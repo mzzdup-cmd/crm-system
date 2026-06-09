@@ -4,25 +4,59 @@ from "react-router-dom";
 import { useAuth }
 from "../context/AuthContext";
 
+import LoadingState
+from "./LoadingState";
+
+import { ROLES }
+from "../constants/roles";
+
 export default function ProtectedRoute({
 
   children,
 
   allowedRoles,
 
+  requireAdmin = false,
+
+  fallbackPath = "/unauthorized",
+
 }) {
 
-  const { userData } = useAuth();
+  const {
+    userData,
+    loading,
+  } = useAuth();
 
-  if (!userData) {
+  if (loading) {
 
-    return null;
+    return (
+      <LoadingState />
+    );
 
   }
 
+  if (!userData) {
+
+    return (
+      <Navigate
+        to="/"
+        replace
+      />
+    );
+
+  }
+
+  const roles =
+
+    requireAdmin
+
+      ? [ROLES.ADMIN]
+
+      : allowedRoles;
+
   const hasAccess =
 
-    allowedRoles.includes(
+    roles?.includes(
       userData.role
     );
 
@@ -30,6 +64,11 @@ export default function ProtectedRoute({
 
     ? children
 
-    : <Navigate to="/" />;
+    : (
+      <Navigate
+        to={fallbackPath}
+        replace
+      />
+    );
 
 }

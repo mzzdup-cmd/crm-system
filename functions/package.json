@@ -1,0 +1,19 @@
+{
+  "name": "crm-school-functions",
+  "private": true,
+  "main": "index.js",
+  "engines": {
+    "node": "20"
+  },
+  "scripts": {
+    "serve": "firebase emulators:start --only functions,firestore",
+    "deploy": "firebase deploy --only functions",
+    "backfill": "node scripts/backfillPayments.js",
+    "nightly-sync": "node scripts/nightlySheetsSync.js"
+  },
+  "dependencies": {
+    "firebase-admin": "^13.6.0",
+    "firebase-functions": "^6.6.0",
+    "googleapis": "^144.0.0"
+  }
+}

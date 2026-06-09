@@ -51,6 +51,10 @@ export function AuthProvider({
 
             setUserData(data);
 
+          } else {
+
+            setUserData(null);
+
           }
 
           setLoading(false);
@@ -70,23 +74,12 @@ export function AuthProvider({
       value={{
         user,
         userData,
+        loading,
       }}
 
     >
 
-      {
-
-        loading
-
-          ? (
-            <div className="text-white p-10">
-              Загрузка...
-            </div>
-          )
-
-          : children
-
-      }
+      {children}
 
     </AuthContext.Provider>
 

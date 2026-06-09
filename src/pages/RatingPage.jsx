@@ -1,18 +1,19 @@
 import { useEffect, useState } from "react";
-import { useAuth }
-from "../context/AuthContext";
 
 import {
-  collection,
-  getDocs,
-} from "firebase/firestore";
+  getAllClients,
+  resolveManagerDisplayName,
+} from "../services/clientService";
 
-import { db } from "../services/firebase";
+import LoadingState
+from "../components/LoadingState";
 
 export default function RatingPage() {
-  const { userData } = useAuth();
 
   const [rating, setRating] = useState([]);
+
+  const [loading, setLoading] =
+    useState(true);
 
   useEffect(() => {
     loadRating();
@@ -20,34 +21,41 @@ export default function RatingPage() {
 
   const loadRating = async () => {
 
-    const querySnapshot = await getDocs(
-      collection(db, "clients")
-    );
+    setLoading(true);
 
-    const clients = [];
-
-    querySnapshot.forEach((doc) => {
-      clients.push(doc.data());
-    });
+    const clients =
+      await getAllClients();
 
     const managersMap = {};
 
     clients.forEach((client) => {
 
-      if (!managersMap[client.manager]) {
+      const managerKey =
+        client.managerId ||
+        client.manager;
 
-        managersMap[client.manager] = {
-          manager: client.manager,
+      if (!managerKey) {
+        return;
+      }
+
+      if (!managersMap[managerKey]) {
+
+        managersMap[managerKey] = {
+          managerKey,
+          manager:
+            resolveManagerDisplayName(
+              managerKey
+            ),
           totalAmount: 0,
           clientsCount: 0,
         };
 
       }
 
-      managersMap[client.manager].totalAmount +=
-        Number(client.amount || 0)
+      managersMap[managerKey].totalAmount +=
+        Number(client.amount || 0);
 
-      managersMap[client.manager].clientsCount += 1;
+      managersMap[managerKey].clientsCount += 1;
 
     });
 
@@ -58,21 +66,18 @@ export default function RatingPage() {
         b.totalAmount - a.totalAmount
     );
 
-    const finalRating =
-
-  userData?.role === "admin"
-
-    ? sortedManagers
-
-    : sortedManagers.filter(
-        (manager) =>
-          manager.manager ===
-          userData?.name
-      );
-
-setRating(finalRating);
+    setRating(sortedManagers);
+    setLoading(false);
 
   };
+
+  if (loading) {
+
+    return (
+      <LoadingState message="Загрузка рейтинга..." />
+    );
+
+  }
 
   return (
 
@@ -87,7 +92,7 @@ setRating(finalRating);
         {rating.map((manager, index) => (
 
           <div
-            key={manager.manager}
+            key={manager.managerKey}
             className="bg-slate-900 rounded-2xl p-6 flex justify-between items-center"
           >
 

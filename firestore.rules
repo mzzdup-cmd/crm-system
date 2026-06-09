@@ -1,0 +1,320 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function userDoc() {
+      return get(
+        /databases/$(database)/documents/users/$(request.auth.uid)
+      ).data;
+    }
+
+    function isAdmin() {
+      return isSignedIn()
+        && userDoc().role == 'admin';
+    }
+
+    function isManager() {
+      return isSignedIn()
+        && userDoc().role == 'manager';
+    }
+
+    function ownerManagerId() {
+      return userDoc().managerId;
+    }
+
+    function ownerManagerName() {
+      return userDoc().name;
+    }
+
+    function isOwnerByManagerId(managerId) {
+      return isManager()
+        && managerId != null
+        && ownerManagerId() == managerId;
+    }
+
+    function isLegacyOwner(managerName) {
+      return isManager()
+        && managerName != null
+        && ownerManagerName() == managerName;
+    }
+
+    function canReadManagerData(data) {
+      return isAdmin()
+        || isOwnerByManagerId(data.managerId)
+        || (
+          data.managerId == null
+          && isLegacyOwner(data.manager)
+        );
+    }
+
+    function canCreateManagerData(data) {
+      return isAdmin()
+        || (
+          isOwnerByManagerId(data.managerId)
+          && data.managerId != null
+        );
+    }
+
+    function canUpdateManagerData(
+      existing,
+      incoming
+    ) {
+      return isAdmin()
+        || (
+          isOwnerByManagerId(existing.managerId)
+          && incoming.managerId == existing.managerId
+        )
+        || (
+          existing.managerId == null
+          && isLegacyOwner(existing.manager)
+          && incoming.manager == existing.manager
+        );
+    }
+
+    match /users/{uid} {
+      allow read: if isSignedIn()
+        && (
+          request.auth.uid == uid
+          || isAdmin()
+          || resource.data.role in ['manager', 'admin']
+        );
+
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /clients/{clientId} {
+      allow read: if isSignedIn()
+        && canReadManagerData(resource.data);
+
+      allow create: if isSignedIn()
+        && canCreateManagerData(request.resource.data);
+
+      allow update: if isSignedIn()
+        && canUpdateManagerData(
+          resource.data,
+          request.resource.data
+        );
+
+      allow delete: if isAdmin();
+    }
+
+    function isRecentPayment() {
+      return resource.data.createdAt is int
+        && resource.data.createdAt
+          > request.time.toMillis() - 30 * 60 * 1000;
+    }
+
+    function managerCanEditPayment() {
+      return isManager()
+        && isOwnerByManagerId(resource.data.managerId)
+        && isRecentPayment()
+        && resource.data.deletedAt == null
+        && request.resource.data.managerId
+          == resource.data.managerId
+        && request.resource.data.clientId
+          == resource.data.clientId
+        && request.resource.data.deletedAt == null;
+    }
+
+    match /payments/{paymentId} {
+      allow read: if isSignedIn();
+
+      allow create: if isSignedIn()
+        && canCreateManagerData(request.resource.data);
+
+      allow update: if isSignedIn()
+        && (
+          isAdmin()
+          || managerCanEditPayment()
+        );
+
+      allow delete: if false;
+    }
+
+    match /manualBonuses/{bonusId} {
+      allow read: if isSignedIn()
+        && canReadManagerData(resource.data);
+
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /nightShifts/{shiftId} {
+      allow read: if isSignedIn()
+        && canReadManagerData(resource.data);
+
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /schedule/{dateId} {
+      allow read: if isSignedIn();
+
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /syncLog/{logId} {
+      allow read: if isAdmin();
+
+      allow write: if false;
+    }
+
+    match /traffic/{docId} {
+      allow read: if isSignedIn();
+
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /trafficSources/{sourceId} {
+      allow read: if isSignedIn();
+
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /notifications/{notificationId} {
+      allow read: if isSignedIn()
+        && resource.data.userId == request.auth.uid;
+
+      allow create: if isSignedIn()
+        && (
+          isAdmin()
+          || request.resource.data.userId == request.auth.uid
+          || (
+            request.resource.data.type == 'pending_sale'
+            && request.resource.data.userId is string
+            && request.resource.data.dedupKey is string
+          )
+        );
+
+      allow update: if isSignedIn()
+        && resource.data.userId == request.auth.uid
+        && request.resource.data.userId == resource.data.userId;
+
+      allow delete: if isAdmin();
+    }
+
+    function isPendingOwner(data) {
+      return isAdmin()
+        || isOwnerByManagerId(data.ownerManagerId);
+    }
+
+    function isPendingCreator(data) {
+      return isAdmin()
+        || isOwnerByManagerId(data.createdByManagerId);
+    }
+
+    match /pendingSales/{saleId} {
+      allow read: if isSignedIn()
+        && (
+          isPendingOwner(resource.data)
+          || isPendingCreator(resource.data)
+        );
+
+      allow create: if isSignedIn()
+        && (
+          isAdmin()
+          || (
+            request.resource.data.createdByManagerId == ownerManagerId()
+            && request.resource.data.ownerManagerId != ownerManagerId()
+            && request.resource.data.status == 'pending'
+          )
+        );
+
+      allow update: if isSignedIn()
+        && (
+          isAdmin()
+          || (
+            isPendingOwner(resource.data)
+            && resource.data.status == 'pending'
+            && request.resource.data.ownerManagerId == resource.data.ownerManagerId
+            && request.resource.data.createdByManagerId == resource.data.createdByManagerId
+          )
+        );
+
+      allow delete: if isAdmin();
+    }
+
+    function isOwnTimeOffRequest(data) {
+      return isOwnerByManagerId(data.managerId);
+    }
+
+    match /timeOffRequests/{requestId} {
+      allow read: if isSignedIn()
+        && (
+          isAdmin()
+          || isOwnTimeOffRequest(resource.data)
+        );
+
+      allow create: if isSignedIn()
+        && isManager()
+        && request.resource.data.managerId == ownerManagerId()
+        && request.resource.data.status == 'pending';
+
+      allow update: if isAdmin();
+
+      allow delete: if false;
+    }
+
+    match /vacationRequests/{requestId} {
+      allow read: if isSignedIn()
+        && (
+          isAdmin()
+          || isOwnTimeOffRequest(resource.data)
+        );
+
+      allow create: if isSignedIn()
+        && isManager()
+        && request.resource.data.managerId == ownerManagerId()
+        && request.resource.data.status == 'pending';
+
+      allow update: if isAdmin();
+
+      allow delete: if false;
+    }
+
+    match /knowledgeFaq/{itemId} {
+      allow read: if isSignedIn();
+
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /knowledgeNotes/{itemId} {
+      allow read: if isSignedIn();
+
+      allow create, update, delete: if isAdmin();
+    }
+
+    function isOwnKnowledgeScript(data) {
+      return isAdmin()
+        || isOwnerByManagerId(data.managerId);
+    }
+
+    match /knowledgeScripts/{itemId} {
+      allow read: if isSignedIn();
+
+      allow create: if isSignedIn()
+        && (
+          isAdmin()
+          || (
+            isManager()
+            && request.resource.data.managerId == ownerManagerId()
+          )
+        );
+
+      allow update: if isSignedIn()
+        && (
+          isAdmin()
+          || (
+            isManager()
+            && resource.data.managerId == ownerManagerId()
+            && request.resource.data.managerId == resource.data.managerId
+          )
+        );
+
+      allow delete: if isAdmin();
+    }
+  }
+}

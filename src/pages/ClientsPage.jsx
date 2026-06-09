@@ -6,17 +6,24 @@ import {
   useState,
 } from "react";
 
-import {
-  collection,
-  addDoc,
-  getDocs,
-} from "firebase/firestore";
-
 import { Link }
 from "react-router-dom";
 
-import { db }
-from "../services/firebase";
+import {
+  getClientsForUser,
+} from "../services/clientService";
+
+import {
+  getRemain,
+  isOverdue,
+  matchesStatusFilter,
+} from "../domain/client/clientStatus";
+
+import { MANAGERS } from "../constants/managers";
+import { COURSES } from "../constants/courses";
+
+import LoadingState
+from "../components/LoadingState";
 
 export default function ClientsPage() {
 
@@ -25,6 +32,9 @@ export default function ClientsPage() {
 
   const [clients, setClients] =
     useState([]);
+
+  const [loading, setLoading] =
+    useState(true);
 
   const [search, setSearch] =
     useState("");
@@ -38,168 +48,31 @@ export default function ClientsPage() {
   const [statusFilter, setStatusFilter] =
     useState("");
 
-  const [form, setForm] =
-    useState({
-
-      manager: "",
-      dealType: "",
-      dialogLink: "",
-      vkLink: "",
-      amount: "",
-      budget: "",
-      paymentDate: "",
-      startDate: "",
-      firstContact: "",
-      invoice: "",
-      source: "",
-      course: "",
-      paymentSystem: "",
-      email: "",
-      tariff: "",
-      notes: "",
-
-    });
-
   useEffect(() => {
 
     loadClients();
 
-  }, []);
+  }, [userData]);
 
   async function loadClients() {
 
-    const querySnapshot =
-      await getDocs(
-        collection(db, "clients")
-      );
+    if (!userData) {
+      return;
+    }
 
-    const clientsData = [];
+    setLoading(true);
 
-    querySnapshot.forEach((doc) => {
-
-      clientsData.push({
-
-        id: doc.id,
-        ...doc.data(),
-
-      });
-
-    });
+    const clientsData =
+      await getClientsForUser(userData);
 
     setClients(clientsData);
-
-  }
-
-  function getNextPaymentDate(
-    dateString
-  ) {
-
-    if (!dateString)
-      return "";
-
-    const date =
-      new Date(dateString);
-
-    date.setDate(
-      date.getDate() + 14
-    );
-
-    return date
-      .toISOString()
-      .split("T")[0];
-
-  }
-
-  async function handleAddClient() {
-
-    if (
-      !form.manager ||
-      !form.dialogLink ||
-      !form.amount
-    ) return;
-
-    const newClient = {
-
-      ...form,
-
-      createdAt:
-        Date.now(),
-
-      nextPaymentDate:
-
-        Number(form.amount)
-          <
-        Number(form.budget)
-
-          ? getNextPaymentDate(
-              form.paymentDate
-            )
-
-          : null,
-
-    };
-
-    const docRef =
-      await addDoc(
-
-        collection(
-          db,
-          "clients"
-        ),
-
-        newClient
-
-      );
-
-    setClients([
-
-      {
-
-        id: docRef.id,
-        ...newClient,
-
-      },
-
-      ...clients,
-
-    ]);
-
-    setForm({
-
-      manager: "",
-      dealType: "",
-      dialogLink: "",
-      vkLink: "",
-      amount: "",
-      budget: "",
-      paymentDate: "",
-      startDate: "",
-      firstContact: "",
-      invoice: "",
-      source: "",
-      course: "",
-      paymentSystem: "",
-      email: "",
-      tariff: "",
-      notes: "",
-
-    });
+    setLoading(false);
 
   }
 
   const visibleClients =
 
     clients.filter((client) => {
-
-      const access =
-
-        userData?.role ===
-        "admin"
-
-          ? true
-
-          : client.manager ===
-            userData?.name;
 
       const matchesSearch =
 
@@ -237,62 +110,25 @@ export default function ClientsPage() {
 
           : true;
 
-      const remain =
-
-        Number(
-          client.budget || 0
-        )
-
-        -
-
-        Number(
-          client.amount || 0
-        );
-
-      const isOverdue =
-
-        client.nextPaymentDate &&
-
-        new Date() >
-
-        new Date(
-          client.nextPaymentDate
-        ) &&
-
-        remain > 0;
-
-      const status =
-
-        isOverdue
-
-          ? "overdue"
-
-          : remain > 0
-
-          ? "subscription"
-
-          : "paid";
-
-      const matchesStatus =
-
-        statusFilter
-
-          ? status ===
-            statusFilter
-
-          : true;
-
       return (
-
-        access &&
         matchesSearch &&
         matchesManager &&
         matchesCourse &&
-        matchesStatus
-
+        matchesStatusFilter(
+          client,
+          statusFilter
+        )
       );
 
     });
+
+  if (loading) {
+
+    return (
+      <LoadingState message="Загрузка клиентов..." />
+    );
+
+  }
 
   return (
 
@@ -320,7 +156,7 @@ export default function ClientsPage() {
 
       />
 
-      <div className="grid grid-cols-3 gap-4 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mb-8">
 
         <select
 
@@ -342,23 +178,22 @@ export default function ClientsPage() {
 
           </option>
 
-          <option>
+          {
 
-            Катя Бакаева
+            MANAGERS.map((manager) => (
 
-          </option>
+              <option
+                key={manager.id}
+                value={manager.name}
+              >
 
-          <option>
+                {manager.name}
 
-            Руслан Р
+              </option>
 
-          </option>
+            ))
 
-          <option>
-
-            Полина Пенькова
-
-          </option>
+          }
 
         </select>
 
@@ -382,29 +217,22 @@ export default function ClientsPage() {
 
           </option>
 
-          <option>
+          {
 
-            Монтаж
+            COURSES.map((course) => (
 
-          </option>
+              <option
+                key={course}
+                value={course}
+              >
 
-          <option>
+                {course}
 
-            АЕ
+              </option>
 
-          </option>
+            ))
 
-          <option>
-
-            3D
-
-          </option>
-
-          <option>
-
-            Ретушь
-
-          </option>
+          }
 
         </select>
 
@@ -458,28 +286,10 @@ export default function ClientsPage() {
             (client) => {
 
               const remain =
+                getRemain(client);
 
-                Number(
-                  client.budget || 0
-                )
-
-                -
-
-                Number(
-                  client.amount || 0
-                );
-
-              const isOverdue =
-
-                client.nextPaymentDate &&
-
-                new Date() >
-
-                new Date(
-                  client.nextPaymentDate
-                ) &&
-
-                remain > 0;
+              const overdue =
+                isOverdue(client);
 
               return (
 
@@ -499,7 +309,7 @@ export default function ClientsPage() {
 
                       ${
 
-                        isOverdue
+                        overdue
 
                           ? "bg-red-500/20 border border-red-500"
 
@@ -573,7 +383,7 @@ export default function ClientsPage() {
 
                           {
 
-                            isOverdue ? (
+                            overdue ? (
 
                               <div className="text-red-400 font-bold">
 

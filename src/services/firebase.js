@@ -2,14 +2,48 @@ import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyBRDxt_fsOZFQelbG9dEJkWkuNK_mfUoHo",
-  authDomain: "crm-school-v2.firebaseapp.com",
-  projectId: "crm-school-v2",
-  storageBucket: "crm-school-v2.firebasestorage.app",
-  messagingSenderId: "571495900614",
-  appId: "1:571495900614:web:0d7c65d6c80508118f3ec7",
-  measurementId: "G-XQHR93EDMF"
+  apiKey:
+    import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain:
+    import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId:
+    import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket:
+    import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId:
+    import.meta.env
+      .VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId:
+    import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId:
+    import.meta.env
+      .VITE_FIREBASE_MEASUREMENT_ID,
 };
+
+function validateFirebaseConfig() {
+  const required = [
+    "apiKey",
+    "authDomain",
+    "projectId",
+    "appId",
+  ];
+
+  const missing = required.filter(
+    (key) => !firebaseConfig[key]
+  );
+
+  if (
+    missing.length &&
+    import.meta.env.PROD
+  ) {
+    console.error(
+      "Missing Firebase env vars:",
+      missing.join(", ")
+    );
+  }
+}
+
+validateFirebaseConfig();
 
 const app = initializeApp(firebaseConfig);
 

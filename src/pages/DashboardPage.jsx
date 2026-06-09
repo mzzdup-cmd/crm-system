@@ -1,379 +1,1031 @@
+import { Link } from "react-router-dom";
+
 import {
-  useEffect,
   useState,
 } from "react";
 
+import LoadingState
+from "../components/LoadingState";
+
+import EmptyState
+from "../components/ui/EmptyState";
+
+import PageHeader
+from "../components/ui/PageHeader";
+
+import RealtimeIndicator
+from "../components/ui/RealtimeIndicator";
+
+import QuickSaleModal
+from "../components/pendingSales/QuickSaleModal";
+
+import { useDashboardRealtime }
+from "../hooks/useRealtimeDashboard";
+
+import { useNotifications }
+from "../hooks/useNotifications";
+
+import { usePendingSales }
+from "../hooks/usePendingSales";
+
+import { useOperationalRequests }
+from "../hooks/useOperationalRequests";
+
 import {
-  collection,
-  getDocs,
-} from "firebase/firestore";
-
-import { db }
-from "../services/firebase";
-
-import { useAuth }
-from "../context/AuthContext";
-
-export default function DashboardPage() {
-
-  const { userData } =
-    useAuth();
-
-  const [clients, setClients] =
-    useState([]);
-
-  const [payments, setPayments] =
-    useState([]);
-
-  useEffect(() => {
-
-    loadClients();
-    loadPayments();
-
-  }, []);
-
-  async function loadClients() {
-
-    const querySnapshot =
-      await getDocs(
-        collection(db, "clients")
-      );
-
-    const data = [];
-
-    querySnapshot.forEach((doc) => {
-
-      data.push({
-        id: doc.id,
-        ...doc.data(),
-      });
-
-    });
-
-    setClients(data);
-
-  }
-
-  async function loadPayments() {
-
-    const snapshot =
-      await getDocs(
-        collection(db, "payments")
-      );
-
-    const paymentsData = [];
-
-    snapshot.forEach((doc) => {
-
-      paymentsData.push({
-        id: doc.id,
-        ...doc.data(),
-      });
-
-    });
-
-    paymentsData.sort(
-
-      (a, b) =>
-
-        b.createdAt -
-        a.createdAt
-
-    );
-
-    setPayments(
-      paymentsData
-    );
-
-  }
-
-  const visibleClients =
-    clients.filter((client) =>
-
-      userData?.role === "admin"
-
-        ? true
-
-        : client.manager ===
-          userData?.name
-    );
-
-  const totalRevenue =
-    visibleClients.reduce(
-
-      (sum, client) =>
-
-        sum +
-        Number(
-          client.amount || 0
-        ),
-
-      0
-    );
-
-  const totalDeals =
-    visibleClients.length;
-
-  const subscriptions =
-    visibleClients.filter(
-
-      (client) =>
-
-        Number(client.amount) <
-        Number(client.budget)
-
-    ).length;
-
-  const averageCheck =
-    totalDeals
-
-      ? Math.round(
-          totalRevenue /
-          totalDeals
-        )
-
-      : 0;
-
-  const overdueClients =
-    visibleClients.filter(
-      (client) => {
-
-        if (
-          !client.nextPaymentDate
-        ) return false;
-
-        const today =
-          new Date();
-
-        const paymentDate =
-          new Date(
-            client.nextPaymentDate
-          );
-
-        const isOverdue =
-
-          today > paymentDate;
-
-        const hasDebt =
-
-          Number(client.amount)
-          <
-          Number(client.budget);
-
-        return (
-          isOverdue &&
-          hasDebt
-        );
-
-      }
-    );
-
-  const managersStats = {};
-
-  payments.forEach((payment) => {
-
-    if (!payment.manager)
-      return;
-
-    if (
-      !managersStats[
-        payment.manager
-      ]
-    ) {
-
-      managersStats[
-        payment.manager
-      ] = {
-
-        revenue: 0,
-
-        deals: 0,
-
-      };
-
-    }
-
-    managersStats[
-      payment.manager
-    ].revenue +=
-
-      Number(
-        payment.amount || 0
-      );
-
-    managersStats[
-      payment.manager
-    ].deals += 1;
-
-  });
-
-  const leaderboard =
-
-  Object.entries(
-    managersStats
-  )
-
-  .sort(
-
-    (a, b) =>
-
-      b[1].revenue -
-      a[1].revenue
-
-  );
-
+  getQuickSaleButtonLabel,
+} from "../domain/pendingSales/pendingSalesLogic";
+
+import { countActiveMissingVkReminders }
+from "../services/missingVkReminderService";
+
+import { usePermissions }
+from "../hooks/usePermissions";
+
+import { getRemain }
+from "../domain/client/clientStatus";
+
+import {
+  resolveManagerDisplayName,
+} from "../services/clientService";
+
+import {
+  getManagerNameById,
+} from "../constants/managers";
+
+import {
+  SHIFT_START,
+  SHIFT_END,
+} from "../constants/schedule";
+
+import PageErrorBoundary
+from "../components/ui/PageErrorBoundary";
+
+function StatCard({
+  label,
+  value,
+  color = "text-white",
+  className = "",
+}) {
   return (
+    <div
+      className={`
+        bg-slate-900 p-5 md:p-6 rounded-2xl
+        transition-transform duration-200
+        hover:scale-[1.01]
+        ${className}
+      `}
+    >
+      <div className="text-slate-400 text-sm">
 
-    <div>
-
-      <h1 className="text-4xl font-bold mb-8">
-
-        Dashboard
-
-      </h1>
-
-      <div className="grid grid-cols-4 gap-6">
-
-        <div className="bg-slate-900 p-6 rounded-2xl">
-
-          <div className="text-slate-400">
-
-            Выручка
-
-          </div>
-
-          <div className="text-3xl font-bold text-green-400 mt-2">
-
-            {totalRevenue} ₽
-
-          </div>
-
-        </div>
-
-        <div className="bg-slate-900 p-6 rounded-2xl">
-
-          <div className="text-slate-400">
-
-            Сделки
-
-          </div>
-
-          <div className="text-3xl font-bold mt-2">
-
-            {totalDeals}
-
-          </div>
-
-        </div>
-
-        <div className="bg-slate-900 p-6 rounded-2xl">
-
-          <div className="text-slate-400">
-
-            Подписки
-
-          </div>
-
-          <div className="text-3xl font-bold text-yellow-400 mt-2">
-
-            {subscriptions}
-
-          </div>
-
-        </div>
-
-        <div className="bg-slate-900 p-6 rounded-2xl">
-
-          <div className="text-slate-400">
-
-            Средний чек
-
-          </div>
-
-          <div className="text-3xl font-bold text-cyan-400 mt-2">
-
-            {averageCheck} ₽
-
-          </div>
-
-        </div>
+        {label}
 
       </div>
 
-      <div className="mt-10">
+      <div className={`text-2xl md:text-3xl font-bold mt-2 ${color}`}>
 
-        <h2 className="text-2xl font-bold mb-4 text-red-400">
+        {value}
 
-          ⚠️ Просроченные подписки
+      </div>
+
+    </div>
+  );
+}
+
+function formatMoney(value) {
+  return `${Number(value || 0).toLocaleString("ru-RU")} ₽`;
+}
+
+function PersonalKpiCard({ kpi }) {
+  return (
+    <section className="bg-slate-900 p-5 md:p-6 rounded-2xl space-y-4">
+      <div>
+        <h2 className="text-xl font-bold">
+          Мои KPI · {kpi.range.label.toLowerCase()}
+        </h2>
+        <p className="text-slate-400 text-sm mt-1">
+          Все типы оплат: новые, доплаты, апсейлы, возвраты, legacy
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        <StatCard
+          label="Выручка месяца"
+          value={formatMoney(kpi.revenue)}
+          color="text-green-400"
+        />
+
+        <StatCard
+          label="Средний чек"
+          value={formatMoney(kpi.averageCheck)}
+          color="text-cyan-400"
+        />
+
+        <StatCard
+          label="Количество продаж"
+          value={kpi.deals}
+        />
+
+        <StatCard
+          label={
+            kpi.goalAchieved
+              ? "Бонусная цель"
+              : "До цели"
+          }
+          value={
+            kpi.goalAchieved
+              ? "Достигнута ✅"
+              : formatMoney(kpi.remainingToGoal)
+          }
+          color={
+            kpi.goalAchieved
+              ? "text-green-400"
+              : "text-amber-400"
+          }
+        />
+      </div>
+    </section>
+  );
+}
+
+function OperationalRequestsCard({ summary }) {
+  const pendingOwn =
+    summary.pendingTimeOff.length +
+    summary.pendingVacations.length;
+
+  return (
+    <section className="bg-slate-900 p-5 md:p-6 rounded-2xl space-y-4">
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="text-lg font-bold">
+          Отсутствия
+        </h2>
+        <Link
+          to="/time-off"
+          className="text-sm text-cyan-400 hover:underline"
+        >
+          Запросы →
+        </Link>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <StatCard
+          label="Статус запросов"
+          value={
+            pendingOwn
+              ? `${pendingOwn} на рассмотрении`
+              : "Нет pending"
+          }
+          color={
+            pendingOwn
+              ? "text-amber-400"
+              : "text-green-400"
+          }
+        />
+
+        <StatCard
+          label="Отпуск"
+          value={
+            summary.activeVacation
+              ? `${summary.activeVacation.startDate} — ${summary.activeVacation.endDate}`
+              : "—"
+          }
+          color="text-violet-400"
+        />
+
+        <StatCard
+          label="Ближайшие выходные"
+          value={
+            summary.upcomingOffDays.length
+              ? summary.upcomingOffDays.join(", ")
+              : "—"
+          }
+        />
+      </div>
+    </section>
+  );
+}
+
+function AdminOperationalCard({ summary }) {
+  return (
+    <section className="bg-slate-900 p-5 md:p-6 rounded-2xl space-y-4">
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="text-lg font-bold">
+          Отсутствия команды
+        </h2>
+        <Link
+          to="/time-off"
+          className="text-sm text-cyan-400 hover:underline"
+        >
+          Все запросы →
+        </Link>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <StatCard
+          label="Pending approvals"
+          value={summary.pendingTotal}
+          color={
+            summary.pendingTotal
+              ? "text-amber-400"
+              : "text-green-400"
+          }
+        />
+
+        <StatCard
+          label="Ближайшие отпуска"
+          value={summary.approvedVacations.length}
+          color="text-violet-400"
+        />
+
+        <StatCard
+          label="Пересечения"
+          value={
+            summary.overlappingAbsences.length
+              ? `${summary.overlappingAbsences.length} дат`
+              : "Нет"
+          }
+          color={
+            summary.overlappingAbsences.length
+              ? "text-red-400"
+              : "text-green-400"
+          }
+        />
+      </div>
+
+      {summary.overlappingAbsences.length > 0 && (
+        <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 text-sm space-y-2">
+          <div className="font-bold text-red-300">
+            Пересекающиеся отсутствия
+          </div>
+          {summary.overlappingAbsences.slice(0, 5).map((item) => (
+            <div key={item.date} className="text-slate-300">
+              {item.date}:{" "}
+              {item.managerIds
+                .map((id) =>
+                  getManagerNameById(id)
+                )
+                .join(", ")}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {summary.approvedVacations.length > 0 && (
+        <div className="space-y-2 text-sm">
+          {summary.approvedVacations.slice(0, 4).map((item) => (
+            <div
+              key={item.id}
+              className="bg-slate-800/60 p-3 rounded-xl flex justify-between gap-3"
+            >
+              <span>
+                {item.manager} · {item.startDate} — {item.endDate}
+              </span>
+              <span className="text-slate-500 shrink-0">
+                {item.daysCount} дн.
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function MotivationalLeaderBlock({
+  leaderInfo,
+}) {
+  const { leader, isLeader, difference } =
+    leaderInfo;
+
+  if (!leader) {
+    return null;
+  }
+
+  return (
+    <section
+      className="
+        p-5 md:p-6 rounded-2xl
+        bg-gradient-to-r from-violet-500/15 to-cyan-500/10
+        border border-violet-500/30
+        space-y-3
+      "
+    >
+      {isLeader ? (
+        <>
+          <div className="text-2xl font-bold">
+            Поздравляем 🎉
+          </div>
+          <div className="text-lg text-green-300">
+            Сейчас у вас самая большая выручка:{" "}
+            <strong>
+              {formatMoney(leader.revenue)}
+            </strong>
+          </div>
+          <div className="text-slate-300">
+            Вы лидер месяца 🔥
+          </div>
+        </>
+      ) : (
+        <>
+          <div className="text-lg text-slate-200">
+            Сейчас лидер месяца —{" "}
+            <strong>{leader.name}</strong>:{" "}
+            {formatMoney(leader.revenue)}
+          </div>
+          <div className="text-2xl font-bold text-amber-300">
+            До лидерства осталось:{" "}
+            {formatMoney(difference)}
+          </div>
+          <div className="text-slate-300">
+            У тебя есть все шансы обогнать 🔥
+          </div>
+        </>
+      )}
+    </section>
+  );
+}
+
+export default function DashboardPage() {
+  return (
+    <PageErrorBoundary title="Dashboard">
+      <DashboardPageContent />
+    </PageErrorBoundary>
+  );
+}
+
+function DashboardPageContent() {
+  const { isAdmin, isManager, displayName } =
+    usePermissions();
+
+  const {
+    payments,
+    summary,
+    schedule,
+    initialLoading,
+    connected,
+    today,
+  } = useDashboardRealtime();
+
+  const {
+    pendingCount,
+    canQuickSale,
+    coveringTargets,
+  } = usePendingSales();
+
+  const {
+    summary: requestsSummary,
+  } = useOperationalRequests();
+
+  const quickSaleLabel =
+    getQuickSaleButtonLabel(coveringTargets);
+
+  const { notifications } =
+    useNotifications();
+
+  const missingVkCount =
+    countActiveMissingVkReminders(
+      notifications
+    );
+
+  const todayPaymentsCount =
+    payments.filter(
+      (payment) =>
+        payment.paymentDate === today
+    ).length;
+
+  const [quickSaleOpen, setQuickSaleOpen] =
+    useState(false);
+
+  if (initialLoading) {
+    return (
+      <LoadingState message="Загрузка dashboard..." />
+    );
+  }
+
+  const leaderboard =
+    summary.leaderInfo?.leaderboard || [];
+
+  const personalKpi =
+    summary.personalKpi;
+
+  return (
+    <div className="space-y-8 animate-fade-in">
+
+      <PageHeader
+        title="Dashboard"
+        subtitle={
+          <>
+            <span>{today}</span>
+            <RealtimeIndicator connected={connected} />
+          </>
+        }
+        actions={
+          canQuickSale && (
+
+            <button
+              type="button"
+              onClick={() => setQuickSaleOpen(true)}
+              className="
+                px-4 py-2.5 rounded-xl font-bold text-sm
+                bg-cyan-500 hover:bg-cyan-400 transition-colors
+              "
+            >
+
+              {quickSaleLabel}
+
+            </button>
+
+          )
+        }
+      />
+
+      {
+
+        pendingCount > 0 && (
+
+          <Link
+            to="/pending-sales"
+            className="
+              block p-5 rounded-2xl
+              bg-gradient-to-r from-cyan-500/20 to-green-500/10
+              border border-cyan-500/40
+              hover:border-cyan-400/60 transition-all
+            "
+          >
+
+            <div className="flex flex-wrap items-center justify-between gap-3">
+
+              <div>
+
+                <div className="text-lg font-bold text-cyan-300">
+
+                  {
+
+                    pendingCount === 1
+                      ? "У вас новая быстрая продажа"
+                      : `У вас ${pendingCount} новых быстрых продаж`
+
+                  }
+
+                </div>
+
+                <div className="text-slate-400 text-sm mt-1">
+
+                  Подтвердите и оформите оплату →
+
+                </div>
+
+              </div>
+
+              <div className="text-3xl font-bold text-cyan-400">
+
+                {pendingCount}
+
+              </div>
+
+            </div>
+
+          </Link>
+
+        )
+
+      }
+
+      {
+
+        isAdmin &&
+        requestsSummary.pendingTotal > 0 && (
+
+          <Link
+            to="/time-off"
+            className="
+              block p-5 rounded-2xl
+              bg-gradient-to-r from-amber-500/20 to-orange-500/10
+              border border-amber-500/40
+              hover:border-amber-400/60 transition-all
+            "
+          >
+
+            <div className="flex flex-wrap items-center justify-between gap-3">
+
+              <div>
+
+                <div className="text-lg font-bold text-amber-300">
+
+                  Запросы на рассмотрении
+
+                </div>
+
+                <div className="text-slate-400 text-sm mt-1">
+
+                  Выходные и отпуска →
+
+                </div>
+
+              </div>
+
+              <div className="text-3xl font-bold text-amber-400">
+
+                {requestsSummary.pendingTotal}
+
+              </div>
+
+            </div>
+
+          </Link>
+
+        )
+
+      }
+
+      {
+
+        isAdmin && summary.failedSyncCount > 0 && (
+
+            <Link
+              to="/management"
+              className="
+                px-4 py-2 rounded-xl
+                bg-red-500/20 text-red-300
+                hover:bg-red-500/30 transition-colors text-sm
+              "
+            >
+
+              {summary.failedSyncCount} ошибок синхронизации
+
+            </Link>
+
+          )
+
+      }
+
+      {
+
+        isManager && displayName && (
+
+          <section className="bg-slate-900 p-5 md:p-6 rounded-2xl space-y-6">
+
+            <div>
+
+              <div className="text-2xl font-bold">
+
+                Доброго дня, {displayName}
+
+              </div>
+
+              <div className="text-slate-400 mt-1 text-sm">
+
+                Ваши задачи на сегодня
+
+              </div>
+
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+
+              <Link to="/notifications">
+                <StatCard
+                  label="Не заполнен VK"
+                  value={missingVkCount}
+                  color="text-amber-400"
+                  className="h-full hover:bg-slate-800 transition-colors"
+                />
+              </Link>
+
+              <Link to="/pending-sales">
+                <StatCard
+                  label="Pending sales"
+                  value={pendingCount}
+                  color="text-cyan-400"
+                  className="h-full hover:bg-slate-800 transition-colors"
+                />
+              </Link>
+
+              <Link to="/subscriptions">
+                <StatCard
+                  label="Просрочки"
+                  value={
+                    summary.tasks.overdue
+                      .length
+                  }
+                  color="text-red-400"
+                  className="h-full hover:bg-slate-800 transition-colors"
+                />
+              </Link>
+
+              <Link to="/payments">
+                <StatCard
+                  label="Сегодняшние оплаты"
+                  value={todayPaymentsCount}
+                  color="text-green-400"
+                  className="h-full hover:bg-slate-800 transition-colors"
+                />
+              </Link>
+
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+
+              <StatCard
+                label="Смена"
+                value={
+                  summary.shiftInfo?.isOff
+                    ? "Выходной"
+                    : `${SHIFT_START}–${SHIFT_END}`
+                }
+              />
+
+              <StatCard
+                label="Traffic load"
+                value={
+                  summary.trafficLoad
+                    ? `${Math.round(summary.trafficLoad.share * 100)}%`
+                    : "—"
+                }
+                color="text-cyan-400"
+              />
+
+              <StatCard
+                label="Задачи сегодня"
+                value={summary.tasks.total}
+                color="text-yellow-400"
+              />
+
+              <StatCard
+                label="Просрочки"
+                value={summary.tasks.overdue.length}
+                color="text-red-400"
+              />
+
+            </div>
+
+            {
+
+              summary.tasks.total > 0 && (
+
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+
+                  {
+
+                    summary.tasks.dueToday.length > 0 && (
+
+                      <div className="bg-slate-800/60 p-4 rounded-xl">
+
+                        <div className="text-yellow-400 font-bold mb-3">
+
+                          Оплата сегодня
+
+                        </div>
+
+                        <div className="space-y-2">
+
+                          {
+
+                            summary.tasks.dueToday.slice(0, 5).map((client) => (
+
+                              <Link
+                                key={client.id}
+                                to={`/client/${client.id}`}
+                                className="block text-sm hover:text-cyan-300"
+                              >
+
+                                {client.name || client.course} · {client.debt} ₽
+
+                              </Link>
+
+                            ))
+
+                          }
+
+                        </div>
+
+                      </div>
+
+                    )
+
+                  }
+
+                  {
+
+                    summary.tasks.dueTomorrow.length > 0 && (
+
+                      <div className="bg-slate-800/60 p-4 rounded-xl">
+
+                        <div className="text-slate-300 font-bold mb-3">
+
+                          Оплата завтра
+
+                        </div>
+
+                        <div className="space-y-2">
+
+                          {
+
+                            summary.tasks.dueTomorrow.slice(0, 5).map((client) => (
+
+                              <Link
+                                key={client.id}
+                                to={`/client/${client.id}`}
+                                className="block text-sm hover:text-cyan-300"
+                              >
+
+                                {client.name || client.course} · {client.debt} ₽
+
+                              </Link>
+
+                            ))
+
+                          }
+
+                        </div>
+
+                      </div>
+
+                    )
+
+                  }
+
+                  {
+
+                    summary.tasks.overdue.length > 0 && (
+
+                      <div className="bg-red-500/10 p-4 rounded-xl border border-red-500/30">
+
+                        <div className="text-red-400 font-bold mb-3">
+
+                          Просрочено
+
+                        </div>
+
+                        <div className="space-y-2">
+
+                          {
+
+                            summary.tasks.overdue.slice(0, 5).map((client) => (
+
+                              <Link
+                                key={client.id}
+                                to={`/client/${client.id}`}
+                                className="block text-sm hover:text-red-300"
+                              >
+
+                                {client.name || client.course} · {client.daysOverdue} дн. · {client.debt} ₽
+
+                              </Link>
+
+                            ))
+
+                          }
+
+                        </div>
+
+                      </div>
+
+                    )
+
+                  }
+
+                </div>
+
+              )
+
+            }
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+
+              <StatCard
+                label="Подписки"
+                value={summary.subscriptions}
+              />
+
+              <StatCard
+                label="Работаете за"
+                value={
+                  summary.shiftInfo?.coveringFor
+                    ? getManagerNameById(summary.shiftInfo.coveringFor)
+                    : "—"
+                }
+              />
+
+              <StatCard
+                label="Активных подписок"
+                value={summary.activeSubscriptions.length}
+                color="text-cyan-400"
+              />
+
+            </div>
+
+            {personalKpi && (
+              <PersonalKpiCard kpi={personalKpi} />
+            )}
+
+            <OperationalRequestsCard
+              summary={requestsSummary}
+            />
+
+            {summary.leaderInfo && (
+              <MotivationalLeaderBlock
+                leaderInfo={summary.leaderInfo}
+              />
+            )}
+
+          </section>
+
+        )
+
+      }
+
+      {
+
+        isAdmin && (
+
+          <section className="bg-slate-900 p-5 md:p-6 rounded-2xl space-y-4">
+
+            <div className="flex items-center justify-between">
+
+              <h2 className="text-xl font-bold">
+
+                Команда · Live
+
+              </h2>
+
+              <Link
+                to="/management"
+                className="text-sm text-cyan-400 hover:text-cyan-300"
+              >
+
+                Управление →
+
+              </Link>
+
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+
+              <StatCard
+                label="Выручка месяца"
+                value={formatMoney(summary.totalRevenue)}
+                color="text-green-400"
+              />
+
+              <StatCard
+                label="Активных менеджеров"
+                value={summary.activeManagers.length}
+                color="text-cyan-400"
+              />
+
+              <StatCard
+                label="Просрочки"
+                value={summary.overdueClients.length}
+                color="text-red-400"
+              />
+
+              <StatCard
+                label="Sync failures"
+                value={summary.failedSyncCount}
+                color={
+                  summary.failedSyncCount
+                    ? "text-orange-400"
+                    : "text-green-400"
+                }
+              />
+
+            </div>
+
+            {
+
+              summary.teamLoad.length > 0 && (
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+
+                  {
+
+                    summary.teamLoad.map((item) => (
+
+                      <div
+                        key={item.managerId}
+                        className="bg-slate-800 p-3 rounded-xl flex justify-between text-sm"
+                      >
+
+                        <span>
+
+                          {getManagerNameById(item.managerId)}
+
+                        </span>
+
+                        <span className="text-cyan-400">
+
+                          {Math.round(item.share * 100)}%
+
+                        </span>
+
+                      </div>
+
+                    ))
+
+                  }
+
+                </div>
+
+              )
+
+            }
+
+            <AdminOperationalCard
+              summary={requestsSummary}
+            />
+
+          </section>
+
+        )
+
+      }
+
+      {isAdmin && (
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 md:gap-6">
+
+        <StatCard
+          label="Выручка месяца"
+          value={formatMoney(summary.totalRevenue)}
+          color="text-green-400"
+        />
+
+        <StatCard
+          label="Сделки месяца"
+          value={summary.totalDeals}
+        />
+
+        <StatCard
+          label="Подписки"
+          value={summary.subscriptions}
+          color="text-yellow-400"
+        />
+
+        <StatCard
+          label="Средний чек"
+          value={formatMoney(summary.averageCheck)}
+          color="text-cyan-400"
+        />
+
+      </div>
+      )}
+
+      <section>
+
+        <h2 className="text-xl md:text-2xl font-bold mb-4 text-red-400">
+
+          Просроченные подписки
 
         </h2>
 
         {
 
-          overdueClients.length === 0
+          summary.overdueClients.length === 0
 
             ? (
 
-              <div className="text-slate-400">
-
-                Просрочек нет
-
-              </div>
+              <EmptyState
+                icon="✅"
+                title="Просрочек нет"
+                description="Все подписки оплачены вовремя."
+              />
 
             )
 
             : (
 
-              <div className="space-y-4">
+              <div className="space-y-3">
 
                 {
 
-                  overdueClients.map(
-                    (client) => (
+                  summary.overdueClients.map((client) => (
 
-                      <div
-                        key={client.id}
-                        className="bg-slate-900 p-4 rounded-2xl flex justify-between"
-                      >
+                    <Link
+                      key={client.id}
+                      to={`/client/${client.id}`}
+                      className="
+                        block bg-slate-900 p-4 rounded-2xl
+                        flex justify-between items-center
+                        hover:bg-slate-800 transition-colors
+                      "
+                    >
 
-                        <div>
+                      <div>
 
-                          <div className="font-bold text-xl">
+                        <div className="font-bold">
 
-                            {
-
-                              client.name ||
-                              "Без имени"
-
-                            }
-
-                          </div>
-
-                          <div className="text-slate-400">
-
-                            Долг:
-
-                            {" "}
-
-                            {
-
-                              Number(
-                                client.budget
-                              )
-
-                              -
-
-                              Number(
-                                client.amount
-                              )
-
-                            }
-
-                            ₽
-
-                          </div>
+                          {client.name || client.manager || "Клиент"}
 
                         </div>
+
+                        <div className="text-slate-400 text-sm mt-1">
+
+                          {client.course} · {client.manager}
+
+                        </div>
+
+                      </div>
+
+                      <div className="text-right">
 
                         <div className="text-red-400 font-bold">
 
@@ -381,10 +1033,17 @@ export default function DashboardPage() {
 
                         </div>
 
+                        <div className="text-sm text-slate-400 mt-1">
+
+                          {getRemain(client)} ₽
+
+                        </div>
+
                       </div>
 
-                    )
-                  )
+                    </Link>
+
+                  ))
 
                 }
 
@@ -394,230 +1053,124 @@ export default function DashboardPage() {
 
         }
 
-      </div>
+      </section>
 
-      <div className="mt-10">
+      {isAdmin && (
+      <section>
 
-        <h2 className="text-2xl font-bold mb-4">
+        <h2 className="text-xl md:text-2xl font-bold mb-4">
 
           LIVE FEED
 
         </h2>
 
-        <div className="space-y-4">
+        {
 
-          {
+          payments.length === 0
 
-            payments
-              .slice(0, 10)
-              .map(
-                (payment) => (
+            ? (
 
-                  <div
-                    key={payment.id}
-                    className="bg-slate-900 p-4 rounded-2xl"
-                  >
+              <EmptyState
+                icon="💳"
+                title="Платежей пока нет"
+                description="Новые оплаты появятся здесь в realtime."
+              />
 
-                    <div className="font-bold">
+            )
 
-                      {
+            : (
 
-                        payment.clientName
-
-                      }
-
-                    </div>
-
-                    <div className="text-slate-400 mt-2">
-
-                      {
-
-                        payment.dealType
-
-                      }
-
-                      {" — "}
-
-                      {
-
-                        payment.amount
-
-                      }
-
-                      ₽
-
-                    </div>
-
-                  </div>
-
-                )
-              )
-
-          }
-
-        </div>
-
-      </div>
-
-      <div className="mt-10">
-
-        <h2 className="text-2xl font-bold mb-4">
-
-          KPI Менеджеров
-
-        </h2>
-
-        <div className="mt-10">
-
-  <h2 className="text-2xl font-bold mb-4">
-
-    🏆 Leaderboard
-
-  </h2>
-
-  <div className="space-y-4">
-
-    {
-
-      leaderboard.map(
-
-        ([name, stats], index) => (
-
-          <div
-            key={name}
-            className="bg-slate-900 p-6 rounded-2xl flex justify-between items-center"
-          >
-
-            <div className="flex items-center gap-4">
-
-              <div className="text-4xl">
+              <div className="space-y-3">
 
                 {
 
-                  index === 0
+                  payments.slice(0, 10).map((payment) => (
 
-                    ? "🥇"
+                    <div
+                      key={payment.id}
+                      className="
+                        bg-slate-900 p-4 rounded-2xl
+                        hover:bg-slate-800/80 transition-colors
+                      "
+                    >
 
-                    : index === 1
+                      <div className="font-bold">
 
-                    ? "🥈"
+                        {payment.clientName}
 
-                    : index === 2
+                      </div>
 
-                    ? "🥉"
+                      <div className="text-slate-400 mt-1 text-sm">
 
-                    : "🏅"
+                        {payment.dealType} — {payment.amount} ₽
+
+                      </div>
+
+                    </div>
+
+                  ))
 
                 }
 
               </div>
 
-              <div>
+            )
 
-                <div className="text-2xl font-bold">
+        }
 
-                  {name}
+      </section>
+      )}
 
-                </div>
+      {isAdmin && (
+      <section>
 
-                <div className="text-slate-400 mt-2">
+        <h2 className="text-xl md:text-2xl font-bold mb-4">
 
-                  Сделок:
+          Leaderboard · месяц
 
-                  {" "}
+        </h2>
 
-                  {stats.deals}
-
-                </div>
-
-              </div>
-
-            </div>
-
-            <div className="text-right">
-
-              <div className="text-3xl font-bold text-yellow-400">
-
-                {stats.revenue} ₽
-
-              </div>
-
-            </div>
-
-          </div>
-
-        )
-
-      )
-
-    }
-
-  </div>
-
-</div>
-
-        <div className="space-y-4">
+        <div className="space-y-3">
 
           {
 
-            Object.entries(
-              managersStats
-            ).map(
+            leaderboard.map((stats, index) => (
 
-              ([name, stats]) => (
+              <div
+                key={stats.managerKey}
+                className="
+                  bg-slate-900 p-5 rounded-2xl
+                  flex justify-between items-center
+                  hover:bg-slate-800/80 transition-colors
+                "
+              >
 
-                <div
-                  key={name}
-                  className="bg-slate-900 p-6 rounded-2xl flex justify-between items-center"
-                >
+                <div className="flex items-center gap-4">
 
-                  <div>
+                  <div className="text-2xl">
 
-                    <div className="text-2xl font-bold">
+                    {
 
-                      {name}
+                      index === 0 ? "🥇"
+                        : index === 1 ? "🥈"
+                        : index === 2 ? "🥉"
+                        : "🏅"
 
-                    </div>
-
-                    <div className="text-slate-400 mt-2">
-
-                      Сделок:
-
-                      {" "}
-
-                      {stats.deals}
-
-                    </div>
+                    }
 
                   </div>
 
-                  <div className="text-right">
+                  <div>
 
-                    <div className="text-3xl font-bold text-green-400">
+                    <div className="text-lg font-bold">
 
-                      {stats.revenue} ₽
+                      {resolveManagerDisplayName(stats.name)}
 
                     </div>
 
-                    <div className="text-slate-400 mt-2">
+                    <div className="text-slate-400 text-sm">
 
-                      Средний чек:
-
-                      {" "}
-
-                      {
-
-                        Math.round(
-
-                          stats.revenue /
-
-                          stats.deals
-
-                        )
-
-                      }
-
-                      ₽
+                      Сделок: {stats.deals}
 
                     </div>
 
@@ -625,18 +1178,31 @@ export default function DashboardPage() {
 
                 </div>
 
-              )
+                <div className="text-xl font-bold text-yellow-400">
 
-            )
+                  {formatMoney(stats.revenue)}
+
+                </div>
+
+              </div>
+
+            ))
 
           }
 
         </div>
 
-      </div>
+      </section>
+      )}
+
+      <QuickSaleModal
+        open={quickSaleOpen}
+        onClose={() => setQuickSaleOpen(false)}
+        schedule={schedule}
+        coveringTargets={coveringTargets}
+      />
 
     </div>
 
   );
-
 }

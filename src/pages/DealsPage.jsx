@@ -1,14 +1,22 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+
 import { useAuth }
 from "../context/AuthContext";
 
 import {
-  collection,
-  getDocs,
-} from "firebase/firestore";
+  getClientsForUser,
+} from "../services/clientService";
 
-import { db } from "../services/firebase";
+import {
+  getRecentPaymentsForUser,
+} from "../services/paymentService";
+
+import { hasDebt } from "../domain/client/clientStatus";
+import { MANAGERS } from "../constants/managers";
+
+import LoadingState
+from "../components/LoadingState";
 
 
 export default function DealsPage() {
@@ -23,65 +31,46 @@ export default function DealsPage() {
   const [filterManager, setFilterManager] =
     useState("");
 
-    const [payments, setPayments] =
-  useState([]);
+  const [payments, setPayments] =
+    useState([]);
+
+  const [loading, setLoading] =
+    useState(true);
 
   useEffect(() => {
     loadDeals();
     loadPayments();
-  }, []);
+  }, [userData]);
 
   async function loadPayments() {
 
-  const snapshot =
-    await getDocs(
-      collection(db, "payments")
-    );
+    if (!userData) {
+      return;
+    }
 
-  const paymentsData = [];
+    const paymentsData =
+      await getRecentPaymentsForUser(
+        userData,
+        10
+      );
 
-  snapshot.forEach((doc) => {
+    setPayments(paymentsData);
 
-    paymentsData.push({
-      id: doc.id,
-      ...doc.data(),
-    });
-
-  });
-
-  paymentsData.sort(
-
-    (a, b) =>
-
-      b.createdAt -
-      a.createdAt
-
-  );
-
-  setPayments(
-    paymentsData.slice(0, 10)
-  );
-
-}
+  }
 
   const loadDeals = async () => {
 
-    const querySnapshot = await getDocs(
-      collection(db, "clients")
-    );
+    if (!userData) {
+      return;
+    }
 
-    const deals = [];
+    setLoading(true);
 
-    querySnapshot.forEach((doc) => {
+    const clientsData =
+      await getClientsForUser(userData);
 
-      deals.push({
-        id: doc.id,
-        ...doc.data(),
-      });
-
-    });
-
-    setClients(deals);
+    setClients(clientsData);
+    setLoading(false);
 
   };
 
@@ -119,23 +108,21 @@ export default function DealsPage() {
             filterManager
           : true;
 
-          const hasAccess =
-
-  userData?.role === "admin"
-
-    ? true
-
-    : client.manager ===
-      userData?.name;
-
       return (
-  matchesSearch &&
-  matchesManager &&
-  hasAccess
-);
+        matchesSearch &&
+        matchesManager
+      );
 
     }
   );
+
+  if (loading) {
+
+    return (
+      <LoadingState message="Загрузка сделок..." />
+    );
+
+  }
 
   return (
 
@@ -147,7 +134,7 @@ export default function DealsPage() {
 
       <div className="bg-slate-900 rounded-2xl p-6 mb-8">
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
           <input
             placeholder="Поиск"
@@ -172,41 +159,20 @@ export default function DealsPage() {
               Все менеджеры
             </option>
 
-            <option>
-              Сергей Г
-            </option>
+            {
 
-            <option>
-              Денис М
-            </option>
+              MANAGERS.map((manager) => (
 
-            <option>
-              Андрей В
-            </option>
+                <option
+                  key={manager.id}
+                  value={manager.name}
+                >
+                  {manager.name}
+                </option>
 
-            <option>
-              Руслан Р
-            </option>
+              ))
 
-            <option>
-              Александр С
-            </option>
-
-            <option>
-              Полина Пенькова
-            </option>
-
-            <option>
-              Полина Пламадяла
-            </option>
-
-            <option>
-              Катя Бакаева
-            </option>
-
-            <option>
-              Виолетта П
-            </option>
+            }
 
           </select>
 
@@ -219,10 +185,10 @@ export default function DealsPage() {
         {filteredClients.map((client) => (
 
           <Link
-  to={`/client/${client.id}`}
-  key={client.id}
-  className="bg-slate-900 rounded-2xl p-6 block"
->
+            to={`/client/${client.id}`}
+            key={client.id}
+            className="bg-slate-900 rounded-2xl p-6 block"
+          >
 
             <div className="flex justify-between">
 
@@ -280,8 +246,7 @@ export default function DealsPage() {
 
                 <div className="mt-4">
 
-                  {Number(client.amount) >=
-                  Number(client.budget)
+                  {!hasDebt(client)
 
                     ? (
                       <div className="text-green-400 font-bold">
@@ -294,69 +259,7 @@ export default function DealsPage() {
                         Подписка
                       </div>
 
-                    
                     )}
-
-                    <div className="mt-10">
-
-  <h2 className="text-2xl font-bold mb-4">
-
-    LIVE FEED
-
-  </h2>
-
-  <div className="space-y-4">
-
-    {
-
-      payments.map(
-        (payment) => (
-
-          <div
-            key={payment.id}
-            className="bg-slate-900 p-4 rounded-2xl"
-          >
-
-            <div className="font-bold">
-
-              {
-
-                payment.clientName
-
-              }
-
-            </div>
-
-            <div className="text-slate-400 mt-2">
-
-              {
-
-                payment.dealType
-
-              }
-
-              {" — "}
-
-              {
-
-                payment.amount
-
-              }
-
-              ₽
-
-            </div>
-
-          </div>
-
-        )
-      )
-
-    }
-
-  </div>
-
-</div>
 
                 </div>
 
@@ -367,6 +270,67 @@ export default function DealsPage() {
           </Link>
 
         ))}
+
+      </div>
+
+      <div className="mt-10">
+
+        <h2 className="text-2xl font-bold mb-4">
+
+          LIVE FEED
+
+        </h2>
+
+        <div className="space-y-4">
+
+          {
+
+            payments.map(
+              (payment) => (
+
+                <div
+                  key={payment.id}
+                  className="bg-slate-900 p-4 rounded-2xl"
+                >
+
+                  <div className="font-bold">
+
+                    {
+
+                      payment.clientName
+
+                    }
+
+                  </div>
+
+                  <div className="text-slate-400 mt-2">
+
+                    {
+
+                      payment.dealType
+
+                    }
+
+                    {" — "}
+
+                    {
+
+                      payment.amount
+
+                    }
+
+                    ₽
+
+                  </div>
+
+                </div>
+
+              )
+            )
+
+          }
+
+        </div>
 
       </div>
 

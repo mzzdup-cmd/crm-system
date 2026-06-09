@@ -1,0 +1,122 @@
+import { isBbDealType } from "../../constants/dealTypes";
+
+const SUBSCRIPTION_CYCLE_DAYS = 14;
+
+/**
+ * Returns Monday of the payment week (stream start).
+ * Example: payment 06.06.2026 (Sat) → 01.06.2026 (Mon)
+ */
+export function getStartDate(dateString) {
+  if (!dateString) {
+    return "";
+  }
+
+  const date = new Date(dateString);
+  const day = date.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+
+  date.setDate(date.getDate() + diff);
+
+  return date.toISOString().split("T")[0];
+}
+
+/**
+ * Next subscription payment date (+14 days from payment date).
+ */
+export function getNextPaymentDate(dateString) {
+  if (!dateString) {
+    return "";
+  }
+
+  const date = new Date(dateString);
+
+  date.setDate(
+    date.getDate() + SUBSCRIPTION_CYCLE_DAYS
+  );
+
+  return date.toISOString().split("T")[0];
+}
+
+export function resolveNextPaymentDate({
+  amount,
+  budget,
+  paymentDate,
+}) {
+  const paid = Number(amount || 0);
+  const total = Number(budget || 0);
+
+  if (paid >= total || !paymentDate) {
+    return null;
+  }
+
+  return getNextPaymentDate(paymentDate);
+}
+
+/**
+ * Weekly stream options (Mondays) around the payment week.
+ */
+export function generateStreamOptions(
+  paymentDate,
+  weeksBefore = 4,
+  weeksAfter = 8
+) {
+  if (!paymentDate) {
+    return [];
+  }
+
+  const anchor =
+    getStartDate(paymentDate);
+
+  if (!anchor) {
+    return [];
+  }
+
+  const base = new Date(anchor);
+  const options = [];
+
+  for (
+    let offset = -weeksBefore;
+    offset <= weeksAfter;
+    offset += 1
+  ) {
+    const date = new Date(base);
+    date.setDate(
+      date.getDate() + offset * 7
+    );
+
+    options.push(
+      date.toISOString().split("T")[0]
+    );
+  }
+
+  return options;
+}
+
+export function getDefaultStream(
+  paymentDate
+) {
+  return getStartDate(paymentDate);
+}
+
+/**
+ * Resolves client/payment startDate (stream Monday).
+ * BB: manual date. Others: selected stream Monday.
+ */
+export function resolvePaymentStartDate({
+  dealTypeId,
+  paymentDate,
+  selectedStream,
+  manualStartDate,
+}) {
+  if (isBbDealType(dealTypeId)) {
+    return manualStartDate || "";
+  }
+
+  return (
+    selectedStream ||
+    getDefaultStream(paymentDate) ||
+    ""
+  );
+}
+
+export { SUBSCRIPTION_CYCLE_DAYS };

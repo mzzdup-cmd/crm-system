@@ -1,8 +1,76 @@
 @import "tailwindcss";
 
+:root {
+  color-scheme: dark;
+}
+
 body {
   margin: 0;
   background: #020617;
   color: white;
-  font-family: Arial, sans-serif;
+  font-family: Inter, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+@keyframes slide-in-right {
+  from {
+    transform: translateX(100%);
+    opacity: 0.8;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 0.22s ease-out;
+}
+
+@media (hover: hover) {
+  a, button {
+    transition: background-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
+  }
+}
+
+@media (max-width: 640px) {
+  h1 {
+    font-size: 1.75rem;
+    line-height: 2rem;
+  }
+}
+
+.recharts-wrapper {
+  max-width: 100%;
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }

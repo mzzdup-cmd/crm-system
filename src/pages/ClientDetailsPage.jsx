@@ -5,21 +5,48 @@ import {
 
 import {
   useParams,
-} from "react-router-dom";
-
-import {
-  doc,
-  getDoc,
-  collection,
-  getDocs,
-} from "firebase/firestore";
-
-import { db }
-from "../services/firebase";
-
-import {
   Link,
+  Navigate,
 } from "react-router-dom";
+
+import { useAuth }
+from "../context/AuthContext";
+
+import {
+  getClientByIdForUser,
+  updateClient,
+} from "../services/clientService";
+
+import { useToast }
+from "../context/ToastContext";
+
+import {
+  getPaymentsByClientId,
+  updatePaymentWithClient,
+  deletePayment,
+} from "../services/paymentService";
+
+import {
+  canEditPayment,
+  canDeletePayment,
+} from "../domain/payment/paymentPermissions";
+
+import {
+  formatMoney,
+} from "../utils/moneyFormat";
+
+import ConfirmModal
+from "../components/ui/ConfirmModal";
+
+import PaymentEditModal
+from "../components/payments/PaymentEditModal";
+
+import {
+  getRemain,
+} from "../domain/client/clientStatus";
+
+import LoadingState
+from "../components/LoadingState";
 
 
 export default function ClientDetailsPage() {
@@ -27,109 +54,234 @@ export default function ClientDetailsPage() {
   const { id } =
     useParams();
 
+  const { userData, user, loading: authLoading } = useAuth();
+  const toast = useToast();
+
+  const actor = userData
+    ? { ...userData, uid: user?.uid }
+    : null;
+
+  const isAdmin =
+    userData?.role === "admin";
+
   const [client, setClient] =
     useState(null);
 
+  const [vkDraft, setVkDraft] =
+    useState("");
+
+  const [savingVk, setSavingVk] =
+    useState(false);
+
   const [payments, setPayments] =
     useState([]);
+
+  const [loading, setLoading] =
+    useState(true);
+
+  const [denied, setDenied] =
+    useState(false);
+
+  const [editPayment, setEditPayment] =
+    useState(null);
+
+  const [deleteTarget, setDeleteTarget] =
+    useState(null);
+
+  const [savingPayment, setSavingPayment] =
+    useState(false);
 
   useEffect(() => {
 
     loadClient();
     loadPayments();
 
-  }, []);
+  }, [id, userData, authLoading]);
 
   async function loadClient() {
-
-    const ref = doc(
-      db,
-      "clients",
-      id
-    );
-
-    const snapshot =
-      await getDoc(ref);
-
-    if (
-      snapshot.exists()
-    ) {
-
-      setClient({
-
-        id:
-          snapshot.id,
-
-        ...snapshot.data(),
-
-      });
-
+    if (authLoading) {
+      return;
     }
 
+    if (!userData) {
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const clientData =
+        await getClientByIdForUser(
+          id,
+          userData
+        );
+
+      if (!clientData) {
+        setDenied(true);
+        setLoading(false);
+        return;
+      }
+
+      setClient(clientData);
+      setVkDraft(clientData.vkLink || "");
+      setDenied(false);
+    } catch (error) {
+      console.error(error);
+      toast.error(
+        error.message ||
+          "Ошибка загрузки клиента"
+      );
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function loadPayments() {
+    try {
+      const data =
+        await getPaymentsByClientId(id);
 
-    const snapshot =
-      await getDocs(
-        collection(db, "payments")
+      setPayments(data);
+    } catch (error) {
+      console.error(error);
+      toast.error(
+        "Не удалось загрузить оплаты"
+      );
+    }
+  }
+
+  async function handleSavePaymentEdit({
+    paymentUpdates,
+    clientUpdates,
+  }) {
+    if (!editPayment || !actor) {
+      return;
+    }
+
+    setSavingPayment(true);
+
+    try {
+      const result =
+        await updatePaymentWithClient({
+          paymentId: editPayment.id,
+          paymentUpdates,
+          clientUpdates,
+          userData: actor,
+        });
+
+      toast.success(
+        `Оплата обновлена: ${formatMoney(
+          paymentUpdates.amount
+        )}`
       );
 
-    const data = [];
+      setEditPayment(null);
 
-    snapshot.forEach((doc) => {
-
-      const payment = {
-
-        id: doc.id,
-        ...doc.data(),
-
-      };
-
-      if (
-        payment.clientId === id
-      ) {
-
-        data.push(payment);
-
+      if (result.client) {
+        setClient(result.client);
       }
 
-    });
+      await loadPayments();
+    } catch (error) {
+      console.error(error);
+      toast.error(
+        error.message ||
+          "Не удалось сохранить"
+      );
+    } finally {
+      setSavingPayment(false);
+    }
+  }
 
-    data.sort(
+  async function handleDeletePayment() {
+    if (!deleteTarget || !actor) {
+      return;
+    }
 
-      (a, b) =>
+    setSavingPayment(true);
 
-        b.createdAt -
-        a.createdAt
+    try {
+      const result = await deletePayment({
+        paymentId: deleteTarget.id,
+        userData: actor,
+      });
 
+      toast.success(
+        `Оплата удалена: ${formatMoney(
+          deleteTarget.amount
+        )}`
+      );
+
+      setDeleteTarget(null);
+
+      if (result.client) {
+        setClient(result.client);
+      }
+
+      await loadPayments();
+    } catch (error) {
+      console.error(error);
+      toast.error(
+        error.message ||
+          "Не удалось удалить"
+      );
+    } finally {
+      setSavingPayment(false);
+    }
+  }
+
+  async function saveVkLink() {
+    if (!client || !vkDraft.trim()) {
+      return;
+    }
+
+    setSavingVk(true);
+
+    try {
+      await updateClient(client.id, {
+        vkLink: vkDraft.trim(),
+      });
+
+      setClient({
+        ...client,
+        vkLink: vkDraft.trim(),
+      });
+
+      toast.success(
+        "VK ссылка сохранена"
+      );
+    } catch (error) {
+      toast.error(
+        error.message ||
+          "Не удалось сохранить"
+      );
+    } finally {
+      setSavingVk(false);
+    }
+  }
+
+  if (loading) {
+
+    return (
+      <LoadingState message="Загрузка клиента..." />
     );
-
-    setPayments(data);
 
   }
 
-  if (!client) {
+  if (denied || !client) {
 
     return (
-      <div>
-        Загрузка...
-      </div>
+      <Navigate
+        to="/unauthorized"
+        replace
+      />
     );
 
   }
 
   const remain =
-
-    Number(
-      client.budget || 0
-    )
-
-    -
-
-    Number(
-      client.amount || 0
-    );
+    getRemain(client);
 
   return (
 
@@ -226,7 +378,51 @@ export default function ClientDetailsPage() {
 
   }
 
-</div>
+          </div>
+
+          {!client.vkLink && (
+            <div className="mt-6 bg-amber-500/10 border border-amber-500/30 p-5 rounded-2xl max-w-xl">
+              <div className="font-bold text-amber-300 mb-2">
+                Нужно дозаполнить VK
+              </div>
+              <p className="text-sm text-slate-400 mb-4">
+                Добавьте ссылку — напоминание
+                закроется автоматически
+              </p>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <input
+                  value={vkDraft}
+                  onChange={(e) =>
+                    setVkDraft(
+                      e.target.value
+                    )
+                  }
+                  placeholder="https://vk.com/..."
+                  className="
+                    flex-1 bg-slate-800
+                    p-3 rounded-xl
+                  "
+                />
+                <button
+                  type="button"
+                  onClick={saveVkLink}
+                  disabled={
+                    savingVk ||
+                    !vkDraft.trim()
+                  }
+                  className="
+                    bg-amber-500 hover:bg-amber-600
+                    px-6 py-3 rounded-xl font-bold
+                    disabled:opacity-50
+                  "
+                >
+                  {savingVk
+                    ? "Сохранение..."
+                    : "Сохранить VK"}
+                </button>
+              </div>
+            </div>
+          )}
 
         </div>
 
@@ -248,7 +444,7 @@ export default function ClientDetailsPage() {
 
       </div>
 
-      <div className="grid grid-cols-4 gap-6 mt-10">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 md:gap-6 mt-8 md:mt-10">
 
         <div className="bg-slate-900 p-6 rounded-2xl">
 
@@ -392,7 +588,12 @@ export default function ClientDetailsPage() {
 
                         {
 
-                          payment.amount
+                          formatMoney(
+                            payment.amount,
+                            {
+                              withCurrency: false,
+                            }
+                          )
 
                         }
 
@@ -432,6 +633,50 @@ export default function ClientDetailsPage() {
 
                   }
 
+                  <div className="mt-4 flex flex-wrap gap-3">
+                    {canEditPayment(
+                      payment,
+                      userData
+                    ) && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setEditPayment(
+                            payment
+                          )
+                        }
+                        className="
+                          px-4 py-2 rounded-xl
+                          bg-cyan-600 hover:bg-cyan-700
+                          text-sm font-semibold
+                        "
+                      >
+                        Редактировать
+                      </button>
+                    )}
+
+                    {canDeletePayment(
+                      payment,
+                      userData
+                    ) && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setDeleteTarget(
+                            payment
+                          )
+                        }
+                        className="
+                          px-4 py-2 rounded-xl
+                          bg-red-600/80 hover:bg-red-600
+                          text-sm font-semibold
+                        "
+                      >
+                        Удалить
+                      </button>
+                    )}
+                  </div>
+
                 </div>
 
               )
@@ -442,6 +687,36 @@ export default function ClientDetailsPage() {
         </div>
 
       </div>
+
+      <PaymentEditModal
+        open={Boolean(editPayment)}
+        payment={editPayment}
+        userData={userData}
+        isAdmin={isAdmin}
+        saving={savingPayment}
+        onSave={handleSavePaymentEdit}
+        onClose={() =>
+          setEditPayment(null)
+        }
+      />
+
+      <ConfirmModal
+        open={Boolean(deleteTarget)}
+        title="Удалить оплату?"
+        message={
+          deleteTarget
+            ? `${formatMoney(
+                deleteTarget.amount
+              )} — сумма клиента будет пересчитана.`
+            : ""
+        }
+        confirmLabel="Удалить"
+        loading={savingPayment}
+        onConfirm={handleDeletePayment}
+        onCancel={() =>
+          setDeleteTarget(null)
+        }
+      />
 
     </div>
 

@@ -30,7 +30,7 @@ export default function LoginForm() {
         password
       );
 
-    } catch (err) {
+    } catch {
 
       setError(
         "Неверная почта или пароль"
