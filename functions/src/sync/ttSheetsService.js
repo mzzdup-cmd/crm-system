@@ -1,5 +1,7 @@
 const { google } = require("googleapis");
 
+const sheetTabCache = new Map();
+
 function getCredentials() {
   const credentialsJson =
     process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
@@ -29,6 +31,86 @@ async function getSheetsClient() {
   });
 }
 
+function normalizeTabName(name) {
+  return String(name || "")
+    .trim()
+    .toUpperCase()
+    .replace(/\u0422/g, "T")
+    .replace(/\u0442/g, "T");
+}
+
+function toSheetRange(sheetName, cellRange) {
+  const escaped = String(sheetName).replace(
+    /'/g,
+    "''"
+  );
+
+  return `'${escaped}'!${cellRange}`;
+}
+
+async function listSpreadsheetTabs(
+  spreadsheetId
+) {
+  const sheets = await getSheetsClient();
+
+  const meta = await sheets.spreadsheets.get({
+    spreadsheetId,
+    fields: "sheets.properties.title",
+  });
+
+  return (meta.data.sheets || []).map(
+    (sheet) => sheet.properties?.title
+  ).filter(Boolean);
+}
+
+async function resolveSheetTabName(
+  spreadsheetId,
+  preferredName = "TT"
+) {
+  const cacheKey = `${spreadsheetId}:${preferredName}`;
+
+  if (sheetTabCache.has(cacheKey)) {
+    return sheetTabCache.get(cacheKey);
+  }
+
+  const titles =
+    await listSpreadsheetTabs(spreadsheetId);
+
+  if (!titles.length) {
+    throw new Error(
+      `Spreadsheet ${spreadsheetId} has no tabs`
+    );
+  }
+
+  let match = titles.find(
+    (title) => title === preferredName
+  );
+
+  if (!match) {
+    const target =
+      normalizeTabName(preferredName);
+
+    match = titles.find(
+      (title) =>
+        normalizeTabName(title) === target
+    );
+  }
+
+  if (!match) {
+    match = titles.find((title) =>
+      /tt|тт/i.test(title)
+    );
+  }
+
+  if (!match) {
+    match = titles[0];
+  }
+
+  sheetTabCache.set(cacheKey, match);
+
+  return match;
+}
+
 async function appendTtRow({
   spreadsheetId,
   sheetName,
@@ -36,10 +118,21 @@ async function appendTtRow({
 }) {
   const sheets = await getSheetsClient();
 
+  const resolvedTab =
+    await resolveSheetTabName(
+      spreadsheetId,
+      sheetName
+    );
+
+  const range = toSheetRange(
+    resolvedTab,
+    "A:P"
+  );
+
   const response =
     await sheets.spreadsheets.values.append({
       spreadsheetId,
-      range: `${sheetName}!A:P`,
+      range,
       valueInputOption: "USER_ENTERED",
       insertDataOption: "INSERT_ROWS",
       requestBody: {
@@ -49,7 +142,7 @@ async function appendTtRow({
 
   return {
     spreadsheetId,
-    sheetName,
+    sheetName: resolvedTab,
     updatedRange:
       response.data.updates?.updatedRange ||
       null,
@@ -65,6 +158,31 @@ async function writeTtSyncMeta({
 }) {
   const sheets = await getSheetsClient();
 
+  const titles =
+    await listSpreadsheetTabs(spreadsheetId);
+
+  let resolvedMetaTab = titles.find(
+    (title) => title === metaTab
+  );
+
+  if (!resolvedMetaTab) {
+    await sheets.spreadsheets.batchUpdate({
+      spreadsheetId,
+      requestBody: {
+        requests: [
+          {
+            addSheet: {
+              properties: {
+                title: metaTab,
+              },
+            },
+          },
+        ],
+      },
+    });
+    resolvedMetaTab = metaTab;
+  }
+
   const values = [
     ["CRM TT Sync"],
     ["lastSyncAt", payload.lastSyncAtIso],
@@ -77,14 +195,14 @@ async function writeTtSyncMeta({
 
   await sheets.spreadsheets.values.update({
     spreadsheetId,
-    range: `${metaTab}!A1`,
+    range: toSheetRange(resolvedMetaTab, "A1"),
     valueInputOption: "USER_ENTERED",
     requestBody: {
       values,
     },
   });
 
-  return { metaTab };
+  return { metaTab: resolvedMetaTab };
 }
 
 function formatMsk(timestamp) {
@@ -102,4 +220,7 @@ module.exports = {
   appendTtRow,
   writeTtSyncMeta,
   formatMsk,
+  resolveSheetTabName,
+  listSpreadsheetTabs,
+  toSheetRange,
 };

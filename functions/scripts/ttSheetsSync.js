@@ -58,6 +58,25 @@ async function main() {
     listConfiguredManagers().join(", ")
   );
 
+  const {
+    resolveSheetTabName,
+  } = require("../src/sync/ttSheetsService");
+
+  const katyaConfig = require("../src/sync/managerTtSheets")
+    .getTtSheetForManager("katya_bakaeva");
+
+  if (katyaConfig?.spreadsheetId) {
+    const resolvedTab =
+      await resolveSheetTabName(
+        katyaConfig.spreadsheetId,
+        katyaConfig.sheetName
+      );
+
+    console.log(
+      `[tt-sync] TT tab resolved: "${resolvedTab}"`
+    );
+  }
+
   const result =
     await runTtSheetsSync({
       source: "github_actions",
