@@ -1,12 +1,16 @@
 const admin = require("firebase-admin");
 
 const {
-  getSyncRowMetadata,
-} = require("./syncRowMapper");
+  getTtRowMetadata,
+} = require("./ttRowMapper");
 
 const {
-  appendSyncRow,
-} = require("./sheetsSyncService");
+  getTtSheetForManager,
+} = require("./managerTtSheets");
+
+const {
+  appendTtRow,
+} = require("./ttSheetsService");
 
 const {
   SYNC_LOG_STATUS,
@@ -118,15 +122,39 @@ async function syncPaymentToSheets(paymentId, paymentData) {
       paymentId
     );
 
-    const metadata = getSyncRowMetadata({
+    const metadata = getTtRowMetadata({
       payment,
       client,
       cycle,
     });
 
-    const sheetsResult = await appendSyncRow(
-      metadata.row
+    const ttConfig = getTtSheetForManager(
+      metadata.managerId
     );
+
+    if (!ttConfig) {
+      await getDb()
+        .collection("syncLog")
+        .doc(logId)
+        .update({
+          status: SYNC_LOG_STATUS.SKIPPED,
+          reason: "manager_tt_not_configured",
+          managerId: metadata.managerId,
+          completedAt: Date.now(),
+        });
+
+      return {
+        status: SYNC_LOG_STATUS.SKIPPED,
+        paymentId,
+        reason: "manager_tt_not_configured",
+      };
+    }
+
+    const sheetsResult = await appendTtRow({
+      spreadsheetId: ttConfig.spreadsheetId,
+      sheetName: ttConfig.sheetName,
+      row: metadata.row,
+    });
 
     await markPaymentSynced(paymentId, sheetsResult);
 
@@ -138,6 +166,8 @@ async function syncPaymentToSheets(paymentId, paymentData) {
         cycle: metadata.cycle,
         clientId: metadata.clientId,
         managerId: metadata.managerId,
+        spreadsheetId: ttConfig.spreadsheetId,
+        sheetName: ttConfig.sheetName,
         sheetsUpdatedRange:
           sheetsResult.updatedRange,
         completedAt: Date.now(),

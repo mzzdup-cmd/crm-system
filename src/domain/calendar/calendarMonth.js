@@ -155,14 +155,18 @@ export function eventOccursOnDate(
   event,
   dateKey
 ) {
-  const eventStart =
-    event.startDate || event.date;
+  if (event.isRange) {
+    const eventStart =
+      event.startDate || event.date;
 
-  const eventEnd =
-    event.endDate || event.date || eventStart;
+    const eventEnd =
+      event.endDate || event.date || eventStart;
 
-  return (
-    dateKey >= eventStart &&
-    dateKey <= eventEnd
-  );
+    return (
+      dateKey >= eventStart &&
+      dateKey <= eventEnd
+    );
+  }
+
+  return event.date === dateKey;
 }

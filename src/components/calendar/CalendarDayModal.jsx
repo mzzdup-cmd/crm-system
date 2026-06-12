@@ -11,6 +11,19 @@ import {
   CALENDAR_TYPE_LABELS,
 } from "../../constants/calendar";
 
+function formatEventPeriod(event) {
+  if (
+    !event.isRange ||
+    !event.startDate ||
+    !event.endDate ||
+    event.startDate === event.endDate
+  ) {
+    return null;
+  }
+
+  return `${formatDisplayDate(event.startDate)} — ${formatDisplayDate(event.endDate)}`;
+}
+
 export default function CalendarDayModal({
   open,
   dateKey,
@@ -73,7 +86,7 @@ export default function CalendarDayModal({
 
             return (
               <div
-                key={`${event.id}_${event.date}`}
+                key={event.id}
                 className={`
                   rounded-xl border p-4
                   ${style.chip}
@@ -88,6 +101,11 @@ export default function CalendarDayModal({
                     <div className="text-xs mt-1 opacity-80">
                       {CALENDAR_TYPE_LABELS[event.type] ||
                         "Событие"}
+                      {formatEventPeriod(event) && (
+                        <span className="block mt-0.5">
+                          {formatEventPeriod(event)}
+                        </span>
+                      )}
                     </div>
 
                     {event.description && (

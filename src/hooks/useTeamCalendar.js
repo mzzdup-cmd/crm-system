@@ -28,6 +28,7 @@ import {
   shiftMonth,
   buildMonthGrid,
   formatMonthTitle,
+  eventOverlapsRange,
 } from "../domain/calendar/calendarMonth";
 
 import {
@@ -151,10 +152,12 @@ export function useTeamCalendar(
         vacationRequests,
         schedules,
         calendarEvents,
-      }).filter(
-        (event) =>
-          event.date >= monthRange.startDate &&
-          event.date <= monthRange.endDate
+      }).filter((event) =>
+        eventOverlapsRange(
+          event,
+          monthRange.startDate,
+          monthRange.endDate
+        )
       ),
     [
       timeOffRequests,

@@ -7,6 +7,10 @@ import {
 } from "../schedule/timeOffDates";
 
 import {
+  enumerateDateRange,
+} from "../schedule/timeOffDates";
+
+import {
   formatDisplayDate,
 } from "./calendarMonth";
 
@@ -95,20 +99,29 @@ export function buildCalendarInsights({
       return;
     }
 
-    if (
-      event.date < monthStart ||
-      event.date > monthEnd
-    ) {
-      return;
-    }
+    const dates = event.isRange
+      ? enumerateDateRange(
+          event.startDate,
+          event.endDate || event.startDate
+        )
+      : [event.date];
 
-    if (!byDate[event.date]) {
-      byDate[event.date] = new Set();
-    }
+    dates.forEach((date) => {
+      if (
+        date < monthStart ||
+        date > monthEnd
+      ) {
+        return;
+      }
 
-    if (event.managerId) {
-      byDate[event.date].add(event.managerId);
-    }
+      if (!byDate[date]) {
+        byDate[date] = new Set();
+      }
+
+      if (event.managerId) {
+        byDate[date].add(event.managerId);
+      }
+    });
   });
 
   Object.entries(byDate).forEach(

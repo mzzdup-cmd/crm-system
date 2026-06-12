@@ -47,7 +47,12 @@ async function markPaymentSynced(paymentId, meta = {}) {
     .update({
       syncedToSheets: true,
       syncedAt: Date.now(),
+      syncedToTt: true,
+      ttSpreadsheetId:
+        meta.spreadsheetId || null,
       sheetsUpdatedRange:
+        meta.updatedRange || null,
+      ttUpdatedRange:
         meta.updatedRange || null,
     });
 }

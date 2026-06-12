@@ -107,26 +107,18 @@ export function aggregateCalendarEvents({
       return;
     }
 
-    enumerateDateRange(
-      request.startDate,
-      request.endDate
-    ).forEach((date) => {
-      pushEvent({
-        id: `vacation_${request.id}_${date}`,
-        dedupKey: buildEventKey(
-          date,
-          request.managerId,
-          CALENDAR_EVENT_TYPES.VACATION
-        ),
-        type: CALENDAR_EVENT_TYPES.VACATION,
-        date,
-        startDate: request.startDate,
-        endDate: request.endDate,
-        managerId: request.managerId,
-        title: `${request.manager || getManagerNameById(request.managerId)} — отпуск`,
-        source: "vacationRequests",
-        editable: false,
-      });
+    pushEvent({
+      id: `vacation_${request.id}`,
+      dedupKey: `vacation_${request.id}`,
+      type: CALENDAR_EVENT_TYPES.VACATION,
+      date: request.startDate,
+      startDate: request.startDate,
+      endDate: request.endDate,
+      managerId: request.managerId,
+      title: `${request.manager || getManagerNameById(request.managerId)} — отпуск`,
+      source: "vacationRequests",
+      isRange: true,
+      editable: false,
     });
   });
 
@@ -202,11 +194,20 @@ export function aggregateCalendarEvents({
 
 export function groupEventsByDate(events) {
   return events.reduce((acc, event) => {
-    if (!acc[event.date]) {
-      acc[event.date] = [];
-    }
+    const dates = event.isRange
+      ? enumerateDateRange(
+          event.startDate,
+          event.endDate || event.startDate
+        )
+      : [event.date];
 
-    acc[event.date].push(event);
+    dates.forEach((date) => {
+      if (!acc[date]) {
+        acc[date] = [];
+      }
+
+      acc[date].push(event);
+    });
 
     return acc;
   }, {});
