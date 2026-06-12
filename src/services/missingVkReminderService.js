@@ -110,24 +110,56 @@ export async function resolveMissingVkRemindersForClient(
     return;
   }
 
-  const managerId = client.managerId;
+  const dedupKey = buildMissingVkDedupKey(
+    client.id
+  );
 
-  if (!managerId) {
+  const userIds = new Set();
+
+  if (client.managerId) {
+    const users =
+      await getUsersByManagerIds([
+        client.managerId,
+      ]);
+
+    users.forEach((user) => {
+      if (user?.uid) {
+        userIds.add(user.uid);
+      }
+    });
+  }
+
+  await Promise.all(
+    [...userIds].map((userId) =>
+      resolveNotificationByDedupKey(
+        userId,
+        dedupKey
+      )
+    )
+  );
+}
+
+export async function syncMissingVkResolutionForUser(
+  userId,
+  clients = []
+) {
+  if (!userId || !clients.length) {
     return;
   }
 
-  const users =
-    await getUsersByManagerIds([
-      managerId,
-    ]);
+  const dedupKeys = clients
+    .filter((client) =>
+      client.vkLink?.trim()
+    )
+    .map((client) =>
+      buildMissingVkDedupKey(client.id)
+    );
 
   await Promise.all(
-    users.map((user) =>
+    dedupKeys.map((dedupKey) =>
       resolveNotificationByDedupKey(
-        user.uid,
-        buildMissingVkDedupKey(
-          client.id
-        )
+        userId,
+        dedupKey
       )
     )
   );

@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { useState } from "react";
 
 import EmptyState
 from "../components/ui/EmptyState";
@@ -6,15 +6,60 @@ from "../components/ui/EmptyState";
 import RealtimeIndicator
 from "../components/ui/RealtimeIndicator";
 
+import SubscriptionCard
+from "../components/subscriptions/SubscriptionCard";
+
+import ConfirmModal
+from "../components/ui/ConfirmModal";
+
+import { useToast }
+from "../context/ToastContext";
+
 import { useSubscriptionsRealtime }
 from "../hooks/useRealtimeDashboard";
+
+import { markSubscriptionChurned }
+from "../services/clientService";
+
+import {
+  SUBSCRIPTION_OUTCOMES,
+} from "../domain/client/subscriptionOutcome";
 
 import LoadingState
 from "../components/LoadingState";
 
+const TABS = [
+  {
+    id: SUBSCRIPTION_OUTCOMES.ACTIVE,
+    label: "Активные",
+  },
+  {
+    id: SUBSCRIPTION_OUTCOMES.COMPLETED,
+    label: "Успешные",
+  },
+  {
+    id: SUBSCRIPTION_OUTCOMES.CHURNED,
+    label: "Слив",
+  },
+];
+
 export default function SubscriptionsPage() {
+  const toast = useToast();
+
+  const [activeTab, setActiveTab] =
+    useState(SUBSCRIPTION_OUTCOMES.ACTIVE);
+
+  const [churnTarget, setChurnTarget] =
+    useState(null);
+
+  const [savingChurn, setSavingChurn] =
+    useState(false);
+
   const {
-    subscriptions,
+    activeSubscriptions,
+    completedSubscriptions,
+    churnedSubscriptions,
+    subscriptionCounts,
     initialLoading,
     connected,
   } = useSubscriptionsRealtime();
@@ -24,6 +69,80 @@ export default function SubscriptionsPage() {
       <LoadingState message="Загрузка подписок..." />
     );
   }
+
+  const tabItems = {
+    [SUBSCRIPTION_OUTCOMES.ACTIVE]:
+      activeSubscriptions,
+    [SUBSCRIPTION_OUTCOMES.COMPLETED]:
+      completedSubscriptions,
+    [SUBSCRIPTION_OUTCOMES.CHURNED]:
+      churnedSubscriptions,
+  };
+
+  const currentItems =
+    tabItems[activeTab] || [];
+
+  const emptyCopy = {
+    [SUBSCRIPTION_OUTCOMES.ACTIVE]: {
+      title: "Активных подписок нет",
+      description:
+        "Здесь клиенты с незакрытым бюджетом и графиком доплат.",
+    },
+    [SUBSCRIPTION_OUTCOMES.COMPLETED]: {
+      title: "Успешных подписок пока нет",
+      description:
+        "Полностью оплаченные подписки появятся здесь автоматически.",
+    },
+    [SUBSCRIPTION_OUTCOMES.CHURNED]: {
+      title: "Сливов пока нет",
+      description:
+        "Если ученик отказывается продолжать оплату, перенесите подписку в слив.",
+    },
+  };
+
+  async function confirmChurn() {
+    if (!churnTarget) {
+      return;
+    }
+
+    setSavingChurn(true);
+
+    try {
+      await markSubscriptionChurned(
+        churnTarget.id
+      );
+
+      toast.success(
+        "Подписка перенесена в слив"
+      );
+      setChurnTarget(null);
+    } catch (error) {
+      toast.error(
+        error.message ||
+          "Не удалось обновить подписку"
+      );
+    } finally {
+      setSavingChurn(false);
+    }
+  }
+
+  function handleCopy(status) {
+    if (status === "error") {
+      toast.error(
+        "Не удалось скопировать текст"
+      );
+      return;
+    }
+
+    toast.success(
+      "Текст скопирован для Bluesales"
+    );
+  }
+
+  const totalCount =
+    subscriptionCounts.active
+    + subscriptionCounts.completed
+    + subscriptionCounts.churned;
 
   return (
     <div className="space-y-6">
@@ -40,7 +159,11 @@ export default function SubscriptionsPage() {
 
           <p className="text-slate-400 mt-2 flex items-center gap-3">
 
-            <span>{subscriptions.length} активных</span>
+            <span>
+              {subscriptionCounts.active} активных
+              {" · "}
+              {totalCount} всего
+            </span>
 
             <RealtimeIndicator connected={connected} />
 
@@ -50,148 +173,87 @@ export default function SubscriptionsPage() {
 
       </div>
 
-      {
+      <div className="flex flex-wrap gap-2">
+        {TABS.map((tab) => {
+          const count =
+            subscriptionCounts[
+              tab.id === SUBSCRIPTION_OUTCOMES.ACTIVE
+                ? "active"
+                : tab.id === SUBSCRIPTION_OUTCOMES.COMPLETED
+                  ? "completed"
+                  : "churned"
+            ];
 
-        subscriptions.length === 0
-
-          ? (
-
-            <EmptyState
-              icon="📋"
-              title="Активных подписок нет"
-              description="Подписки с остатком долга появятся здесь автоматически."
-            />
-
-          )
-
-          : (
-
-            <div className="grid gap-4">
-
-              {
-
-                subscriptions.map((client) => (
-
-                  <Link
-                    key={client.id}
-                    to={`/client/${client.id}`}
-                    className={`
-                      block p-5 md:p-6 rounded-2xl
-                      transition-all duration-200
-                      hover:scale-[1.005] hover:bg-slate-800
-                      ${
-                        client.overdue
-                          ? "bg-red-500/10 border border-red-500/40"
-                          : "bg-slate-900"
-                      }
-                    `}
-                  >
-
-                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-
-                      <div>
-
-                        <div className="text-xl md:text-2xl font-bold">
-
-                          {client.name || client.manager || "Клиент"}
-
-                        </div>
-
-                        <div className="text-slate-400 mt-2">
-
-                          {client.course} · {client.manager}
-
-                        </div>
-
-                      </div>
-
-                      <div className="text-left sm:text-right">
-
-                        <div className="text-2xl md:text-3xl font-bold text-yellow-400">
-
-                          {client.remain.toLocaleString("ru-RU")} ₽
-
-                        </div>
-
-                        <div className="text-slate-400 text-sm mt-1">
-
-                          Остаток
-
-                        </div>
-
-                      </div>
-
-                    </div>
-
-                    <div className="mt-4 flex flex-wrap justify-between gap-4 text-sm">
-
-                      <div>
-
-                        <div className="text-slate-400">
-
-                          Следующая оплата
-
-                        </div>
-
-                        <div className="mt-1 font-medium">
-
-                          {client.nextPaymentDate || "Не указана"}
-
-                        </div>
-
-                      </div>
-
-                      <div className="text-right">
-
-                        <div className="text-slate-400">
-
-                          Статус
-
-                        </div>
-
-                        <div className="mt-1 font-bold">
-
-                          {
-
-                            client.overdue
-
-                              ? (
-                                <span className="text-red-400">
-
-                                  Просрочка
-
-                                </span>
-                              )
-
-                              : (
-                                <span className="text-green-400">
-
-                                  Активна
-
-                                </span>
-                              )
-
-                          }
-
-                        </div>
-
-                      </div>
-
-                    </div>
-
-                  </Link>
-
-                ))
-
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() =>
+                setActiveTab(tab.id)
               }
+              className={`
+                px-4 py-2 rounded-xl font-medium transition-colors
+                ${
+                  activeTab === tab.id
+                    ? "bg-cyan-500 text-white"
+                    : "bg-slate-800 text-slate-300 hover:bg-slate-700"
+                }
+              `}
+            >
+              {tab.label}
+              {" "}
+              ({count})
+            </button>
+          );
+        })}
+      </div>
 
-            </div>
+      {currentItems.length === 0 ? (
+        <EmptyState
+          icon="📋"
+          title={
+            emptyCopy[activeTab].title
+          }
+          description={
+            emptyCopy[activeTab].description
+          }
+        />
+      ) : (
+        <div className="grid gap-4">
+          {currentItems.map((client) => (
+            <SubscriptionCard
+              key={client.id}
+              client={client}
+              variant={activeTab}
+              onMarkChurned={
+                activeTab ===
+                SUBSCRIPTION_OUTCOMES.ACTIVE
+                  ? setChurnTarget
+                  : undefined
+              }
+              onCopy={handleCopy}
+            />
+          ))}
+        </div>
+      )}
 
-          )
-
-      }
+      <ConfirmModal
+        open={Boolean(churnTarget)}
+        title="Перенести в слив?"
+        message={
+          churnTarget
+            ? `Клиент «${churnTarget.name || "без имени"}» больше не будет в активных подписках.`
+            : ""
+        }
+        confirmLabel="В слив"
+        loading={savingChurn}
+        onConfirm={confirmChurn}
+        onCancel={() =>
+          setChurnTarget(null)
+        }
+      />
 
     </div>
-
   );
+
 }

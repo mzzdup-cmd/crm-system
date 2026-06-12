@@ -144,6 +144,23 @@ export async function markNotificationRead(
   });
 }
 
+export async function markNotificationResolved(
+  notificationId
+) {
+  const ref = doc(
+    db,
+    "notifications",
+    notificationId
+  );
+
+  await updateDoc(ref, {
+    read: true,
+    readAt: Date.now(),
+    resolved: true,
+    resolvedAt: Date.now(),
+  });
+}
+
 export async function resolveNotificationByDedupKey(
   userId,
   dedupKey

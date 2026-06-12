@@ -24,6 +24,9 @@ import {
   useAdminAnalyticsSummary,
 } from "../hooks/useRealtimeDashboard";
 
+import SectionHeading
+from "../components/ui/SectionHeading";
+
 import RealtimeIndicator
 from "../components/ui/RealtimeIndicator";
 
@@ -50,7 +53,7 @@ export default function AdminAnalyticsPage() {
   if (loading || !data) {
 
     return (
-      <LoadingState message="Загрузка MM Analytics..." />
+      <LoadingState message="Загрузка аналитики..." />
     );
 
   }
@@ -65,11 +68,17 @@ export default function AdminAnalyticsPage() {
 
         <div className="bg-slate-900/80 p-4 rounded-xl border border-slate-800">
 
-          <div className="text-slate-400 text-xs flex items-center gap-2">
+          <div className="font-semibold text-slate-200 text-xs flex items-center gap-2">
 
-            Live выручка
+            Выручка live
 
             <RealtimeIndicator connected={connected} />
+
+          </div>
+
+          <div className="text-slate-500 text-[11px] font-normal mt-0.5">
+
+            сейчас в CRM
 
           </div>
 
@@ -83,9 +92,15 @@ export default function AdminAnalyticsPage() {
 
         <div className="bg-slate-900/80 p-4 rounded-xl border border-slate-800">
 
-          <div className="text-slate-400 text-xs">
+          <div className="font-semibold text-slate-200 text-xs">
 
-            Live просрочки
+            Просрочки live
+
+          </div>
+
+          <div className="text-slate-500 text-[11px] font-normal mt-0.5">
+
+            неоплаченные клиенты
 
           </div>
 
@@ -99,9 +114,15 @@ export default function AdminAnalyticsPage() {
 
         <div className="bg-slate-900/80 p-4 rounded-xl border border-slate-800">
 
-          <div className="text-slate-400 text-xs">
+          <div className="font-semibold text-slate-200 text-xs">
 
             Сделок
+
+          </div>
+
+          <div className="text-slate-500 text-[11px] font-normal mt-0.5">
+
+            за период
 
           </div>
 
@@ -115,9 +136,15 @@ export default function AdminAnalyticsPage() {
 
         <div className="bg-slate-900/80 p-4 rounded-xl border border-slate-800">
 
-          <div className="text-slate-400 text-xs">
+          <div className="font-semibold text-slate-200 text-xs">
 
-            Recent payments
+            Свежие оплаты
+
+          </div>
+
+          <div className="text-slate-500 text-[11px] font-normal mt-0.5">
+
+            недавние поступления
 
           </div>
 
@@ -137,13 +164,13 @@ export default function AdminAnalyticsPage() {
 
           <h1 className="text-4xl font-bold">
 
-            MM Analytics
+            MM Аналитика
 
           </h1>
 
           <p className="text-slate-400 mt-2">
 
-            Admin Control Center · {data.range.label}
+            Панель руководителя · {data.range.label}
 
           </p>
 
@@ -153,7 +180,7 @@ export default function AdminAnalyticsPage() {
 
           <div>
 
-            Sync success:
+            Успешность sync:
 
             {" "}
 
@@ -163,7 +190,7 @@ export default function AdminAnalyticsPage() {
 
           <div>
 
-            Sheets logs:
+            Записей в Sheets:
 
             {" "}
 
@@ -317,11 +344,11 @@ export default function AdminAnalyticsPage() {
 
         <div className="bg-slate-900 p-6 rounded-2xl">
 
-          <h2 className="text-xl font-bold mb-4">
-
-            Revenue trend
-
-          </h2>
+          <SectionHeading
+            title="Динамика выручки"
+            hint="по дням периода"
+            className="mb-4"
+          />
 
           <RevenueLineChart
             data={data.charts.revenueLine}
@@ -331,11 +358,11 @@ export default function AdminAnalyticsPage() {
 
         <div className="bg-slate-900 p-6 rounded-2xl">
 
-          <h2 className="text-xl font-bold mb-4">
-
-            Revenue by manager
-
-          </h2>
+          <SectionHeading
+            title="Выручка по менеджерам"
+            hint="сравнение команды"
+            className="mb-4"
+          />
 
           <ManagerBarChart
             data={data.charts.managerBars}
@@ -345,11 +372,11 @@ export default function AdminAnalyticsPage() {
 
         <div className="bg-slate-900 p-6 rounded-2xl">
 
-          <h2 className="text-xl font-bold mb-4">
-
-            Deals breakdown
-
-          </h2>
+          <SectionHeading
+            title="Структура сделок"
+            hint="новые, доплаты, апсейлы"
+            className="mb-4"
+          />
 
           <DealsPieChart
             data={data.charts.dealPie}
@@ -359,11 +386,11 @@ export default function AdminAnalyticsPage() {
 
         <div className="bg-slate-900 p-6 rounded-2xl">
 
-          <h2 className="text-xl font-bold mb-4">
-
-            Subscriptions / overdue
-
-          </h2>
+          <SectionHeading
+            title="Подписки и просрочки"
+            hint="активные и должники"
+            className="mb-4"
+          />
 
           <SubscriptionChart
             data={data.charts.subscriptionSplit}
@@ -373,11 +400,11 @@ export default function AdminAnalyticsPage() {
 
         <div className="bg-slate-900 p-6 rounded-2xl">
 
-          <h2 className="text-xl font-bold mb-4">
-
-            Traffic load
-
-          </h2>
+          <SectionHeading
+            title="Нагрузка трафика"
+            hint="распределение потока"
+            className="mb-4"
+          />
 
           <TrafficLoadChart
             data={data.charts.trafficLoad}
@@ -387,11 +414,11 @@ export default function AdminAnalyticsPage() {
 
         <div className="bg-slate-900 p-6 rounded-2xl">
 
-          <h2 className="text-xl font-bold mb-4">
-
-            Manager KPI
-
-          </h2>
+          <SectionHeading
+            title="KPI менеджеров"
+            hint="сделки по типам"
+            className="mb-4"
+          />
 
           <ManagerKpiChart
             data={data.charts.managerKpi}
@@ -471,7 +498,7 @@ export default function AdminAnalyticsPage() {
 
                       <div className="text-slate-400 text-sm">
 
-                        Avg: {formatMoney(manager.averageCheck)}
+                        Средний чек: {formatMoney(manager.averageCheck)}
 
                       </div>
 
@@ -543,21 +570,24 @@ export default function AdminAnalyticsPage() {
 
         <div className="bg-slate-900 p-6 rounded-2xl">
 
-          <h2 className="text-2xl font-bold mb-4">
-
-            Management overview
-
-          </h2>
+          <SectionHeading
+            title="Обзор смен"
+            hint="кто работает сегодня"
+            size="lg"
+            className="mb-4"
+          />
 
           <div className="grid grid-cols-2 gap-4 mb-4">
 
             <AnalyticsCard
-              title="Traffic today"
+              title="Трафик сегодня"
+              hint="количество лидов"
               value={data.management.trafficAmount}
             />
 
             <AnalyticsCard
-              title="Working now"
+              title="На смене"
+              hint="менеджеры сейчас"
               value={data.management.working.length}
             />
 
@@ -595,7 +625,7 @@ export default function AdminAnalyticsPage() {
 
                       {" · "}
 
-                      Traffic:
+                      Трафик:
 
                       {" "}
 

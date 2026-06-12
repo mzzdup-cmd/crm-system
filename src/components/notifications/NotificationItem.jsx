@@ -37,11 +37,35 @@ function formatTime(timestamp) {
 export default function NotificationItem({
   notification,
   onRead,
+  onResolve,
   compact = false,
 }) {
   const config = getNotificationConfig(
     notification.type
   );
+
+  const isDone = notification.resolved;
+
+  function stopNavigation(event) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+
+  async function handleMarkRead(event) {
+    stopNavigation(event);
+
+    if (!notification.read && onRead) {
+      await onRead(notification.id);
+    }
+  }
+
+  async function handleResolve(event) {
+    stopNavigation(event);
+
+    if (onResolve) {
+      await onResolve(notification.id);
+    }
+  }
 
   const content = (
     <div
@@ -49,7 +73,7 @@ export default function NotificationItem({
         flex gap-3 p-4 rounded-xl transition-all duration-200
         hover:bg-slate-800/80
         ${
-          notification.read
+          notification.read || isDone
             ? "opacity-70"
             : "bg-slate-800/40"
         }
@@ -92,9 +116,47 @@ export default function NotificationItem({
 
         </div>
 
+        {isDone && (
+          <div className="mt-2 text-xs text-green-400">
+            Исполнено
+          </div>
+        )}
+
+        {!isDone && (
+          <div className="mt-3 flex flex-wrap gap-2">
+            {!notification.read && (
+              <button
+                type="button"
+                onClick={handleMarkRead}
+                className="
+                  px-2.5 py-1 rounded-lg text-xs
+                  bg-slate-700 text-slate-200
+                  hover:bg-slate-600 transition-colors
+                "
+              >
+                Прочитано
+              </button>
+            )}
+
+            {onResolve && (
+              <button
+                type="button"
+                onClick={handleResolve}
+                className="
+                  px-2.5 py-1 rounded-lg text-xs
+                  bg-cyan-500/20 text-cyan-300
+                  hover:bg-cyan-500/30 transition-colors
+                "
+              >
+                Исполнено
+              </button>
+            )}
+          </div>
+        )}
+
         {
 
-          !notification.read && (
+          !notification.read && !isDone && (
 
             <div className="mt-2 w-2 h-2 rounded-full bg-cyan-400" />
 
@@ -108,12 +170,12 @@ export default function NotificationItem({
   );
 
   function handleClick() {
-    if (!notification.read && onRead) {
+    if (!notification.read && onRead && !isDone) {
       onRead(notification.id);
     }
   }
 
-  if (notification.link) {
+  if (notification.link && !isDone) {
     return (
       <Link
         to={notification.link}
@@ -126,12 +188,8 @@ export default function NotificationItem({
   }
 
   return (
-    <button
-      type="button"
-      onClick={handleClick}
-      className="block w-full text-left"
-    >
+    <div className="block w-full text-left">
       {content}
-    </button>
+    </div>
   );
 }

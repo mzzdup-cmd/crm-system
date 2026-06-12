@@ -7,8 +7,13 @@ const {
 
 const {
   replaceSyncSheet,
+  replaceScheduleSheet,
   writeMetaTab,
 } = require("./sheetsSyncService");
+
+const {
+  buildScheduleExportTable,
+} = require("./scheduleExportBuilder");
 
 const {
   SYNC_LOG_STATUS,
@@ -86,10 +91,20 @@ async function runFullSheetsSync() {
         rows: table.rows,
       });
 
+    const scheduleTable =
+      await buildScheduleExportTable(getDb());
+
+    const scheduleResult =
+      await replaceScheduleSheet({
+        headers: scheduleTable.headers,
+        rows: scheduleTable.rows,
+      });
+
     await writeMetaTab({
       lastSyncAt: startedAt,
       rowCount: table.rows.length,
       paymentCount: payments.length,
+      scheduleRowCount: scheduleTable.rows.length,
     });
 
     await getDb()
@@ -99,8 +114,11 @@ async function runFullSheetsSync() {
         status: SYNC_LOG_STATUS.SUCCESS,
         paymentCount: payments.length,
         rowCount: table.rows.length,
+        scheduleRowCount: scheduleTable.rows.length,
         sheetsUpdatedRange:
           sheetsResult.updatedRange,
+        scheduleUpdatedRange:
+          scheduleResult.updatedRange,
         completedAt: Date.now(),
       });
 
@@ -109,7 +127,9 @@ async function runFullSheetsSync() {
       logId,
       paymentCount: payments.length,
       rowCount: table.rows.length,
+      scheduleRowCount: scheduleTable.rows.length,
       sheetsResult,
+      scheduleResult,
       durationMs: Date.now() - startedAt,
     };
   } catch (error) {

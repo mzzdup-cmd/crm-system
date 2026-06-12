@@ -1,5 +1,6 @@
 export default function AnalyticsCard({
   title,
+  hint,
   value,
   subtitle,
   accent = "text-green-400",
@@ -8,11 +9,17 @@ export default function AnalyticsCard({
   return (
     <div className="bg-slate-900 p-6 rounded-2xl border border-slate-800">
 
-      <div className="text-slate-400">
+      <div className="font-semibold text-slate-200">
 
         {title}
 
       </div>
+
+      {hint && (
+        <div className="text-slate-500 text-xs font-normal mt-0.5">
+          {hint}
+        </div>
+      )}
 
       {
 

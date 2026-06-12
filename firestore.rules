@@ -190,8 +190,13 @@ service cloud.firestore {
         );
 
       allow update: if isSignedIn()
-        && resource.data.userId == request.auth.uid
-        && request.resource.data.userId == resource.data.userId;
+        && (
+          (
+            resource.data.userId == request.auth.uid
+            && request.resource.data.userId == resource.data.userId
+          )
+          || isAdmin()
+        );
 
       allow delete: if isAdmin();
     }
@@ -273,6 +278,12 @@ service cloud.firestore {
       allow update: if isAdmin();
 
       allow delete: if false;
+    }
+
+    match /calendarEvents/{eventId} {
+      allow read: if isSignedIn();
+
+      allow create, update, delete: if isAdmin();
     }
 
     match /knowledgeFaq/{itemId} {

@@ -27,6 +27,9 @@ import {
   buildClientAmountUpdate,
 } from "../domain/payment/clientAmountRecalc";
 import {
+  buildSubscriptionOutcomeUpdate,
+} from "../domain/client/subscriptionOutcome";
+import {
   canEditPayment,
   canDeletePayment,
   isPaymentDeleted,
@@ -557,6 +560,10 @@ export async function applyPaymentToClient({
   await updateClient(client.id, {
     amount: newAmount,
     nextPaymentDate,
+    ...buildSubscriptionOutcomeUpdate(
+      client,
+      newAmount
+    ),
   });
 
   return {

@@ -111,6 +111,10 @@ const TimeOffPage = lazy(
   () => import("./pages/TimeOffPage.jsx")
 );
 
+const TeamCalendarPage = lazy(
+  () => import("./pages/TeamCalendarPage.jsx")
+);
+
 const KnowledgeBasePage = lazy(
   () => import("./pages/KnowledgeBasePage.jsx")
 );
@@ -326,6 +330,15 @@ function AppRoutes() {
             element={
               <LazyPage>
                 <TimeOffPage />
+              </LazyPage>
+            }
+          />
+
+          <Route
+            path="/calendar"
+            element={
+              <LazyPage>
+                <TeamCalendarPage />
               </LazyPage>
             }
           />

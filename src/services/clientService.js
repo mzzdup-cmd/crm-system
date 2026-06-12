@@ -227,6 +227,21 @@ export async function updateClient(id, data) {
   }
 }
 
+import {
+  SUBSCRIPTION_OUTCOMES,
+} from "../domain/client/subscriptionOutcome";
+
+export async function markSubscriptionChurned(
+  clientId
+) {
+  await updateClient(clientId, {
+    subscriptionOutcome:
+      SUBSCRIPTION_OUTCOMES.CHURNED,
+    subscriptionClosedAt: Date.now(),
+    nextPaymentDate: null,
+  });
+}
+
 /** @deprecated use getClientsForUser */
 export function filterClientsByAccess(clients, userData) {
   if (userData?.role === "admin") {

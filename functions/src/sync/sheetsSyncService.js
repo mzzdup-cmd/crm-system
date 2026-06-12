@@ -111,10 +111,88 @@ async function replaceSyncSheet({
   };
 }
 
+async function ensureSheetTab(
+  sheets,
+  spreadsheetId,
+  sheetName
+) {
+  const meta = await sheets.spreadsheets.get({
+    spreadsheetId,
+    fields: "sheets.properties.title",
+  });
+
+  const exists = (meta.data.sheets || []).some(
+    (sheet) =>
+      sheet.properties?.title === sheetName
+  );
+
+  if (exists) {
+    return;
+  }
+
+  await sheets.spreadsheets.batchUpdate({
+    spreadsheetId,
+    requestBody: {
+      requests: [
+        {
+          addSheet: {
+            properties: {
+              title: sheetName,
+            },
+          },
+        },
+      ],
+    },
+  });
+}
+
+async function replaceScheduleSheet({
+  headers,
+  rows,
+}) {
+  const { spreadsheetId } = getSheetsConfig();
+  const sheetName =
+    process.env.SHEETS_SCHEDULE_TAB || "Schedule";
+
+  const sheets = await getSheetsClient();
+  await ensureSheetTab(
+    sheets,
+    spreadsheetId,
+    sheetName
+  );
+  const range = `${sheetName}!A:E`;
+
+  await sheets.spreadsheets.values.clear({
+    spreadsheetId,
+    range,
+  });
+
+  const values = [headers, ...rows];
+
+  const response =
+    await sheets.spreadsheets.values.update({
+      spreadsheetId,
+      range: `${sheetName}!A1`,
+      valueInputOption: "USER_ENTERED",
+      requestBody: {
+        values,
+      },
+    });
+
+  return {
+    spreadsheetId,
+    sheetName,
+    updatedRange:
+      response.data.updatedRange || null,
+    updatedRows: values.length,
+  };
+}
+
 async function writeMetaTab({
   lastSyncAt,
   rowCount,
   paymentCount,
+  scheduleRowCount = 0,
 }) {
   const { spreadsheetId } =
     getSheetsConfig();
@@ -130,6 +208,7 @@ async function writeMetaTab({
     ["lastSyncAtMsk", formatMsk(lastSyncAt)],
     ["rowCount", rowCount],
     ["paymentCount", paymentCount],
+    ["scheduleRowCount", scheduleRowCount],
     ["mode", "nightly_full_replace"],
   ];
 
@@ -159,6 +238,7 @@ function formatMsk(timestamp) {
 module.exports = {
   appendSyncRow,
   replaceSyncSheet,
+  replaceScheduleSheet,
   writeMetaTab,
   getSheetsConfig,
 };

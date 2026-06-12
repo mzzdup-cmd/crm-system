@@ -62,6 +62,7 @@ from "../components/ui/PageErrorBoundary";
 
 function StatCard({
   label,
+  hint,
   value,
   color = "text-white",
   className = "",
@@ -75,11 +76,17 @@ function StatCard({
         ${className}
       `}
     >
-      <div className="text-slate-400 text-sm">
+      <div className="font-semibold text-slate-200 text-sm">
 
         {label}
 
       </div>
+
+      {hint && (
+        <div className="text-slate-500 text-xs font-normal mt-0.5">
+          {hint}
+        </div>
+      )}
 
       <div className={`text-2xl md:text-3xl font-bold mt-2 ${color}`}>
 
@@ -221,7 +228,8 @@ function AdminOperationalCard({ summary }) {
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <StatCard
-          label="Pending approvals"
+          label="На согласовании"
+          hint="запросы отсутствия"
           value={summary.pendingTotal}
           color={
             summary.pendingTotal
@@ -346,7 +354,7 @@ function MotivationalLeaderBlock({
 
 export default function DashboardPage() {
   return (
-    <PageErrorBoundary title="Dashboard">
+    <PageErrorBoundary title="Главная">
       <DashboardPageContent />
     </PageErrorBoundary>
   );
@@ -397,7 +405,7 @@ function DashboardPageContent() {
 
   if (initialLoading) {
     return (
-      <LoadingState message="Загрузка dashboard..." />
+      <LoadingState message="Загрузка главной..." />
     );
   }
 
@@ -411,10 +419,13 @@ function DashboardPageContent() {
     <div className="space-y-8 animate-fade-in">
 
       <PageHeader
-        title="Dashboard"
+        title="Главная"
         subtitle={
           <>
             <span>{today}</span>
+            <span className="text-slate-500 text-sm font-normal ml-2">
+              сводка дня
+            </span>
             <RealtimeIndicator connected={connected} />
           </>
         }
@@ -593,7 +604,8 @@ function DashboardPageContent() {
 
               <Link to="/pending-sales">
                 <StatCard
-                  label="Pending sales"
+                  label="Черновики продаж"
+                  hint="ожидают проведения"
                   value={pendingCount}
                   color="text-cyan-400"
                   className="h-full hover:bg-slate-800 transition-colors"
@@ -635,7 +647,8 @@ function DashboardPageContent() {
               />
 
               <StatCard
-                label="Traffic load"
+                label="Нагрузка трафика"
+                hint="ваша доля потока"
                 value={
                   summary.trafficLoad
                     ? `${Math.round(summary.trafficLoad.share * 100)}%`
@@ -880,7 +893,8 @@ function DashboardPageContent() {
               />
 
               <StatCard
-                label="Sync failures"
+                label="Ошибки выгрузки"
+                hint="сбои sync в Sheets"
                 value={summary.failedSyncCount}
                 color={
                   summary.failedSyncCount

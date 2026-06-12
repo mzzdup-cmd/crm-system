@@ -32,7 +32,7 @@ jobs:
           VITE_FIREBASE_MEASUREMENT_ID: ${{ secrets.VITE_FIREBASE_MEASUREMENT_ID }}
           VITE_APP_ENV: production
 
-      - name: Deploy Firebase Hosting + Functions
-        run: npx firebase-tools deploy --only hosting,functions --non-interactive
+      - name: Deploy Firebase Hosting
+        run: npx firebase-tools deploy --only hosting --non-interactive --project crm-school-v2
         env:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}

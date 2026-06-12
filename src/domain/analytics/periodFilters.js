@@ -22,7 +22,11 @@ export function endOfDay(date) {
 }
 
 export function toDateString(date) {
-  return date.toISOString().split("T")[0];
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
 }
 
 export function getDateRange(
@@ -95,6 +99,16 @@ export function parsePaymentDate(payment) {
 
   if (typeof raw === "number") {
     return new Date(raw);
+  }
+
+  if (
+    typeof raw === "string"
+    && /^\d{4}-\d{2}-\d{2}$/.test(raw)
+  ) {
+    const [year, month, day] =
+      raw.split("-").map(Number);
+
+    return new Date(year, month - 1, day);
   }
 
   return new Date(raw);

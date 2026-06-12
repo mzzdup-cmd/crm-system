@@ -3,6 +3,10 @@ import {
 } from "../client/clientDates";
 
 import {
+  buildSubscriptionOutcomeUpdate,
+} from "../client/subscriptionOutcome";
+
+import {
   isPaymentDeleted,
 } from "./paymentPermissions";
 
@@ -78,5 +82,9 @@ export function buildClientAmountUpdate(
   return {
     amount: totalAmount,
     nextPaymentDate,
+    ...buildSubscriptionOutcomeUpdate(
+      client,
+      totalAmount
+    ),
   };
 }

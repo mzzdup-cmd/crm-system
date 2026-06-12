@@ -18,7 +18,10 @@ import {
 } from "../services/realtimeService";
 
 import {
-  hasDebt,
+  categorizeSubscriptions,
+} from "../domain/client/subscriptionOutcome";
+
+import {
   isOverdue,
   getRemain,
 } from "../domain/client/clientStatus";
@@ -45,6 +48,10 @@ import {
   syncManagerShiftNotifications,
   notifyAdminsSyncFailures,
 } from "../services/reminderSyncService";
+
+import {
+  syncMissingVkResolutionForUser,
+} from "../services/missingVkReminderService";
 
 import {
   buildOperationalSummary,
@@ -164,6 +171,16 @@ export function useDashboardRealtime() {
     }
 
     syncClientReminders(userData, clients);
+
+    syncMissingVkResolutionForUser(
+      userData.uid,
+      clients
+    ).catch((error) => {
+      console.error(
+        "Missing VK resolution sync failed:",
+        error
+      );
+    });
 
     if (isManager && schedule) {
       syncManagerShiftNotifications({
@@ -291,20 +308,41 @@ export function useSubscriptionsRealtime() {
     };
   }, [userData]);
 
-  const subscriptions = useMemo(
-    () =>
+  const subscriptionGroups = useMemo(() => {
+    const groups = categorizeSubscriptions(
       clients
-        .filter((client) => hasDebt(client))
-        .map((client) => ({
-          ...client,
-          remain: getRemain(client),
-          overdue: isOverdue(client),
-        })),
-    [clients]
-  );
+    );
+
+    const enrich = (items) =>
+      items.map((client) => ({
+        ...client,
+        remain: getRemain(client),
+        overdue: isOverdue(client),
+      }));
+
+    return {
+      active: enrich(groups.active),
+      completed: enrich(groups.completed),
+      churned: enrich(groups.churned),
+    };
+  }, [clients]);
 
   return {
-    subscriptions,
+    subscriptions: subscriptionGroups.active,
+    activeSubscriptions:
+      subscriptionGroups.active,
+    completedSubscriptions:
+      subscriptionGroups.completed,
+    churnedSubscriptions:
+      subscriptionGroups.churned,
+    subscriptionCounts: {
+      active:
+        subscriptionGroups.active.length,
+      completed:
+        subscriptionGroups.completed.length,
+      churned:
+        subscriptionGroups.churned.length,
+    },
     initialLoading,
     connected,
   };

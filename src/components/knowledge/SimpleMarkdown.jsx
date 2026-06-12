@@ -1,7 +1,13 @@
 function renderInline(text) {
   const parts = [];
   let remaining = text;
-  let key = 0;
+  let keyIndex = 0;
+
+  const nextKey = () => {
+    const current = keyIndex;
+    keyIndex += 1;
+    return current;
+  };
 
   while (remaining.length) {
     const linkMatch =
@@ -13,7 +19,7 @@ function renderInline(text) {
 
       if (index > 0) {
         parts.push(
-          <span key={key++}>
+          <span key={nextKey()}>
             {remaining.slice(0, index)}
           </span>
         );
@@ -21,7 +27,7 @@ function renderInline(text) {
 
       parts.push(
         <a
-          key={key++}
+          key={nextKey()}
           href={linkMatch[2]}
           target="_blank"
           rel="noreferrer"
@@ -46,14 +52,14 @@ function renderInline(text) {
 
       if (index > 0) {
         parts.push(
-          <span key={key++}>
+          <span key={nextKey()}>
             {remaining.slice(0, index)}
           </span>
         );
       }
 
       parts.push(
-        <strong key={key++}>
+        <strong key={nextKey()}>
           {boldMatch[1]}
         </strong>
       );
@@ -65,7 +71,7 @@ function renderInline(text) {
     }
 
     parts.push(
-      <span key={key++}>{remaining}</span>
+      <span key={nextKey()}>{remaining}</span>
     );
     break;
   }

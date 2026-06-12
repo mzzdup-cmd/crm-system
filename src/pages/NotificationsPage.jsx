@@ -10,33 +10,53 @@ from "../components/ui/EmptyState";
 import RealtimeIndicator
 from "../components/ui/RealtimeIndicator";
 
+import { useToast }
+from "../context/ToastContext";
+
 import { NOTIFICATION_TYPES }
 from "../constants/notifications";
 
 export default function NotificationsPage() {
+  const toast = useToast();
+
   const {
     notifications,
     unreadCount,
     connected,
     markRead,
+    markResolved,
     markAllRead,
   } = useNotifications();
 
-  const fillInReminders =
+  const activeNotifications =
     notifications.filter(
+      (item) => !item.resolved
+    );
+
+  const fillInReminders =
+    activeNotifications.filter(
       (item) =>
         item.type ===
-          NOTIFICATION_TYPES.MISSING_VK_LINK &&
-        !item.resolved
+        NOTIFICATION_TYPES.MISSING_VK_LINK
     );
 
   const otherNotifications =
-    notifications.filter(
+    activeNotifications.filter(
       (item) =>
         item.type !==
-          NOTIFICATION_TYPES.MISSING_VK_LINK ||
-        item.resolved
+        NOTIFICATION_TYPES.MISSING_VK_LINK
     );
+
+  async function handleResolve(id) {
+    try {
+      await markResolved(id);
+      toast.success("Уведомление закрыто");
+    } catch {
+      toast.error(
+        "Не удалось закрыть уведомление"
+      );
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -110,6 +130,7 @@ export default function NotificationsPage() {
                     notification
                   }
                   onRead={markRead}
+                  onResolve={handleResolve}
                 />
               )
             )}
@@ -119,7 +140,7 @@ export default function NotificationsPage() {
 
       {
 
-        notifications.length === 0
+        activeNotifications.length === 0
 
           ? (
 
@@ -133,30 +154,33 @@ export default function NotificationsPage() {
 
           : (
 
-            <section className="space-y-3">
-              {fillInReminders.length >
-                0 && (
-                <h2 className="text-lg font-bold">
-                  Остальные
-                </h2>
-              )}
-
-              <div className="space-y-2">
-                {otherNotifications.map(
-                  (notification) => (
-                    <NotificationItem
-                      key={
-                        notification.id
-                      }
-                      notification={
-                        notification
-                      }
-                      onRead={markRead}
-                    />
-                  )
+            otherNotifications.length > 0 && (
+              <section className="space-y-3">
+                {fillInReminders.length >
+                  0 && (
+                  <h2 className="text-lg font-bold">
+                    Остальные
+                  </h2>
                 )}
-              </div>
-            </section>
+
+                <div className="space-y-2">
+                  {otherNotifications.map(
+                    (notification) => (
+                      <NotificationItem
+                        key={
+                          notification.id
+                        }
+                        notification={
+                          notification
+                        }
+                        onRead={markRead}
+                        onResolve={handleResolve}
+                      />
+                    )
+                  )}
+                </div>
+              </section>
+            )
 
           )
 

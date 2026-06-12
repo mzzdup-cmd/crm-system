@@ -3,8 +3,8 @@ import { ROLES } from "../constants/roles";
 export const MOBILE_BOTTOM_NAV = [
   {
     path: "/",
-    label: "Dashboard",
-    shortLabel: "Home",
+    label: "Главная",
+    shortLabel: "Главная",
     icon: "🏠",
     roles: [ROLES.ADMIN, ROLES.MANAGER],
   },
@@ -34,7 +34,7 @@ export const MOBILE_BOTTOM_NAV = [
 export const NAV_ITEMS = [
   {
     path: "/",
-    label: "Dashboard",
+    label: "Главная",
     roles: [ROLES.ADMIN, ROLES.MANAGER],
   },
   {
@@ -78,6 +78,11 @@ export const NAV_ITEMS = [
     roles: [ROLES.ADMIN, ROLES.MANAGER],
   },
   {
+    path: "/calendar",
+    label: "Календарь",
+    roles: [ROLES.ADMIN, ROLES.MANAGER],
+  },
+  {
     path: "/time-off",
     label: "Запросы",
     roles: [ROLES.ADMIN, ROLES.MANAGER],
@@ -89,7 +94,7 @@ export const NAV_ITEMS = [
   },
   {
     path: "/analytics",
-    label: "MM Analytics",
+    label: "MM Аналитика",
     roles: [ROLES.ADMIN],
     adminOnly: true,
   },
@@ -101,7 +106,7 @@ export const NAV_ITEMS = [
   },
   {
     path: "/traffic",
-    label: "Traffic",
+    label: "Трафик",
     roles: [ROLES.ADMIN],
     adminOnly: true,
   },

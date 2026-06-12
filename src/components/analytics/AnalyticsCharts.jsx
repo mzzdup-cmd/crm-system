@@ -20,6 +20,58 @@ import {
   CHART_THEME,
 } from "../../constants/analytics";
 
+const CHART_HEIGHT = 280;
+
+function ChartEmpty({
+  message = "Нет данных за период",
+}) {
+  return (
+    <div
+      className="
+        flex h-full w-full flex-col items-center
+        justify-center rounded-xl border border-dashed
+        border-slate-700 bg-slate-800/30 px-4 text-center
+      "
+    >
+      <div className="text-2xl mb-2 opacity-70">
+        📊
+      </div>
+      <p className="text-slate-400 text-sm">
+        {message}
+      </p>
+      <p className="text-slate-500 text-xs mt-1">
+        Попробуйте «Месяц» или «Неделя»
+      </p>
+    </div>
+  );
+}
+
+function ChartFrame({
+  height = CHART_HEIGHT,
+  isEmpty,
+  emptyMessage,
+  children,
+}) {
+  return (
+    <div
+      className="w-full min-w-0"
+      style={{ height }}
+    >
+      {isEmpty ? (
+        <ChartEmpty message={emptyMessage} />
+      ) : (
+        <ResponsiveContainer
+          width="100%"
+          height="100%"
+          minWidth={0}
+        >
+          {children}
+        </ResponsiveContainer>
+      )}
+    </div>
+  );
+}
+
 function ChartTooltip({ active, payload, label }) {
   if (!active || !payload?.length) {
     return null;
@@ -60,11 +112,23 @@ function ChartTooltip({ active, payload, label }) {
   );
 }
 
+function hasNumericValues(data, key = "value") {
+  return Array.isArray(data)
+    && data.some(
+      (item) => Number(item?.[key] || 0) > 0
+    );
+}
+
 export function RevenueLineChart({ data }) {
+  const isEmpty =
+    !Array.isArray(data)
+    || !data.length
+    || !hasNumericValues(data, "revenue");
+
   return (
-    <ResponsiveContainer
-      width="100%"
-      height={280}
+    <ChartFrame
+      isEmpty={isEmpty}
+      emptyMessage="Нет оплат за выбранный период"
     >
       <LineChart data={data}>
         <CartesianGrid
@@ -88,15 +152,20 @@ export function RevenueLineChart({ data }) {
           dot={{ fill: CHART_COLORS.green }}
         />
       </LineChart>
-    </ResponsiveContainer>
+    </ChartFrame>
   );
 }
 
 export function ManagerBarChart({ data }) {
+  const isEmpty =
+    !Array.isArray(data)
+    || !data.length
+    || !hasNumericValues(data, "revenue");
+
   return (
-    <ResponsiveContainer
-      width="100%"
-      height={280}
+    <ChartFrame
+      isEmpty={isEmpty}
+      emptyMessage="Нет выручки по менеджерам"
     >
       <BarChart data={data}>
         <CartesianGrid
@@ -118,15 +187,20 @@ export function ManagerBarChart({ data }) {
           radius={[8, 8, 0, 0]}
         />
       </BarChart>
-    </ResponsiveContainer>
+    </ChartFrame>
   );
 }
 
 export function DealsPieChart({ data }) {
+  const isEmpty =
+    !Array.isArray(data)
+    || !data.length
+    || !hasNumericValues(data, "value");
+
   return (
-    <ResponsiveContainer
-      width="100%"
-      height={280}
+    <ChartFrame
+      isEmpty={isEmpty}
+      emptyMessage="Нет сделок за период"
     >
       <PieChart>
         <Pie
@@ -158,15 +232,20 @@ export function DealsPieChart({ data }) {
         <Tooltip content={<ChartTooltip />} />
         <Legend />
       </PieChart>
-    </ResponsiveContainer>
+    </ChartFrame>
   );
 }
 
 export function TrafficLoadChart({ data }) {
+  const isEmpty =
+    !Array.isArray(data)
+    || !data.length
+    || !hasNumericValues(data, "load");
+
   return (
-    <ResponsiveContainer
-      width="100%"
-      height={280}
+    <ChartFrame
+      isEmpty={isEmpty}
+      emptyMessage="Трафик не распределён"
     >
       <BarChart data={data}>
         <CartesianGrid
@@ -183,20 +262,25 @@ export function TrafficLoadChart({ data }) {
         <Tooltip content={<ChartTooltip />} />
         <Bar
           dataKey="load"
-          name="Load"
+          name="Нагрузка"
           fill={CHART_COLORS.yellow}
           radius={[8, 8, 0, 0]}
         />
       </BarChart>
-    </ResponsiveContainer>
+    </ChartFrame>
   );
 }
 
 export function SubscriptionChart({ data }) {
+  const isEmpty =
+    !Array.isArray(data)
+    || !data.length
+    || !hasNumericValues(data, "value");
+
   return (
-    <ResponsiveContainer
-      width="100%"
-      height={280}
+    <ChartFrame
+      isEmpty={isEmpty}
+      emptyMessage="Нет подписок и просрочек"
     >
       <PieChart>
         <Pie
@@ -215,15 +299,26 @@ export function SubscriptionChart({ data }) {
         <Tooltip content={<ChartTooltip />} />
         <Legend />
       </PieChart>
-    </ResponsiveContainer>
+    </ChartFrame>
   );
 }
 
 export function ManagerKpiChart({ data }) {
+  const isEmpty =
+    !Array.isArray(data)
+    || !data.length
+    || !data.some(
+      (item) =>
+        Number(item?.newDeals || 0) > 0
+        || Number(item?.topups || 0) > 0
+        || Number(item?.upsells || 0) > 0
+    );
+
   return (
-    <ResponsiveContainer
-      width="100%"
+    <ChartFrame
       height={300}
+      isEmpty={isEmpty}
+      emptyMessage="Нет KPI по менеджерам"
     >
       <BarChart data={data}>
         <CartesianGrid
@@ -258,6 +353,6 @@ export function ManagerKpiChart({ data }) {
           stackId="a"
         />
       </BarChart>
-    </ResponsiveContainer>
+    </ChartFrame>
   );
 }

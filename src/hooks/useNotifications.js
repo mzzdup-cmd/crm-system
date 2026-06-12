@@ -10,8 +10,17 @@ import {
   subscribeToNotifications,
   countUnreadNotifications,
   markNotificationRead,
+  markNotificationResolved,
   markAllNotificationsRead,
 } from "../services/notificationService";
+
+import {
+  getClientsForUser,
+} from "../services/clientService";
+
+import {
+  syncMissingVkResolutionForUser,
+} from "../services/missingVkReminderService";
 
 export function useNotifications() {
   const { userData } = useAuth();
@@ -38,11 +47,25 @@ export function useNotifications() {
         }
       );
 
+    getClientsForUser(userData)
+      .then((clients) =>
+        syncMissingVkResolutionForUser(
+          userData.uid,
+          clients
+        )
+      )
+      .catch((error) => {
+        console.error(
+          "Missing VK sync failed:",
+          error
+        );
+      });
+
     return () => {
       setConnected(false);
       unsubscribe();
     };
-  }, [userData?.uid]);
+  }, [userData]);
 
   const unreadCount = useMemo(
     () =>
@@ -87,11 +110,30 @@ export function useNotifications() {
     );
   }
 
+  async function markResolved(id) {
+    await markNotificationResolved(id);
+
+    setNotifications((current) =>
+      current.map((item) =>
+        item.id === id
+          ? {
+              ...item,
+              read: true,
+              readAt: Date.now(),
+              resolved: true,
+              resolvedAt: Date.now(),
+            }
+          : item
+      )
+    );
+  }
+
   return {
     notifications,
     unreadCount,
     connected,
     markRead,
+    markResolved,
     markAllRead,
   };
 }
