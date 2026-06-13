@@ -44,6 +44,168 @@ function LoadErrorState({
   );
 }
 
+function SalaryManagerCard({
+  manager,
+}) {
+  return (
+    <div
+      className="
+        bg-slate-900 p-5 md:p-6 rounded-2xl
+        hover:bg-slate-800/80 transition-colors
+      "
+    >
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+        <div>
+          <div className="text-2xl md:text-3xl font-bold">
+            {manager.name}
+          </div>
+          <div className="text-slate-400 mt-2 text-sm">
+            Выручка:{" "}
+            {manager.revenue.toLocaleString(
+              "ru-RU"
+            )}{" "}
+            ₽ · сделок:{" "}
+            {manager.deals || 0}
+            {manager.nightShifts > 0 && (
+              <>
+                {" "}
+                · ночных:{" "}
+                {manager.nightShifts}
+              </>
+            )}
+          </div>
+        </div>
+
+        <div className="text-3xl md:text-4xl font-bold text-green-400">
+          {manager.totalSalary.toLocaleString(
+            "ru-RU"
+          )}{" "}
+          ₽
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mt-6">
+        <div className="bg-slate-800 p-4 rounded-xl">
+          <div className="text-slate-400 text-sm">
+            Оклад
+          </div>
+          <div className="text-xl font-bold mt-2">
+            {manager.baseSalary.toLocaleString(
+              "ru-RU"
+            )}{" "}
+            ₽
+          </div>
+        </div>
+
+        <div className="bg-slate-800 p-4 rounded-xl">
+          <div className="text-slate-400 text-sm">
+            5% от продаж
+          </div>
+          <div className="text-xl font-bold mt-2">
+            {manager.percentBonus.toLocaleString(
+              "ru-RU"
+            )}{" "}
+            ₽
+          </div>
+        </div>
+
+        <div className="bg-slate-800 p-4 rounded-xl">
+          <div className="text-slate-400 text-sm">
+            Бонус оборота
+          </div>
+          <div className="text-xl font-bold mt-2 text-yellow-400">
+            {manager.revenueBonus.toLocaleString(
+              "ru-RU"
+            )}{" "}
+            ₽
+          </div>
+        </div>
+
+        <div className="bg-slate-800 p-4 rounded-xl">
+          <div className="text-slate-400 text-sm">
+            Ночные смены
+          </div>
+          <div className="text-xl font-bold mt-2 text-cyan-400">
+            {manager.nightBonus.toLocaleString(
+              "ru-RU"
+            )}{" "}
+            ₽
+          </div>
+        </div>
+
+        <div className="bg-slate-800 p-4 rounded-xl">
+          <div className="text-slate-400 text-sm">
+            Ручные бонусы
+          </div>
+          <div className="text-xl font-bold mt-2 text-pink-400">
+            {manager.manualBonus.toLocaleString(
+              "ru-RU"
+            )}{" "}
+            ₽
+          </div>
+        </div>
+
+        <div className="bg-green-500/20 p-4 rounded-xl border border-green-500/40">
+          <div className="text-green-400 text-sm">
+            ИТОГО
+          </div>
+          <div className="text-2xl font-bold mt-2 text-green-400">
+            {manager.totalSalary.toLocaleString(
+              "ru-RU"
+            )}{" "}
+            ₽
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SalaryPeriodSection({
+  period,
+  archived = false,
+}) {
+  const rows = period?.rows || [];
+
+  if (!rows.length) {
+    return null;
+  }
+
+  return (
+    <section className="space-y-4">
+      <div>
+        <h3
+          className={`
+            text-lg font-bold
+            ${
+              archived
+                ? "text-slate-300"
+                : "text-white"
+            }
+          `}
+        >
+          {archived
+            ? "Архив · "
+            : ""}
+          {period.label}
+        </h3>
+        <p className="text-slate-500 text-sm mt-1">
+          {period.subtitle}
+        </p>
+      </div>
+
+      <div className="space-y-6">
+        {rows.map((manager) => (
+          <SalaryManagerCard
+            key={`${period.label}-${manager.managerKey}`}
+            manager={manager}
+          />
+        ))}
+      </div>
+    </section>
+  );
+}
+
 export default function SalaryPage({
   embedded = false,
 }) {
@@ -55,7 +217,19 @@ export default function SalaryPage({
     reload,
   } = usePageLoad(getSalaryReportForUser);
 
-  const rows = salaryData || [];
+  const currentRows =
+    salaryData?.current?.rows || [];
+
+  const archive =
+    salaryData?.archive || [];
+
+  const hasArchive = archive.some(
+    (period) => period.rows?.length
+  );
+
+  const hasAnyData =
+    currentRows.length > 0 ||
+    hasArchive;
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -65,7 +239,8 @@ export default function SalaryPage({
           subtitle={
             loading
               ? "Загрузка..."
-              : `${rows.length} менеджер(ов)`
+              : salaryData?.current?.label
+                || "Расчёт за месяц"
           }
         />
       )}
@@ -84,7 +259,7 @@ export default function SalaryPage({
 
       {!loading &&
         !error &&
-        rows.length === 0 && (
+        !hasAnyData && (
           <EmptyState
             icon="💰"
             title="Нет данных по зарплате"
@@ -94,114 +269,25 @@ export default function SalaryPage({
 
       {!loading &&
         !error &&
-        rows.length > 0 && (
-          <div className="space-y-6">
-            {rows.map((manager) => (
-              <div
-                key={manager.managerKey}
-                className="
-                  bg-slate-900 p-5 md:p-6 rounded-2xl
-                  hover:bg-slate-800/80 transition-colors
-                "
-              >
-                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-                  <div>
-                    <div className="text-2xl md:text-3xl font-bold">
-                      {manager.name}
-                    </div>
-                    <div className="text-slate-400 mt-2 text-sm">
-                      Выручка:{" "}
-                      {manager.revenue.toLocaleString(
-                        "ru-RU"
-                      )}{" "}
-                      ₽ · сделок:{" "}
-                      {manager.deals || 0}
-                    </div>
-                  </div>
+        hasAnyData && (
+          <div className="space-y-10">
+            {salaryData?.current && (
+              <SalaryPeriodSection
+                period={salaryData.current}
+              />
+            )}
 
-                  <div className="text-3xl md:text-4xl font-bold text-green-400">
-                    {manager.totalSalary.toLocaleString(
-                      "ru-RU"
-                    )}{" "}
-                    ₽
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mt-6">
-                  <div className="bg-slate-800 p-4 rounded-xl">
-                    <div className="text-slate-400 text-sm">
-                      Оклад
-                    </div>
-                    <div className="text-xl font-bold mt-2">
-                      {manager.baseSalary.toLocaleString(
-                        "ru-RU"
-                      )}{" "}
-                      ₽
-                    </div>
-                  </div>
-
-                  <div className="bg-slate-800 p-4 rounded-xl">
-                    <div className="text-slate-400 text-sm">
-                      5% от продаж
-                    </div>
-                    <div className="text-xl font-bold mt-2">
-                      {manager.percentBonus.toLocaleString(
-                        "ru-RU"
-                      )}{" "}
-                      ₽
-                    </div>
-                  </div>
-
-                  <div className="bg-slate-800 p-4 rounded-xl">
-                    <div className="text-slate-400 text-sm">
-                      Бонус оборота
-                    </div>
-                    <div className="text-xl font-bold mt-2 text-yellow-400">
-                      {manager.revenueBonus.toLocaleString(
-                        "ru-RU"
-                      )}{" "}
-                      ₽
-                    </div>
-                  </div>
-
-                  <div className="bg-slate-800 p-4 rounded-xl">
-                    <div className="text-slate-400 text-sm">
-                      Ночные смены
-                    </div>
-                    <div className="text-xl font-bold mt-2 text-cyan-400">
-                      {manager.nightBonus.toLocaleString(
-                        "ru-RU"
-                      )}{" "}
-                      ₽
-                    </div>
-                  </div>
-
-                  <div className="bg-slate-800 p-4 rounded-xl">
-                    <div className="text-slate-400 text-sm">
-                      Ручные бонусы
-                    </div>
-                    <div className="text-xl font-bold mt-2 text-pink-400">
-                      {manager.manualBonus.toLocaleString(
-                        "ru-RU"
-                      )}{" "}
-                      ₽
-                    </div>
-                  </div>
-
-                  <div className="bg-green-500/20 p-4 rounded-xl border border-green-500/40">
-                    <div className="text-green-400 text-sm">
-                      ИТОГО
-                    </div>
-                    <div className="text-2xl font-bold mt-2 text-green-400">
-                      {manager.totalSalary.toLocaleString(
-                        "ru-RU"
-                      )}{" "}
-                      ₽
-                    </div>
-                  </div>
-                </div>
+            {hasArchive && (
+              <div className="space-y-6 pt-2 border-t border-slate-800">
+                {archive.map((period) => (
+                  <SalaryPeriodSection
+                    key={period.label}
+                    period={period}
+                    archived
+                  />
+                ))}
               </div>
-            ))}
+            )}
           </div>
         )}
     </div>

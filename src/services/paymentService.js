@@ -49,7 +49,10 @@ import { updateClient, getClientById } from "./clientService";
 import { maybeNotifyMissingVkLink } from "./missingVkReminderService";
 import { getManualBonusesForUser } from "./bonusService";
 import { getNightShiftsForUser } from "./shiftService";
-import { buildSalaryReport } from "../domain/salary/salaryCalculator";
+import {
+  buildSalaryReportBundle,
+  filterSalaryRowsForManager,
+} from "../domain/salary/salaryPeriod";
 import { MANAGERS } from "../constants/managers";
 
 function mapPaymentDoc(snapshot) {
@@ -809,30 +812,50 @@ export async function getSalaryReportForUser(userData) {
     managerNames[manager.name] = manager.name;
   });
 
-  const report = buildSalaryReport({
+  const managerId =
+    getCurrentManagerId(userData);
+
+  const allManagerKeys = isAdmin(userData)
+    ? MANAGERS.map(
+        (manager) => manager.id
+      )
+    : managerId
+      ? [managerId]
+      : [];
+
+  const bundle = buildSalaryReportBundle({
     payments,
     nightShifts,
     manualBonuses,
     managerNames,
-    allManagerKeys: isAdmin(userData)
-      ? MANAGERS.map(
-          (manager) => manager.id
-        )
-      : [],
+    allManagerKeys,
+    archiveOffsets: [-1],
   });
 
   if (isAdmin(userData)) {
-    return report;
+    return bundle;
   }
 
-  const managerId =
-    getCurrentManagerId(userData);
-
-  return report.filter(
-    (item) =>
-      item.managerKey === managerId ||
-      item.managerKey === userData?.name
-  );
+  return {
+    current: {
+      ...bundle.current,
+      rows: filterSalaryRowsForManager(
+        bundle.current.rows,
+        userData,
+        managerId
+      ),
+    },
+    archive: bundle.archive.map(
+      (period) => ({
+        ...period,
+        rows: filterSalaryRowsForManager(
+          period.rows,
+          userData,
+          managerId
+        ),
+      })
+    ),
+  };
 }
 
 /** @deprecated use bonusService / shiftService */

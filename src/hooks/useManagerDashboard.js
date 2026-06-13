@@ -114,7 +114,8 @@ export function useManagerDashboard() {
     );
 
     const salaryTotal =
-      salaryReport[0]?.totalSalary || 0;
+      salaryReport.current?.rows[0]
+        ?.totalSalary || 0;
 
     setData({
       date: getTodayDateString(),

@@ -42,6 +42,10 @@ import {
   buildSalaryReport,
 } from "../salary/salaryCalculator";
 
+import {
+  filterSalaryDataByRange,
+} from "../salary/salaryPeriod";
+
 import { MANAGERS } from "../../constants/managers";
 
 function indexClientsById(clients) {
@@ -126,6 +130,16 @@ export function buildAnalyticsReport({
       parsePaymentDate
     );
 
+  const {
+    nightShifts: periodNightShifts,
+    manualBonuses: periodManualBonuses,
+  } = filterSalaryDataByRange({
+    payments,
+    nightShifts,
+    manualBonuses,
+    range,
+  });
+
   const totalRevenue =
     aggregateRevenue(periodPayments);
 
@@ -181,8 +195,8 @@ export function buildAnalyticsReport({
 
   const salaryReport = buildSalaryReport({
     payments: periodPayments,
-    nightShifts,
-    manualBonuses,
+    nightShifts: periodNightShifts,
+    manualBonuses: periodManualBonuses,
     managerNames,
   });
 
