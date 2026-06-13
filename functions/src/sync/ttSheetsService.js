@@ -111,11 +111,55 @@ async function resolveSheetTabName(
   return match;
 }
 
+async function findLastTtDataRow(
+  spreadsheetId,
+  resolvedTab
+) {
+  const sheets = await getSheetsClient();
+
+  const result =
+    await sheets.spreadsheets.values.get({
+      spreadsheetId,
+      range: toSheetRange(resolvedTab, "A2:A"),
+    });
+
+  const values = result.data.values || [];
+
+  for (
+    let index = values.length - 1;
+    index >= 0;
+    index -= 1
+  ) {
+    const cell = values[index]?.[0];
+
+    if (
+      cell === undefined ||
+      cell === null
+    ) {
+      continue;
+    }
+
+    const text = String(cell).trim();
+
+    if (text !== "") {
+      return index + 2;
+    }
+  }
+
+  return 1;
+}
+
 async function appendTtRow({
   spreadsheetId,
   sheetName,
   row,
 }) {
+  if (!Array.isArray(row) || row.length !== 16) {
+    throw new Error(
+      `TT row must have 16 columns (A:P), got ${row?.length}`
+    );
+  }
+
   const sheets = await getSheetsClient();
 
   const resolvedTab =
@@ -124,30 +168,47 @@ async function appendTtRow({
       sheetName
     );
 
-  const range = toSheetRange(
+  const lastRow = await findLastTtDataRow(
+    spreadsheetId,
+    resolvedTab
+  );
+
+  const nextRow = lastRow + 1;
+  const targetRange = toSheetRange(
     resolvedTab,
-    "A:P"
+    `A${nextRow}:P${nextRow}`
   );
 
   const response =
-    await sheets.spreadsheets.values.append({
+    await sheets.spreadsheets.values.update({
       spreadsheetId,
-      range,
+      range: targetRange,
       valueInputOption: "USER_ENTERED",
-      insertDataOption: "INSERT_ROWS",
       requestBody: {
         values: [row],
       },
     });
 
+  const updatedRange =
+    response.data.updatedRange ||
+    targetRange;
+
+  if (
+    !updatedRange.includes(
+      `A${nextRow}`
+    )
+  ) {
+    throw new Error(
+      `TT row was not written to column A (got ${updatedRange})`
+    );
+  }
+
   return {
     spreadsheetId,
     sheetName: resolvedTab,
-    updatedRange:
-      response.data.updates?.updatedRange ||
-      null,
-    updatedRows:
-      response.data.updates?.updatedRows || 1,
+    rowNumber: nextRow,
+    updatedRange,
+    updatedRows: 1,
   };
 }
 

@@ -10,6 +10,19 @@ const MANAGER_NAMES = {
   violeta_petrova: "Виолетта Петрова",
 };
 
+const LEGACY_MANAGER_ALIASES = {
+  Катя: "katya_bakaeva",
+  Руслан: "ruslan_romanyuk",
+  "Руслан Р": "ruslan_romanyuk",
+  Полина: "polina_penkova",
+  "Сергей Г": "sergey_grebenshchikov",
+  "Денис М": "denis_manuilov",
+  "Андрей В": "andrey_volkov",
+  "Александр С": "alexander_simanov",
+  "Виолетта П": "violeta_petrova",
+  "Полина Пламадяла": "polina_plamadya",
+};
+
 function getStartDate(dateString) {
   if (!dateString) {
     return "";
@@ -84,12 +97,30 @@ function resolveManagerId(payment, client) {
     return null;
   }
 
-  return (
-    Object.entries(MANAGER_NAMES).find(
-      ([, managerName]) =>
-        managerName === name
-    )?.[0] || null
+  if (LEGACY_MANAGER_ALIASES[name]) {
+    return LEGACY_MANAGER_ALIASES[name];
+  }
+
+  const exactMatch = Object.entries(
+    MANAGER_NAMES
+  ).find(
+    ([, managerName]) =>
+      managerName === name
   );
+
+  if (exactMatch) {
+    return exactMatch[0];
+  }
+
+  const partialMatch = Object.entries(
+    MANAGER_NAMES
+  ).find(([, managerName]) =>
+    name.startsWith(
+      managerName.split(" ")[0]
+    )
+  );
+
+  return partialMatch?.[0] || null;
 }
 
 function mapPaymentToTtRow({

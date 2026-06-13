@@ -32,8 +32,6 @@ function getDb() {
 async function fetchUnsyncedPayments(limit = 500) {
   const snapshot = await getDb()
     .collection("payments")
-    .where("syncedToSheets", "==", false)
-    .limit(limit)
     .get();
 
   return snapshot.docs
@@ -42,7 +40,9 @@ async function fetchUnsyncedPayments(limit = 500) {
       ...docSnap.data(),
     }))
     .filter(
-      (payment) => !payment.deletedAt
+      (payment) =>
+        !payment.deletedAt &&
+        payment.syncedToSheets !== true
     );
 }
 
@@ -168,7 +168,10 @@ async function runTtSheetsSync({
     success: 0,
     skipped: 0,
     failed: 0,
+    pendingBefore: 0,
     byManager: {},
+    skipReasons: {},
+    syncedRows: [],
     errors: [],
     configuredManagers:
       listConfiguredManagers(),
@@ -195,6 +198,7 @@ async function runTtSheetsSync({
       buildPaymentCycleMap(allPayments);
 
     const sorted = sortPayments(payments);
+    summary.pendingBefore = sorted.length;
 
     for (const payment of sorted) {
       summary.processed += 1;
@@ -215,14 +219,24 @@ async function runTtSheetsSync({
       if (!ttConfig) {
         summary.skipped += 1;
 
+        const skipReason = metadata.managerId
+          ? "manager_tt_not_configured"
+          : "manager_unresolved";
+
+        summary.skipReasons[skipReason] =
+          (summary.skipReasons[skipReason] || 0) +
+          1;
+
         await getDb()
           .collection("syncLog")
           .add({
             type: "tt_append",
             paymentId: payment.id,
             managerId: metadata.managerId,
+            managerName:
+              payment.manager || null,
             status: SYNC_LOG_STATUS.SKIPPED,
-            reason: "manager_tt_not_configured",
+            reason: skipReason,
             createdAt: Date.now(),
           });
 
@@ -255,6 +269,15 @@ async function runTtSheetsSync({
         summary.byManager[
           metadata.managerId
         ].success += 1;
+
+        summary.syncedRows.push({
+          paymentId: payment.id,
+          managerId: metadata.managerId,
+          sheetName: sheetsResult.sheetName,
+          rowNumber: sheetsResult.rowNumber,
+          updatedRange:
+            sheetsResult.updatedRange,
+        });
 
         await getDb()
           .collection("syncLog")

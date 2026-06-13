@@ -87,6 +87,33 @@ async function main() {
     JSON.stringify(result, null, 2)
   );
 
+  console.log(
+    `[tt-sync] Summary: pending=${result.pendingBefore}, ` +
+      `exported=${result.success}, skipped=${result.skipped}, ` +
+      `failed=${result.failed}`
+  );
+
+  if (result.syncedRows?.length) {
+    result.syncedRows.forEach((row) => {
+      console.log(
+        `[tt-sync] Row written: payment ${row.paymentId} → ` +
+          `${row.sheetName}!A${row.rowNumber}`
+      );
+    });
+  }
+
+  if (
+    result.pendingBefore > 0 &&
+    result.success === 0 &&
+    result.failed === 0
+  ) {
+    console.warn(
+      "[tt-sync] WARNING: pending payments exist but nothing was exported.",
+      result.skipReasons
+    );
+    process.exit(1);
+  }
+
   if (result.failed > 0) {
     process.exit(1);
   }
