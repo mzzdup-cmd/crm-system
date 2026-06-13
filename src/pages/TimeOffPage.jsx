@@ -60,7 +60,9 @@ function StatusBadge({ status }) {
   );
 }
 
-export default function TimeOffPage() {
+export default function TimeOffPage({
+  embedded = false,
+}) {
   const { user, userData } = useAuth();
   const toast = useToast();
   const { isAdmin } = usePermissions();
@@ -211,10 +213,12 @@ export default function TimeOffPage() {
 
   return (
     <div className="space-y-8 animate-fade-in max-w-4xl">
-      <PageHeader
-        title="Запросы"
-        subtitle="Выходные и отпуска"
-      />
+      {!embedded && (
+        <PageHeader
+          title="Запросы"
+          subtitle="Выходные и отпуска"
+        />
+      )}
 
       {isAdmin &&
         summary.pendingTotal > 0 && (

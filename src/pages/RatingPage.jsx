@@ -8,7 +8,9 @@ import {
 import LoadingState
 from "../components/LoadingState";
 
-export default function RatingPage() {
+export default function RatingPage({
+  embedded = false,
+}) {
 
   const [rating, setRating] = useState([]);
 
@@ -83,9 +85,11 @@ export default function RatingPage() {
 
     <div>
 
-      <h1 className="text-4xl font-bold mb-8">
-        Рейтинг менеджеров
-      </h1>
+      {!embedded && (
+        <h1 className="text-4xl font-bold mb-8">
+          Рейтинг менеджеров
+        </h1>
+      )}
 
       <div className="grid gap-4">
 

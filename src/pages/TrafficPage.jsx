@@ -59,7 +59,9 @@ function formatPeriod(from, to) {
   return `${fromLabel} – ${toLabel}`;
 }
 
-export default function TrafficPage() {
+export default function TrafficPage({
+  embedded = false,
+}) {
   const { user } = useAuth();
   const toast = useToast();
 
@@ -202,17 +204,19 @@ export default function TrafficPage() {
 
   return (
     <div className="space-y-8 animate-fade-in">
-      <PageHeader
-        title="Traffic"
-        subtitle={
-          <>
-            {sources.length} источников
-            <RealtimeIndicator
-              connected={connected}
-            />
-          </>
-        }
-      />
+      {!embedded && (
+        <PageHeader
+          title="Traffic"
+          subtitle={
+            <>
+              {sources.length} источников
+              <RealtimeIndicator
+                connected={connected}
+              />
+            </>
+          }
+        />
+      )}
 
       <section className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         <div className="bg-slate-900 p-5 md:p-6 rounded-2xl space-y-4">

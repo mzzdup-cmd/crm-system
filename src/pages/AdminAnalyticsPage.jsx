@@ -34,7 +34,9 @@ function formatMoney(value) {
   return `${Number(value || 0).toLocaleString("ru-RU")} ₽`;
 }
 
-export default function AdminAnalyticsPage() {
+export default function AdminAnalyticsPage({
+  embedded = false,
+}) {
 
   const {
     data,
@@ -160,21 +162,23 @@ export default function AdminAnalyticsPage() {
 
       <div className="flex flex-wrap justify-between gap-4 items-start">
 
-        <div>
+        {!embedded && (
+          <div>
+            <h1 className="text-4xl font-bold">
+              MM Аналитика
+            </h1>
 
-          <h1 className="text-4xl font-bold">
+            <p className="text-slate-400 mt-2">
+              Панель руководителя · {data.range.label}
+            </p>
+          </div>
+        )}
 
-            MM Аналитика
-
-          </h1>
-
-          <p className="text-slate-400 mt-2">
-
-            Панель руководителя · {data.range.label}
-
+        {embedded && (
+          <p className="text-slate-400 text-sm">
+            Период · {data.range.label}
           </p>
-
-        </div>
+        )}
 
         <div className="text-right text-sm text-slate-400">
 

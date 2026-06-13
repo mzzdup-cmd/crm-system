@@ -3,6 +3,10 @@ import {
   useState,
 } from "react";
 
+import {
+  useSearchParams,
+} from "react-router-dom";
+
 import MoneyInput
 from "../components/ui/MoneyInput";
 
@@ -25,17 +29,24 @@ import {
 } from "../domain/schedule/scheduleLogic";
 
 import {
-  triggerBackfillPaymentsSync,
-} from "../services/sheetsSyncService";
-
-import {
   syncScheduleNotifications,
   syncTrafficOverloadNotifications,
 } from "../services/reminderSyncService";
 
 import {
+  subscribeOperationalPayments,
+} from "../services/realtimeService";
+
+import {
+  countUnsyncedPayments,
+} from "../services/ttSyncService";
+
+import {
   useManagementRealtime,
 } from "../hooks/useRealtimeDashboard";
+
+import { useAuth }
+from "../context/AuthContext";
 
 import LoadingState
 from "../components/LoadingState";
@@ -43,13 +54,44 @@ from "../components/LoadingState";
 import RealtimeIndicator
 from "../components/ui/RealtimeIndicator";
 
-import ExportCenter
-from "../components/export/ExportCenter";
+import TtSyncPanel
+from "../components/export/TtSyncPanel";
 
 import PageHeader
 from "../components/ui/PageHeader";
 
+import PageTabs
+from "../components/ui/PageTabs";
+
+import TimeOffPage
+from "./TimeOffPage";
+
+import TrafficPage
+from "./TrafficPage";
+
+const TABS = [
+  {
+    id: "schedule",
+    label: "График",
+  },
+  {
+    id: "requests",
+    label: "Запросы",
+  },
+  {
+    id: "traffic",
+    label: "Трафик",
+  },
+];
+
 export default function ManagementPage() {
+  const { userData } = useAuth();
+
+  const [searchParams, setSearchParams] =
+    useSearchParams();
+
+  const activeTab =
+    searchParams.get("tab") || "schedule";
 
   const [date, setDate] =
     useState(getTodayDateString());
@@ -66,18 +108,32 @@ export default function ManagementPage() {
   const [saving, setSaving] =
     useState(false);
 
-  const [backfilling, setBackfilling] =
-    useState(false);
+  const [pendingTtCount, setPendingTtCount] =
+    useState(0);
 
   const {
     schedule: liveSchedule,
     traffic: liveTraffic,
-    failedSyncLogs,
-    recentSyncLogs,
     teamLoad,
     initialLoading,
     connected,
   } = useManagementRealtime(date);
+
+  useEffect(() => {
+    if (!userData) {
+      return undefined;
+    }
+
+    return subscribeOperationalPayments(
+      userData,
+      3000,
+      (payments) => {
+        setPendingTtCount(
+          countUnsyncedPayments(payments)
+        );
+      }
+    );
+  }, [userData]);
 
   useEffect(() => {
     if (liveSchedule) {
@@ -96,10 +152,17 @@ export default function ManagementPage() {
     );
   }, [liveTraffic]);
 
+  function handleTabChange(tabId) {
+    if (tabId === "schedule") {
+      setSearchParams({});
+      return;
+    }
+
+    setSearchParams({ tab: tabId });
+  }
+
   function toggleOffDay(managerId) {
-
     setOffDays((current) => {
-
       if (current.includes(managerId)) {
         return current.filter(
           (id) => id !== managerId
@@ -107,13 +170,10 @@ export default function ManagementPage() {
       }
 
       return [...current, managerId];
-
     });
-
   }
 
   async function saveScheduleAndTraffic() {
-
     setSaving(true);
 
     const prevSchedule = schedule;
@@ -145,53 +205,16 @@ export default function ManagementPage() {
     setSaving(false);
 
     alert("График и traffic сохранены");
-
-  }
-
-  async function runBackfill() {
-
-    setBackfilling(true);
-
-    try {
-
-      const result =
-        await triggerBackfillPaymentsSync();
-
-      alert(
-        `Backfill завершён: success ${result.success}, failed ${result.failed}`
-      );
-
-    } catch (error) {
-
-      alert(
-        error.message ||
-        "Ошибка backfill sync"
-      );
-
-    }
-
-    setBackfilling(false);
-
   }
 
   if (initialLoading) {
-
     return (
       <LoadingState message="Загрузка управления..." />
     );
-
   }
 
-  const syncStatus = {
-    failedCount: failedSyncLogs.length,
-    recentLogs: recentSyncLogs,
-    failedLogs: failedSyncLogs,
-  };
-
   return (
-
-    <div>
-
+    <div className="space-y-6 animate-fade-in">
       <PageHeader
         title="Управление"
         subtitle={
@@ -199,335 +222,152 @@ export default function ManagementPage() {
         }
       />
 
-      <div className="mb-8">
+      <TtSyncPanel
+        pendingCount={pendingTtCount}
+      />
 
-        <ExportCenter />
+      <PageTabs
+        tabs={TABS}
+        activeTab={activeTab}
+        onChange={handleTabChange}
+      />
 
-      </div>
+      {activeTab === "requests" && (
+        <TimeOffPage embedded />
+      )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-8">
+      {activeTab === "traffic" && (
+        <TrafficPage embedded />
+      )}
 
-        <div className="bg-slate-900 p-6 rounded-2xl">
+      {activeTab === "schedule" && (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+            <div className="bg-slate-900 p-6 rounded-2xl">
+              <div className="text-slate-400 mb-2">
+                Дата
+              </div>
 
-          <div className="text-slate-400 mb-2">
+              <input
+                type="date"
+                value={date}
+                onChange={(e) =>
+                  setDate(e.target.value)
+                }
+                className="w-full bg-slate-800 p-4 rounded-xl"
+              />
+            </div>
 
-            Дата
+            <div className="bg-slate-900 p-6 rounded-2xl">
+              <div className="text-slate-400 mb-2">
+                Traffic amount
+              </div>
 
+              <MoneyInput
+                value={trafficAmount}
+                onChange={setTrafficAmount}
+                className="w-full bg-slate-800 p-4 rounded-xl"
+              />
+            </div>
           </div>
 
-          <input
-            type="date"
-            value={date}
-            onChange={(e) =>
-              setDate(e.target.value)
-            }
-            className="w-full bg-slate-800 p-4 rounded-xl"
-          />
+          <div className="bg-slate-900 p-6 rounded-2xl">
+            <h2 className="text-2xl font-bold mb-4">
+              Выходные
+            </h2>
 
-        </div>
-
-        <div className="bg-slate-900 p-6 rounded-2xl">
-
-          <div className="text-slate-400 mb-2">
-
-            Traffic amount
-
-          </div>
-
-          <MoneyInput
-            value={trafficAmount}
-            onChange={setTrafficAmount}
-            className="w-full bg-slate-800 p-4 rounded-xl"
-          />
-
-        </div>
-
-      </div>
-
-      <div className="bg-slate-900 p-6 rounded-2xl mb-8">
-
-        <h2 className="text-2xl font-bold mb-4">
-
-          Выходные
-
-        </h2>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-
-          {
-
-            MANAGERS.map((manager) => (
-
-              <label
-                key={manager.id}
-                className="bg-slate-800 p-4 rounded-xl flex items-center gap-3 cursor-pointer"
-              >
-
-                <input
-                  type="checkbox"
-                  checked={offDays.includes(
-                    manager.id
-                  )}
-                  onChange={() =>
-                    toggleOffDay(
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {MANAGERS.map((manager) => (
+                <label
+                  key={manager.id}
+                  className="bg-slate-800 p-4 rounded-xl flex items-center gap-3 cursor-pointer"
+                >
+                  <input
+                    type="checkbox"
+                    checked={offDays.includes(
                       manager.id
-                    )
-                  }
-                />
-
-                {manager.name}
-
-              </label>
-
-            ))
-
-          }
-
-        </div>
-
-        <button
-          onClick={saveScheduleAndTraffic}
-          disabled={saving}
-          className="mt-6 w-full bg-green-500 hover:bg-green-600 p-4 rounded-xl font-bold disabled:opacity-50"
-        >
-
-          {saving
-            ? "Сохранение..."
-            : "Сохранить график и traffic"}
-
-        </button>
-
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-8">
-
-        <div className="bg-slate-900 p-6 rounded-2xl">
-
-          <h2 className="text-2xl font-bold mb-4">
-
-            Замены
-
-          </h2>
-
-          <div className="space-y-3">
-
-            {
-
-              (schedule?.substitutions || [])
-                .map((item) => (
-
-                  <div
-                    key={`${item.from}-${item.to}`}
-                    className="bg-slate-800 p-4 rounded-xl"
-                  >
-
-                    {
-
-                      getManagerNameById(
-                        item.to
-                      )
-
-                    }
-
-                    {" работает за "}
-
-                    {
-
-                      getManagerNameById(
-                        item.from
-                      )
-
-                    }
-
-                  </div>
-
-                ))
-
-            }
-
-            {
-
-              !(schedule?.substitutions || []).length && (
-
-                <div className="text-slate-400">
-
-                  Замен нет
-
-                </div>
-
-              )
-
-            }
-
-          </div>
-
-        </div>
-
-        <div className="bg-slate-900 p-6 rounded-2xl">
-
-          <h2 className="text-2xl font-bold mb-4">
-
-            Нагрузка команды
-
-          </h2>
-
-          <div className="space-y-3">
-
-            {
-
-              teamLoad.map((item) => (
-
-                <div
-                  key={item.managerId}
-                  className="bg-slate-800 p-4 rounded-xl flex justify-between"
-                >
-
-                  <div>
-
-                    {
-
-                      getManagerNameById(
-                        item.managerId
-                      )
-
-                    }
-
-                  </div>
-
-                  <div className="text-cyan-400">
-
-                    {Math.round(
-                      item.share * 100
                     )}
-
-                    % / {item.load}
-
-                  </div>
-
-                </div>
-
-              ))
-
-            }
-
-          </div>
-
-        </div>
-
-      </div>
-
-      <details className="bg-slate-900/60 p-5 rounded-2xl border border-slate-800/80">
-
-        <summary className="cursor-pointer font-bold text-slate-400 hover:text-slate-200">
-
-          Google Sheets Sync (отложено · pilot)
-
-        </summary>
-
-        <p className="text-slate-500 text-sm mt-4 mb-4">
-
-          Auto-sync через Cloud Functions не используется (без billing).
-          Ежедневный sync: GitHub Actions → Google Sheets.
-          Полная инструкция: docs/SETUP-NIGHTLY-SYNC.md
-          Для pilot также доступен Export Center выше.
-
-        </p>
-
-        <div className="flex flex-wrap justify-between items-center gap-4 mb-4">
-
-          <div className="text-slate-400">
-
-            Failed syncs:
-
-            {" "}
-
-            {syncStatus?.failedCount || 0}
-
-          </div>
-
-          <button
-            onClick={runBackfill}
-            disabled={backfilling}
-            className="bg-slate-800 hover:bg-slate-700 px-5 py-2.5 rounded-xl text-sm disabled:opacity-50"
-          >
-
-            {
-
-              backfilling
-
-                ? "Backfill..."
-
-                : "Backfill unsynced"
-
-            }
-
-          </button>
-
-        </div>
-
-        <div className="space-y-3">
-
-          {
-
-            (syncStatus?.recentLogs || []).map(
-              (log) => (
-
-                <div
-                  key={log.id}
-                  className="bg-slate-800 p-4 rounded-xl flex justify-between"
-                >
-
-                  <div>
-
-                    <div className="font-bold">
-
-                      {log.paymentId}
-
-                    </div>
-
-                    <div className="text-slate-400 text-sm mt-1">
-
-                      {log.reason || log.error || "ok"}
-
-                    </div>
-
-                  </div>
-
-                  <div
-
-                    className={
-
-                      log.status === "success"
-
-                        ? "text-green-400"
-
-                        : log.status === "failed"
-
-                        ? "text-red-400"
-
-                        : "text-yellow-400"
-
+                    onChange={() =>
+                      toggleOffDay(
+                        manager.id
+                      )
                     }
+                  />
 
-                  >
+                  {manager.name}
+                </label>
+              ))}
+            </div>
 
-                    {log.status}
+            <button
+              type="button"
+              onClick={saveScheduleAndTraffic}
+              disabled={saving}
+              className="mt-6 w-full bg-green-500 hover:bg-green-600 p-4 rounded-xl font-bold disabled:opacity-50"
+            >
+              {saving
+                ? "Сохранение..."
+                : "Сохранить график и traffic"}
+            </button>
+          </div>
 
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+            <div className="bg-slate-900 p-6 rounded-2xl">
+              <h2 className="text-2xl font-bold mb-4">
+                Замены
+              </h2>
+
+              <div className="space-y-3">
+                {(schedule?.substitutions || [])
+                  .map((item) => (
+                    <div
+                      key={`${item.from}-${item.to}`}
+                      className="bg-slate-800 p-4 rounded-xl"
+                    >
+                      {getManagerNameById(item.to)}
+                      {" работает за "}
+                      {getManagerNameById(item.from)}
+                    </div>
+                  ))}
+
+                {!(schedule?.substitutions || []).length && (
+                  <div className="text-slate-400">
+                    Замен нет
                   </div>
+                )}
+              </div>
+            </div>
 
-                </div>
+            <div className="bg-slate-900 p-6 rounded-2xl">
+              <h2 className="text-2xl font-bold mb-4">
+                Нагрузка команды
+              </h2>
 
-              )
-            )
+              <div className="space-y-3">
+                {teamLoad.map((item) => (
+                  <div
+                    key={item.managerId}
+                    className="bg-slate-800 p-4 rounded-xl flex justify-between"
+                  >
+                    <div>
+                      {getManagerNameById(
+                        item.managerId
+                      )}
+                    </div>
 
-          }
-
-        </div>
-
-      </details>
-
+                    <div className="text-cyan-400">
+                      {Math.round(
+                        item.share * 100
+                      )}
+                      % / {item.load}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </>
+      )}
     </div>
-
   );
-
 }

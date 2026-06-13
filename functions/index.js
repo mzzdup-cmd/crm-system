@@ -15,6 +15,10 @@ const {
 } = require("./src/sync/syncPaymentHandler");
 
 const {
+  runTtSheetsSync,
+} = require("./src/sync/runTtSheetsSync");
+
+const {
   notifyPaymentCreated,
   notifySyncFailed,
 } = require("./src/notifications/notificationHelper");
@@ -104,5 +108,38 @@ exports.backfillPaymentsSync = onCall(
       Number(request.data?.limit) || 200;
 
     return backfillUnsyncedPayments(limit);
+  }
+);
+
+exports.triggerTtSheetsSync = onCall(
+  {
+    region: "europe-west1",
+  },
+  async (request) => {
+    if (!request.auth) {
+      throw new HttpsError(
+        "unauthenticated",
+        "Authentication required"
+      );
+    }
+
+    const userSnap = await admin
+      .firestore()
+      .collection("users")
+      .doc(request.auth.uid)
+      .get();
+
+    const userData = userSnap.data();
+
+    if (!userData || userData.role !== "admin") {
+      throw new HttpsError(
+        "permission-denied",
+        "Admin access required"
+      );
+    }
+
+    return runTtSheetsSync({
+      source: "crm_manual",
+    });
   }
 );

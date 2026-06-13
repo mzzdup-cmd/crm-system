@@ -43,7 +43,9 @@ const TABS = [
   },
 ];
 
-export default function SubscriptionsPage() {
+export default function SubscriptionsPage({
+  embedded = false,
+}) {
   const toast = useToast();
 
   const [activeTab, setActiveTab] =
@@ -149,27 +151,34 @@ export default function SubscriptionsPage() {
 
       <div className="flex flex-wrap items-center justify-between gap-4">
 
-        <div>
+        {!embedded && (
+          <div>
+            <h1 className="text-3xl md:text-4xl font-bold">
+              Подписки
+            </h1>
 
-          <h1 className="text-3xl md:text-4xl font-bold">
+            <p className="text-slate-400 mt-2 flex items-center gap-3">
+              <span>
+                {subscriptionCounts.active} активных
+                {" · "}
+                {totalCount} всего
+              </span>
 
-            Подписки
+              <RealtimeIndicator connected={connected} />
+            </p>
+          </div>
+        )}
 
-          </h1>
-
-          <p className="text-slate-400 mt-2 flex items-center gap-3">
-
+        {embedded && (
+          <p className="text-slate-400 text-sm flex items-center gap-3">
             <span>
               {subscriptionCounts.active} активных
               {" · "}
               {totalCount} всего
             </span>
-
             <RealtimeIndicator connected={connected} />
-
           </p>
-
-        </div>
+        )}
 
       </div>
 

@@ -8,6 +8,7 @@ import {
   BrowserRouter,
   Routes,
   Route,
+  Navigate,
 } from "react-router-dom";
 
 import { AuthProvider, useAuth }
@@ -43,52 +44,28 @@ import {
   initErrorTracking,
 } from "./services/errorTrackingService";
 
-const ClientsPage = lazy(
-  () => import("./pages/ClientsPage.jsx")
+const SalesHubPage = lazy(
+  () => import("./pages/SalesHubPage.jsx")
+);
+
+const SalaryHubPage = lazy(
+  () => import("./pages/SalaryHubPage.jsx")
+);
+
+const AnalyticsHubPage = lazy(
+  () => import("./pages/AnalyticsHubPage.jsx")
 );
 
 const ClientDetailsPage = lazy(
   () => import("./pages/ClientDetailsPage.jsx")
 );
 
-const DealsPage = lazy(
-  () => import("./pages/DealsPage.jsx")
-);
-
-const PaymentsPage = lazy(
-  () => import("./pages/PaymentsPage.jsx")
-);
-
-const SalaryPage = lazy(
-  () => import("./pages/SalaryPage.jsx")
-);
-
 const NewPaymentPage = lazy(
   () => import("./pages/NewPaymentPage.jsx")
 );
 
-const SubscriptionsPage = lazy(
-  () => import("./pages/SubscriptionsPage.jsx")
-);
-
-const AdminAnalyticsPage = lazy(
-  () => import("./pages/AdminAnalyticsPage.jsx")
-);
-
 const ManagementPage = lazy(
   () => import("./pages/ManagementPage.jsx")
-);
-
-const RatingPage = lazy(
-  () => import("./pages/RatingPage.jsx")
-);
-
-const NightShiftsPage = lazy(
-  () => import("./pages/NightShiftsPage.jsx")
-);
-
-const BonusesPage = lazy(
-  () => import("./pages/BonusesPage.jsx")
 );
 
 const UnauthorizedPage = lazy(
@@ -101,10 +78,6 @@ const NotificationsPage = lazy(
 
 const PendingSalesPage = lazy(
   () => import("./pages/PendingSalesPage.jsx")
-);
-
-const TrafficPage = lazy(
-  () => import("./pages/TrafficPage.jsx")
 );
 
 const TimeOffPage = lazy(
@@ -179,38 +152,41 @@ function AppRoutes() {
           />
 
           <Route
-            path="/clients"
+            path="/payments"
             element={
               <LazyPage>
-                <ClientsPage />
+                <SalesHubPage />
               </LazyPage>
+            }
+          />
+
+          <Route
+            path="/clients"
+            element={
+              <Navigate
+                to="/payments?tab=clients"
+                replace
+              />
             }
           />
 
           <Route
             path="/deals"
             element={
-              <LazyPage>
-                <DealsPage />
-              </LazyPage>
+              <Navigate
+                to="/payments?tab=deals"
+                replace
+              />
             }
           />
 
           <Route
             path="/subscriptions"
             element={
-              <LazyPage>
-                <SubscriptionsPage />
-              </LazyPage>
-            }
-          />
-
-          <Route
-            path="/payments"
-            element={
-              <LazyPage>
-                <PaymentsPage />
-              </LazyPage>
+              <Navigate
+                to="/payments?tab=subscriptions"
+                replace
+              />
             }
           />
 
@@ -218,8 +194,28 @@ function AppRoutes() {
             path="/salary"
             element={
               <LazyPage>
-                <SalaryPage />
+                <SalaryHubPage />
               </LazyPage>
+            }
+          />
+
+          <Route
+            path="/night-shifts"
+            element={
+              <Navigate
+                to="/salary?tab=night-shifts"
+                replace
+              />
+            }
+          />
+
+          <Route
+            path="/bonuses"
+            element={
+              <Navigate
+                to="/salary?tab=bonuses"
+                replace
+              />
             }
           />
 
@@ -246,9 +242,19 @@ function AppRoutes() {
             element={
               <LazyPage>
                 <ProtectedRoute requireAdmin>
-                  <AdminAnalyticsPage />
+                  <AnalyticsHubPage />
                 </ProtectedRoute>
               </LazyPage>
+            }
+          />
+
+          <Route
+            path="/rating"
+            element={
+              <Navigate
+                to="/analytics?tab=rating"
+                replace
+              />
             }
           />
 
@@ -266,44 +272,10 @@ function AppRoutes() {
           <Route
             path="/traffic"
             element={
-              <LazyPage>
-                <ProtectedRoute requireAdmin>
-                  <TrafficPage />
-                </ProtectedRoute>
-              </LazyPage>
-            }
-          />
-
-          <Route
-            path="/rating"
-            element={
-              <LazyPage>
-                <ProtectedRoute requireAdmin>
-                  <RatingPage />
-                </ProtectedRoute>
-              </LazyPage>
-            }
-          />
-
-          <Route
-            path="/night-shifts"
-            element={
-              <LazyPage>
-                <ProtectedRoute requireAdmin>
-                  <NightShiftsPage />
-                </ProtectedRoute>
-              </LazyPage>
-            }
-          />
-
-          <Route
-            path="/bonuses"
-            element={
-              <LazyPage>
-                <ProtectedRoute requireAdmin>
-                  <BonusesPage />
-                </ProtectedRoute>
-              </LazyPage>
+              <Navigate
+                to="/management?tab=traffic"
+                replace
+              />
             }
           />
 

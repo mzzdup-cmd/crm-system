@@ -25,7 +25,9 @@ import { COURSES } from "../constants/courses";
 import LoadingState
 from "../components/LoadingState";
 
-export default function ClientsPage() {
+export default function ClientsPage({
+  embedded = false,
+}) {
 
   const { userData } =
     useAuth();
@@ -134,11 +136,11 @@ export default function ClientsPage() {
 
     <div>
 
-      <h1 className="text-4xl font-bold mb-8">
-
-        Клиенты
-
-      </h1>
+      {!embedded && (
+        <h1 className="text-4xl font-bold mb-8">
+          Клиенты
+        </h1>
+      )}
 
       <input
 

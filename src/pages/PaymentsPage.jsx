@@ -80,7 +80,9 @@ function LoadErrorState({
   );
 }
 
-export default function PaymentsPage() {
+export default function PaymentsPage({
+  embedded = false,
+}) {
   const { user, userData } = useAuth();
   const toast = useToast();
 
@@ -185,14 +187,16 @@ export default function PaymentsPage() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <PageHeader
-        title="История оплат"
-        subtitle={
-          loading
-            ? "Загрузка..."
-            : `${paymentList.length} записей`
-        }
-      />
+      {!embedded && (
+        <PageHeader
+          title="История оплат"
+          subtitle={
+            loading
+              ? "Загрузка..."
+              : `${paymentList.length} записей`
+          }
+        />
+      )}
 
       {loading && (
         <ListPageSkeleton rows={5} />

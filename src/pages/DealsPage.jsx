@@ -19,7 +19,9 @@ import LoadingState
 from "../components/LoadingState";
 
 
-export default function DealsPage() {
+export default function DealsPage({
+  embedded = false,
+}) {
   const { userData } = useAuth();
 
   const [clients, setClients] =
@@ -128,9 +130,11 @@ export default function DealsPage() {
 
     <div>
 
-      <h1 className="text-4xl font-bold mb-8">
-        Сделки
-      </h1>
+      {!embedded && (
+        <h1 className="text-4xl font-bold mb-8">
+          Сделки
+        </h1>
+      )}
 
       <div className="bg-slate-900 rounded-2xl p-6 mb-8">
 

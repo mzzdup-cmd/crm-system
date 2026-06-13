@@ -2,7 +2,6 @@ import {
   useEffect,
   useState,
   useMemo,
-  useRef,
 } from "react";
 
 import { useAuth } from "../context/AuthContext";
@@ -13,8 +12,6 @@ import {
   subscribeOperationalPayments,
   subscribeScheduleByDate,
   subscribeTrafficByDate,
-  subscribeFailedSyncLogs,
-  subscribeRecentSyncLogs,
 } from "../services/realtimeService";
 
 import {
@@ -46,7 +43,6 @@ import {
 import {
   syncClientReminders,
   syncManagerShiftNotifications,
-  notifyAdminsSyncFailures,
 } from "../services/reminderSyncService";
 
 import {
@@ -68,8 +64,6 @@ export function useDashboardRealtime() {
   const [payments, setPayments] = useState([]);
   const [schedule, setSchedule] = useState(null);
   const [traffic, setTraffic] = useState(null);
-  const [failedSyncLogs, setFailedSyncLogs] =
-    useState([]);
 
   const [initialLoading, setInitialLoading] =
     useState(true);
@@ -77,7 +71,6 @@ export function useDashboardRealtime() {
   const [connected, setConnected] =
     useState(false);
 
-  const syncNotifiedRef = useRef(false);
   const today = getTodayDateString();
 
   useEffect(() => {
@@ -86,7 +79,7 @@ export function useDashboardRealtime() {
     }
 
     setConnected(true);
-    let pending = isAdmin ? 4 : 3;
+    let pending = 3;
     let cancelled = false;
 
     function markReady() {
@@ -136,24 +129,6 @@ export function useDashboardRealtime() {
 
     let unsubSync = () => {};
 
-    if (isAdmin) {
-      unsubSync = subscribeFailedSyncLogs(
-        10,
-        (items) => {
-          setFailedSyncLogs(items);
-          markReady();
-
-          if (
-            items.length &&
-            !syncNotifiedRef.current
-          ) {
-            syncNotifiedRef.current = true;
-            notifyAdminsSyncFailures(items);
-          }
-        }
-      );
-    }
-
     return () => {
       cancelled = true;
       setConnected(false);
@@ -163,7 +138,7 @@ export function useDashboardRealtime() {
       unsubTraffic();
       unsubSync();
     };
-  }, [userData, isAdmin, today]);
+  }, [userData, today]);
 
   useEffect(() => {
     if (!userData || !clients.length) {
@@ -238,6 +213,14 @@ export function useDashboardRealtime() {
       ? getActiveManagers(effectiveSchedule)
       : [];
 
+    const unsyncedTtCount = isAdmin
+      ? payments.filter(
+          (payment) =>
+            !payment.deletedAt &&
+            payment.syncedToSheets !== true
+        ).length
+      : 0;
+
     return {
       ...operational,
       overdueClients,
@@ -247,14 +230,15 @@ export function useDashboardRealtime() {
       trafficLoad,
       teamLoad,
       activeManagers,
-      failedSyncCount: failedSyncLogs.length,
+      unsyncedTtCount,
+      failedSyncCount: 0,
     };
   }, [
     clients,
     payments,
     schedule,
     traffic,
-    failedSyncLogs,
+    isAdmin,
     managerId,
     displayName,
   ]);
@@ -264,7 +248,6 @@ export function useDashboardRealtime() {
     payments,
     schedule,
     traffic,
-    failedSyncLogs,
     summary,
     initialLoading,
     connected,
@@ -351,10 +334,6 @@ export function useSubscriptionsRealtime() {
 export function useManagementRealtime(date) {
   const [schedule, setSchedule] = useState(null);
   const [traffic, setTraffic] = useState(null);
-  const [failedSyncLogs, setFailedSyncLogs] =
-    useState([]);
-  const [recentSyncLogs, setRecentSyncLogs] =
-    useState([]);
 
   const [initialLoading, setInitialLoading] =
     useState(true);
@@ -362,15 +341,13 @@ export function useManagementRealtime(date) {
   const [connected, setConnected] =
     useState(false);
 
-  const syncNotifiedRef = useRef("");
-
   useEffect(() => {
     if (!date) {
       return undefined;
     }
 
     setConnected(true);
-    let pending = 4;
+    let pending = 2;
     let cancelled = false;
 
     function markReady() {
@@ -399,41 +376,11 @@ export function useManagementRealtime(date) {
         }
       );
 
-    const unsubFailed = subscribeFailedSyncLogs(
-      10,
-      (items) => {
-        setFailedSyncLogs(items);
-        markReady();
-
-        const key = items
-          .map((log) => log.id)
-          .join(",");
-
-        if (
-          key &&
-          key !== syncNotifiedRef.current
-        ) {
-          syncNotifiedRef.current = key;
-          notifyAdminsSyncFailures(items);
-        }
-      }
-    );
-
-    const unsubRecent = subscribeRecentSyncLogs(
-      10,
-      (items) => {
-        setRecentSyncLogs(items);
-        markReady();
-      }
-    );
-
     return () => {
       cancelled = true;
       setConnected(false);
       unsubSchedule();
       unsubTraffic();
-      unsubFailed();
-      unsubRecent();
     };
   }, [date]);
 
@@ -448,8 +395,6 @@ export function useManagementRealtime(date) {
   return {
     schedule,
     traffic,
-    failedSyncLogs,
-    recentSyncLogs,
     teamLoad,
     initialLoading,
     connected,

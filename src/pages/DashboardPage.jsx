@@ -550,18 +550,18 @@ function DashboardPageContent() {
 
       {
 
-        isAdmin && summary.failedSyncCount > 0 && (
+        isAdmin && summary.unsyncedTtCount > 0 && (
 
             <Link
               to="/management"
               className="
                 px-4 py-2 rounded-xl
-                bg-red-500/20 text-red-300
-                hover:bg-red-500/30 transition-colors text-sm
+                bg-amber-500/20 text-amber-300
+                hover:bg-amber-500/30 transition-colors text-sm
               "
             >
 
-              {summary.failedSyncCount} ошибок синхронизации
+              {summary.unsyncedTtCount} ожидают выгрузки в ТТ
 
             </Link>
 
@@ -892,16 +892,19 @@ function DashboardPageContent() {
                 color="text-red-400"
               />
 
-              <StatCard
-                label="Ошибки выгрузки"
-                hint="сбои sync в Sheets"
-                value={summary.failedSyncCount}
-                color={
-                  summary.failedSyncCount
-                    ? "text-orange-400"
-                    : "text-green-400"
-                }
-              />
+              <Link to="/management">
+                <StatCard
+                  label="Ожидает выгрузки в ТТ"
+                  hint="новые оплаты для ТТ-таблиц"
+                  value={summary.unsyncedTtCount}
+                  color={
+                    summary.unsyncedTtCount
+                      ? "text-amber-400"
+                      : "text-green-400"
+                  }
+                  className="h-full hover:bg-slate-800 transition-colors"
+                />
+              </Link>
 
             </div>
 

@@ -44,7 +44,9 @@ function LoadErrorState({
   );
 }
 
-export default function SalaryPage() {
+export default function SalaryPage({
+  embedded = false,
+}) {
   const {
     data: salaryData,
     loading,
@@ -57,14 +59,16 @@ export default function SalaryPage() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <PageHeader
-        title="Зарплаты"
-        subtitle={
-          loading
-            ? "Загрузка..."
-            : `${rows.length} менеджер(ов)`
-        }
-      />
+      {!embedded && (
+        <PageHeader
+          title="Зарплаты"
+          subtitle={
+            loading
+              ? "Загрузка..."
+              : `${rows.length} менеджер(ов)`
+          }
+        />
+      )}
 
       {loading && (
         <ListPageSkeleton rows={3} />

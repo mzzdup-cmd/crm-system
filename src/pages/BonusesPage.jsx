@@ -32,7 +32,9 @@ import {
 import ConfirmModal
 from "../components/ui/ConfirmModal";
 
-export default function BonusesPage() {
+export default function BonusesPage({
+  embedded = false,
+}) {
   const { user, userData } = useAuth();
   const toast = useToast();
 
@@ -203,9 +205,11 @@ export default function BonusesPage() {
 
   return (
     <div>
-      <h1 className="text-4xl font-bold mb-8">
-        Ручные бонусы
-      </h1>
+      {!embedded && (
+        <h1 className="text-4xl font-bold mb-8">
+          Ручные бонусы
+        </h1>
+      )}
 
       <div className="bg-slate-900 p-6 rounded-2xl max-w-xl">
         <select
