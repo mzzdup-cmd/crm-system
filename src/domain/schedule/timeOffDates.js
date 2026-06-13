@@ -57,6 +57,144 @@ export function isDateWithinRange(
   );
 }
 
+export function formatAbsenceDayLabel(dateKey) {
+  if (!dateKey) {
+    return {
+      title: "",
+      subtitle: "",
+    };
+  }
+
+  const date = new Date(`${dateKey}T12:00:00`);
+
+  const dayMonth = date.toLocaleDateString(
+    "ru-RU",
+    {
+      day: "numeric",
+      month: "long",
+    }
+  );
+
+  const weekday = date.toLocaleDateString(
+    "ru-RU",
+    { weekday: "long" }
+  );
+
+  return {
+    title: dayMonth,
+    subtitle: weekday,
+  };
+}
+
+export function formatVacationRangeLabel(
+  startDate,
+  endDate
+) {
+  if (!startDate || !endDate) {
+    return "";
+  }
+
+  const start = new Date(`${startDate}T12:00:00`);
+  const end = new Date(`${endDate}T12:00:00`);
+
+  const sameMonth =
+    start.getMonth() === end.getMonth() &&
+    start.getFullYear() === end.getFullYear();
+
+  if (startDate === endDate) {
+    return formatAbsenceDayLabel(startDate).title;
+  }
+
+  if (sameMonth) {
+    const month = start.toLocaleDateString(
+      "ru-RU",
+      { month: "long" }
+    );
+
+    return `${start.getDate()} — ${end.getDate()} ${month}`;
+  }
+
+  const startLabel = start.toLocaleDateString(
+    "ru-RU",
+    {
+      day: "numeric",
+      month: "long",
+    }
+  );
+
+  const endLabel = end.toLocaleDateString(
+    "ru-RU",
+    {
+      day: "numeric",
+      month: "long",
+    }
+  );
+
+  return `${startLabel} — ${endLabel}`;
+}
+
+export function getManagerUpcomingAbsences({
+  timeOffRequests = [],
+  vacationRequests = [],
+  managerId,
+  fromDate,
+  dayOffLimit = 6,
+}) {
+  const today =
+    fromDate ||
+    new Date().toISOString().split("T")[0];
+
+  const dayOffs = timeOffRequests
+    .filter(
+      (request) =>
+        request.status === "approved" &&
+        request.managerId === managerId &&
+        request.date >= today
+    )
+    .sort((a, b) =>
+      a.date.localeCompare(b.date)
+    )
+    .slice(0, dayOffLimit)
+    .map((request) => ({
+      type: "day_off",
+      date: request.date,
+      ...formatAbsenceDayLabel(
+        request.date
+      ),
+    }));
+
+  const vacations = vacationRequests
+    .filter(
+      (request) =>
+        request.status === "approved" &&
+        request.managerId === managerId &&
+        request.endDate >= today
+    )
+    .sort((a, b) =>
+      a.startDate.localeCompare(b.startDate)
+    )
+    .map((request) => ({
+      type: "vacation",
+      startDate: request.startDate,
+      endDate: request.endDate,
+      title: formatVacationRangeLabel(
+        request.startDate,
+        request.endDate
+      ),
+      subtitle: "отпуск",
+      daysCount: countVacationDays(
+        request.startDate,
+        request.endDate
+      ),
+    }));
+
+  return {
+    dayOffs,
+    vacations,
+    nextVacation: vacations[0] || null,
+  };
+}
+
 export function getUpcomingApprovedDates({
   timeOffRequests = [],
   vacationRequests = [],

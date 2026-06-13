@@ -271,6 +271,8 @@ function matchesManagerKey(
   return false;
 }
 
+const TEAM_MOTIVATION_SALE_AMOUNT = 22000;
+
 export function getMonthLeaderInfo({
   payments = [],
   managerId,
@@ -290,6 +292,10 @@ export function getMonthLeaderInfo({
       current: null,
       isLeader: false,
       difference: 0,
+      teamAverageRevenue: 0,
+      salesToCloseGap: 0,
+      motivationSaleAmount:
+        TEAM_MOTIVATION_SALE_AMOUNT,
     };
   }
 
@@ -309,18 +315,41 @@ export function getMonthLeaderInfo({
     current.managerKey ===
       leader.managerKey;
 
+  const difference = isLeader
+    ? 0
+    : Math.max(
+        0,
+        leader.revenue -
+          (current?.revenue || 0)
+      );
+
+  const teamAverageRevenue =
+    leaderboard.length
+      ? leaderboard.reduce(
+          (sum, item) =>
+            sum + item.revenue,
+          0
+        ) / leaderboard.length
+      : 0;
+
+  const salesToCloseGap =
+    difference > 0
+      ? Math.ceil(
+          difference /
+            TEAM_MOTIVATION_SALE_AMOUNT
+        )
+      : 0;
+
   return {
     leaderboard,
     leader,
     current,
     isLeader: Boolean(isLeader),
-    difference: isLeader
-      ? 0
-      : Math.max(
-          0,
-          leader.revenue -
-            (current?.revenue || 0)
-        ),
+    difference,
+    teamAverageRevenue,
+    salesToCloseGap,
+    motivationSaleAmount:
+      TEAM_MOTIVATION_SALE_AMOUNT,
   };
 }
 

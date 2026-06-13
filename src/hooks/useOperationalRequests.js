@@ -23,8 +23,8 @@ import {
 } from "../constants/timeOff";
 
 import {
-  getUpcomingApprovedDates,
   findOverlappingAbsences,
+  getManagerUpcomingAbsences,
 } from "../domain/schedule/timeOffDates";
 
 export function useOperationalRequests() {
@@ -106,12 +106,17 @@ export function useOperationalRequests() {
         (item) => item.endDate >= today
       );
 
-    const upcomingOffDays =
-      getUpcomingApprovedDates({
+    const upcomingAbsences =
+      getManagerUpcomingAbsences({
         timeOffRequests,
         vacationRequests,
         managerId,
       });
+
+    const upcomingOffDays =
+      upcomingAbsences.dayOffs.map(
+        (item) => item.date
+      );
 
     const overlappingAbsences =
       findOverlappingAbsences({
@@ -141,6 +146,9 @@ export function useOperationalRequests() {
       approvedVacations:
         upcomingVacations,
       upcomingOffDays,
+      upcomingAbsences,
+      nextVacation:
+        upcomingAbsences.nextVacation,
       overlappingAbsences,
       activeVacation,
     };

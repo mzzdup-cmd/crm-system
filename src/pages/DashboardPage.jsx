@@ -32,6 +32,10 @@ import { useOperationalRequests }
 from "../hooks/useOperationalRequests";
 
 import {
+  formatVacationRangeLabel,
+} from "../domain/schedule/timeOffDates";
+
+import {
   getQuickSaleButtonLabel,
 } from "../domain/pendingSales/pendingSalesLogic";
 
@@ -154,10 +158,63 @@ function PersonalKpiCard({ kpi }) {
   );
 }
 
+function AbsenceDateChip({
+  title,
+  subtitle,
+  tone = "day_off",
+}) {
+  const toneClass =
+    tone === "vacation"
+      ? "border-violet-500/40 bg-violet-500/10"
+      : "border-slate-700 bg-slate-800/80";
+
+  return (
+    <div
+      className={`
+        inline-flex flex-col
+        rounded-xl border px-3 py-2
+        min-w-[108px] max-w-[160px]
+        ${toneClass}
+      `}
+    >
+      <span className="text-sm font-semibold text-slate-100 leading-tight">
+        {title}
+      </span>
+      {subtitle && (
+        <span className="text-xs text-slate-400 mt-0.5 capitalize">
+          {subtitle}
+        </span>
+      )}
+    </div>
+  );
+}
+
 function OperationalRequestsCard({ summary }) {
   const pendingOwn =
     summary.pendingTimeOff.length +
     summary.pendingVacations.length;
+
+  const displayVacation =
+    summary.activeVacation ||
+    summary.nextVacation;
+
+  const vacationChip = displayVacation
+    ? {
+        title:
+          displayVacation.title ||
+          formatVacationRangeLabel(
+            displayVacation.startDate,
+            displayVacation.endDate
+          ),
+        subtitle: summary.activeVacation
+          ? "сейчас"
+          : "отпуск",
+      }
+    : null;
+
+  const dayOffs =
+    summary.upcomingAbsences?.dayOffs ||
+    [];
 
   return (
     <section className="bg-slate-900 p-5 md:p-6 rounded-2xl space-y-4">
@@ -188,24 +245,45 @@ function OperationalRequestsCard({ summary }) {
           }
         />
 
-        <StatCard
-          label="Отпуск"
-          value={
-            summary.activeVacation
-              ? `${summary.activeVacation.startDate} — ${summary.activeVacation.endDate}`
-              : "—"
-          }
-          color="text-violet-400"
-        />
+        <div className="bg-slate-900 p-5 md:p-6 rounded-2xl">
+          <div className="font-semibold text-slate-200 text-sm">
+            Отпуск
+          </div>
+          <div className="mt-3">
+            {vacationChip ? (
+              <AbsenceDateChip
+                tone="vacation"
+                title={vacationChip.title}
+                subtitle={vacationChip.subtitle}
+              />
+            ) : (
+              <span className="text-2xl font-bold text-slate-500">
+                —
+              </span>
+            )}
+          </div>
+        </div>
 
-        <StatCard
-          label="Ближайшие выходные"
-          value={
-            summary.upcomingOffDays.length
-              ? summary.upcomingOffDays.join(", ")
-              : "—"
-          }
-        />
+        <div className="bg-slate-900 p-5 md:p-6 rounded-2xl">
+          <div className="font-semibold text-slate-200 text-sm">
+            Ближайшие выходные
+          </div>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {dayOffs.length ? (
+              dayOffs.map((item) => (
+                <AbsenceDateChip
+                  key={item.date}
+                  title={item.title}
+                  subtitle={item.subtitle}
+                />
+              ))
+            ) : (
+              <span className="text-2xl font-bold text-slate-500">
+                —
+              </span>
+            )}
+          </div>
+        </div>
       </div>
     </section>
   );
@@ -298,11 +376,39 @@ function AdminOperationalCard({ summary }) {
   );
 }
 
+function formatSalesCountLabel(count) {
+  const mod10 = count % 10;
+  const mod100 = count % 100;
+
+  if (
+    mod100 >= 11 &&
+    mod100 <= 14
+  ) {
+    return `${count} продаж`;
+  }
+
+  if (mod10 === 1) {
+    return `${count} продажа`;
+  }
+
+  if (mod10 >= 2 && mod10 <= 4) {
+    return `${count} продажи`;
+  }
+
+  return `${count} продаж`;
+}
+
 function MotivationalLeaderBlock({
   leaderInfo,
 }) {
-  const { leader, isLeader, difference } =
-    leaderInfo;
+  const {
+    leader,
+    isLeader,
+    difference,
+    teamAverageRevenue,
+    salesToCloseGap,
+    motivationSaleAmount,
+  } = leaderInfo;
 
   if (!leader) {
     return null;
@@ -334,17 +440,44 @@ function MotivationalLeaderBlock({
         </>
       ) : (
         <>
-          <div className="text-lg text-slate-200">
-            Сейчас лидер месяца —{" "}
-            <strong>{leader.name}</strong>:{" "}
-            {formatMoney(leader.revenue)}
+          <div className="text-2xl font-bold">
+            До максимума 🔥
           </div>
-          <div className="text-2xl font-bold text-amber-300">
-            До лидерства осталось:{" "}
-            {formatMoney(difference)}
-          </div>
-          <div className="text-slate-300">
-            У тебя есть все шансы обогнать 🔥
+
+          <div className="grid gap-2 text-sm md:text-base">
+            <div className="text-slate-300">
+              Максимальная выручка сейчас:{" "}
+              <strong className="text-green-300">
+                {formatMoney(leader.revenue)}
+              </strong>
+            </div>
+
+            <div className="text-slate-300">
+              Средняя по команде:{" "}
+              <strong>
+                {formatMoney(
+                  teamAverageRevenue
+                )}
+              </strong>
+            </div>
+
+            <div className="text-lg font-bold text-amber-300 pt-1">
+              До максимума осталось:{" "}
+              {formatMoney(difference)}
+            </div>
+
+            {salesToCloseGap > 0 && (
+              <div className="text-slate-300">
+                Это всего{" "}
+                {formatSalesCountLabel(
+                  salesToCloseGap
+                )}{" "}
+                по{" "}
+                {formatMoney(
+                  motivationSaleAmount
+                )}
+              </div>
+            )}
           </div>
         </>
       )}
