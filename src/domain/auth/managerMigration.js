@@ -33,6 +33,9 @@ export const LEGACY_MANAGER_ALIASES = {
   "Александр С": "alexander_simanov",
   "Виолетта П": "violeta_petrova",
   "Полина Пламадяла": "polina_plamadya",
+  /** Typos in Firestore users docs */
+  polina_plamadyala: "polina_plamadya",
+  vilu_petrova: "violeta_petrova",
 };
 
 export function resolveManagerIdFromEmail(email) {

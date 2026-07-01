@@ -46,7 +46,11 @@ export function getCurrentManagerId(userData) {
   }
 
   if (userData.managerId) {
-    return userData.managerId;
+    const resolved = resolveManagerIdFromLegacy(
+      userData.managerId
+    );
+
+    return resolved || userData.managerId;
   }
 
   if (userData.role === ROLES.MANAGER) {
@@ -81,6 +85,12 @@ export function normalizeUserRole(userData) {
 
   let managerId = userData.managerId || null;
   let name = userData.name || "";
+
+  if (managerId) {
+    managerId =
+      resolveManagerIdFromLegacy(managerId) ||
+      managerId;
+  }
 
   if (role === ROLES.MANAGER) {
     if (!managerId && name) {
