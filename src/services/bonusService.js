@@ -14,7 +14,7 @@ import {
 } from "../domain/auth/managerMigration";
 import {
   isLeadership,
-  getCurrentManagerId,
+  getFirestoreManagerId,
 } from "../domain/auth/roleHelpers";
 import {
   buildCreateAudit,
@@ -76,27 +76,35 @@ export async function getManualBonusesForUser(
   }
 
   const managerId =
-    getCurrentManagerId(userData);
+    getFirestoreManagerId(userData);
 
   if (!managerId) {
     return [];
   }
 
-  const bonusesQuery = query(
-    collection(db, "manualBonuses"),
-    where(
-      "managerId",
-      "==",
-      managerId
-    )
-  );
+  try {
+    const bonusesQuery = query(
+      collection(db, "manualBonuses"),
+      where(
+        "managerId",
+        "==",
+        managerId
+      )
+    );
 
-  const snapshot =
-    await getDocs(bonusesQuery);
+    const snapshot =
+      await getDocs(bonusesQuery);
 
-  return filterActiveBonuses(
-    snapshot.docs.map(mapBonusDoc)
-  );
+    return filterActiveBonuses(
+      snapshot.docs.map(mapBonusDoc)
+    );
+  } catch (error) {
+    console.warn(
+      "[bonusService] manual bonuses query failed:",
+      error
+    );
+    return [];
+  }
 }
 
 export async function addManualBonus(

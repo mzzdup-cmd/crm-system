@@ -18,6 +18,7 @@ import {
 import {
   isLeadership,
   getCurrentManagerId,
+  getFirestoreManagerId,
 } from "../domain/auth/roleHelpers";
 import {
   getStartDate,
@@ -138,60 +139,116 @@ export async function getPaymentById(id) {
   return mapPaymentDoc(snapshot);
 }
 
+function paymentBelongsToManager(
+  payment,
+  userData
+) {
+  const canonicalId =
+    getCurrentManagerId(userData);
+  const firestoreId =
+    getFirestoreManagerId(userData);
+  const managerName =
+    userData?.name || "";
+
+  return (
+    (canonicalId &&
+      payment.managerId === canonicalId) ||
+    (firestoreId &&
+      payment.managerId === firestoreId) ||
+    (managerName &&
+      payment.manager === managerName)
+  );
+}
+
+function getManagerQueryIds(userData) {
+  const canonicalId =
+    getCurrentManagerId(userData);
+  const firestoreId =
+    getFirestoreManagerId(userData);
+
+  return [
+    ...new Set(
+      [firestoreId, canonicalId].filter(
+        Boolean
+      )
+    ),
+  ];
+}
+
+async function queryPaymentsByManagerId(
+  managerId
+) {
+  const snapshot = await getDocs(
+    query(
+      collection(db, "payments"),
+      where(
+        "managerId",
+        "==",
+        managerId
+      )
+    )
+  );
+
+  return filterActivePayments(
+    snapshot.docs.map(mapPaymentDoc)
+  );
+}
+
 export async function getPaymentsForUser(userData) {
   if (isLeadership(userData)) {
     return getAllPayments();
   }
 
-  const managerId =
-    getCurrentManagerId(userData);
+  const queryIds =
+    getManagerQueryIds(userData);
 
-  if (!managerId) {
+  if (!queryIds.length) {
     return [];
   }
 
-  try {
-    const paymentsQuery = query(
-      collection(db, "payments"),
-      where(
-        "managerId",
-        "==",
-        managerId
-      ),
-      orderBy("createdAt", "desc")
-    );
+  for (const managerId of queryIds) {
+    try {
+      const payments =
+        await queryPaymentsByManagerId(
+          managerId
+        );
 
-    const snapshot =
-      await getDocs(paymentsQuery);
+      return sortPaymentsDesc(payments);
+    } catch (error) {
+      console.warn(
+        `[paymentService] payments query failed for ${managerId}:`,
+        error
+      );
+    }
+  }
+
+  try {
+    const snapshot = await getDocs(
+      query(
+        collection(db, "payments"),
+        orderBy("createdAt", "desc"),
+        limit(5000)
+      )
+    );
 
     return sortPaymentsDesc(
       filterActivePayments(
-        snapshot.docs.map(mapPaymentDoc)
+        snapshot.docs
+          .map(mapPaymentDoc)
+          .filter((payment) =>
+            paymentBelongsToManager(
+              payment,
+              userData
+            )
+          )
       )
     );
   } catch (error) {
     console.error(
-      "[paymentService] getPaymentsForUser indexed query failed:",
+      "[paymentService] getPaymentsForUser fallback failed:",
       error
     );
-
-    const fallbackQuery = query(
-      collection(db, "payments"),
-      where(
-        "managerId",
-        "==",
-        managerId
-      )
-    );
-
-    const snapshot =
-      await getDocs(fallbackQuery);
-
-    return sortPaymentsDesc(
-      filterActivePayments(
-        snapshot.docs.map(mapPaymentDoc)
-      )
-    );
+    throw error;
   }
 }
 
@@ -784,12 +841,41 @@ export function buildManagersStats(payments) {
 }
 
 export async function getSalaryReportForUser(userData) {
-  const [payments, nightShifts, manualBonuses] =
-    await Promise.all([
-      getPaymentsForUser(userData),
-      getNightShiftsForUser(userData),
-      getManualBonusesForUser(userData),
-    ]);
+  let payments;
+
+  try {
+    payments =
+      await getPaymentsForUser(userData);
+  } catch (error) {
+    console.error(
+      "[salary] payments load failed:",
+      error
+    );
+    throw error;
+  }
+
+  let nightShifts = [];
+  let manualBonuses = [];
+
+  try {
+    nightShifts =
+      await getNightShiftsForUser(userData);
+  } catch (error) {
+    console.error(
+      "[salary] night shifts load failed:",
+      error
+    );
+  }
+
+  try {
+    manualBonuses =
+      await getManualBonusesForUser(userData);
+  } catch (error) {
+    console.error(
+      "[salary] manual bonuses load failed:",
+      error
+    );
+  }
 
   const managerNames = Object.fromEntries(
     MANAGERS.map((manager) => [

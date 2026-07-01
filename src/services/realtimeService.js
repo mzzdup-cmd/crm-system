@@ -12,7 +12,7 @@ import { db } from "./firebase";
 
 import {
   isLeadership,
-  getCurrentManagerId,
+  getFirestoreManagerId,
 } from "../domain/auth/roleHelpers";
 
 import {
@@ -67,7 +67,7 @@ export function subscribeClientsForUser(
     );
   } else {
     const managerId =
-      getCurrentManagerId(userData);
+      getFirestoreManagerId(userData);
 
     if (!managerId) {
       callback([]);
@@ -159,7 +159,7 @@ export function subscribeRecentPaymentsForUser(
     );
   } else {
     const managerId =
-      getCurrentManagerId(userData);
+      getFirestoreManagerId(userData);
 
     if (!managerId) {
       callback([]);

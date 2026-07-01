@@ -14,7 +14,7 @@ import {
 } from "../domain/auth/managerMigration";
 import {
   isLeadership,
-  getCurrentManagerId,
+  getFirestoreManagerId,
 } from "../domain/auth/roleHelpers";
 import {
   buildCreateAudit,
@@ -78,27 +78,35 @@ export async function getNightShiftsForUser(
   }
 
   const managerId =
-    getCurrentManagerId(userData);
+    getFirestoreManagerId(userData);
 
   if (!managerId) {
     return [];
   }
 
-  const shiftsQuery = query(
-    collection(db, "nightShifts"),
-    where(
-      "managerId",
-      "==",
-      managerId
-    )
-  );
+  try {
+    const shiftsQuery = query(
+      collection(db, "nightShifts"),
+      where(
+        "managerId",
+        "==",
+        managerId
+      )
+    );
 
-  const snapshot =
-    await getDocs(shiftsQuery);
+    const snapshot =
+      await getDocs(shiftsQuery);
 
-  return filterActiveShifts(
-    snapshot.docs.map(mapShiftDoc)
-  );
+    return filterActiveShifts(
+      snapshot.docs.map(mapShiftDoc)
+    );
+  } catch (error) {
+    console.warn(
+      "[shiftService] night shifts query failed:",
+      error
+    );
+    return [];
+  }
 }
 
 export async function addNightShift(

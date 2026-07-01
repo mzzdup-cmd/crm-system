@@ -40,6 +40,7 @@ export function getRoleLabel(userData) {
   );
 }
 
+/** Canonical manager id for app logic (aliases resolved). */
 export function getCurrentManagerId(userData) {
   if (!userData) {
     return null;
@@ -74,6 +75,22 @@ export function getCurrentManagerId(userData) {
   return null;
 }
 
+/**
+ * Raw managerId from Firestore users/{uid}.
+ * Security rules compare against this value, not canonical aliases.
+ */
+export function getFirestoreManagerId(userData) {
+  if (!userData) {
+    return null;
+  }
+
+  if (userData.firestoreManagerId) {
+    return userData.firestoreManagerId;
+  }
+
+  return getCurrentManagerId(userData);
+}
+
 export function normalizeUserRole(userData) {
   if (!userData) {
     return null;
@@ -83,7 +100,10 @@ export function normalizeUserRole(userData) {
     ? userData.role
     : ROLES.MANAGER;
 
-  let managerId = userData.managerId || null;
+  const firestoreManagerId =
+    userData.managerId || null;
+
+  let managerId = firestoreManagerId;
   let name = userData.name || "";
 
   if (managerId) {
@@ -122,6 +142,10 @@ export function normalizeUserRole(userData) {
     ...userData,
     role,
     managerId,
+    firestoreManagerId:
+      role === ROLES.MANAGER
+        ? firestoreManagerId
+        : null,
     name,
   };
 }
