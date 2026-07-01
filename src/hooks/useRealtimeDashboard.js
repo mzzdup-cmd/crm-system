@@ -47,6 +47,7 @@ import {
 
 import {
   syncMissingVkResolutionForUser,
+  syncMissingVkRemindersForUser,
 } from "../services/missingVkReminderService";
 
 import {
@@ -153,6 +154,16 @@ export function useDashboardRealtime() {
     ).catch((error) => {
       console.error(
         "Missing VK resolution sync failed:",
+        error
+      );
+    });
+
+    syncMissingVkRemindersForUser(
+      userData,
+      clients
+    ).catch((error) => {
+      console.error(
+        "Missing VK reminder sync failed:",
         error
       );
     });

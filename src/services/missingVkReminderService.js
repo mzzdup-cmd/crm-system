@@ -70,6 +70,7 @@ export async function maybeNotifyMissingVkLink({
   client,
   payment,
   managerName,
+  userData = null,
 }) {
   if (client.vkLink?.trim()) {
     return null;
@@ -89,7 +90,8 @@ export async function maybeNotifyMissingVkLink({
       managerId,
     ]);
 
-  const userId = users[0]?.uid;
+  const userId =
+    userData?.uid || users[0]?.uid;
 
   if (!userId) {
     return null;
@@ -139,6 +141,36 @@ export async function resolveMissingVkRemindersForClient(
   );
 }
 
+export async function syncMissingVkRemindersForUser(
+  userData,
+  clients = []
+) {
+  if (!userData?.uid || !clients.length) {
+    return;
+  }
+
+  const clientsMissingVk = clients.filter(
+    (client) =>
+      client?.id && !client.vkLink?.trim()
+  );
+
+  await Promise.all(
+    clientsMissingVk.map((client) =>
+      notifyMissingVkLink({
+        userId: userData.uid,
+        client,
+        managerId: client.managerId,
+      }).catch((error) => {
+        console.warn(
+          "Missing VK reminder skipped:",
+          client.id,
+          error
+        );
+      })
+    )
+  );
+}
+
 export async function syncMissingVkResolutionForUser(
   userId,
   clients = []
@@ -163,6 +195,75 @@ export async function syncMissingVkResolutionForUser(
       )
     )
   );
+}
+
+export function buildMissingVkNotificationFromClient(
+  client
+) {
+  const clientName =
+    client.name ||
+    client.clientName ||
+    "Клиент";
+
+  return {
+    id: `missing_vk_client_${client.id}`,
+    type:
+      NOTIFICATION_TYPES.MISSING_VK_LINK,
+    title: "Нужно дозаполнить VK",
+    body: `${clientName} — добавьте ссылку на VK`,
+    link: `/client/${client.id}`,
+    read: false,
+    resolved: false,
+    createdAt:
+      client.updatedAt ||
+      client.createdAt ||
+      Date.now(),
+    data: {
+      clientId: client.id,
+      fromClient: true,
+    },
+  };
+}
+
+export function mergeMissingVkReminders(
+  notifications = [],
+  clients = []
+) {
+  const active = notifications.filter(
+    (item) =>
+      !item.resolved &&
+      item.type ===
+        NOTIFICATION_TYPES.MISSING_VK_LINK
+  );
+
+  const coveredClientIds = new Set(
+    active
+      .map(
+        (item) => item.data?.clientId
+      )
+      .filter(Boolean)
+  );
+
+  const fromClients = clients
+    .filter(
+      (client) =>
+        client?.id &&
+        !client.vkLink?.trim() &&
+        !coveredClientIds.has(client.id)
+    )
+    .map(
+      buildMissingVkNotificationFromClient
+    );
+
+  return [...active, ...fromClients];
+}
+
+export function countClientsMissingVk(
+  clients = []
+) {
+  return clients.filter(
+    (client) => !client.vkLink?.trim()
+  ).length;
 }
 
 export function countActiveMissingVkReminders(

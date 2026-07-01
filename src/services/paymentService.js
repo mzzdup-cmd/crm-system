@@ -19,6 +19,7 @@ import {
   isLeadership,
   getCurrentManagerId,
   getFirestoreManagerId,
+  resolveManagerFieldsForWrite,
 } from "../domain/auth/roleHelpers";
 import {
   getStartDate,
@@ -537,6 +538,13 @@ export async function addPaymentRecord({
   sourceName = "",
   userData,
 }) {
+  const managerFields = userData
+    ? resolveManagerFieldsForWrite(
+        userData,
+        manager
+      )
+    : normalizeManagerFields({ manager });
+
   const resolvedSourceName =
     sourceName ||
     client?.sourceName ||
@@ -564,7 +572,8 @@ export async function addPaymentRecord({
     invoiceNumber,
     comment,
     clientNote: resolvedClientNote,
-    manager,
+    manager: managerFields.manager,
+    managerId: managerFields.managerId,
     paymentDate,
     startDate,
     sourceId: resolvedSourceId,
@@ -872,17 +881,25 @@ export async function createPayment({
     userData,
   });
 
-  const updatedClient = await applyPaymentToClient({
+  const updatedClient =   await applyPaymentToClient({
     client,
     paymentAmount,
     paymentDate,
   });
 
-  await maybeNotifyMissingVkLink({
-    client,
-    payment: paymentPayload,
-    managerName: manager,
-  });
+  try {
+    await maybeNotifyMissingVkLink({
+      client,
+      payment: paymentPayload,
+      managerName: manager,
+      userData,
+    });
+  } catch (error) {
+    console.warn(
+      "VK reminder notification skipped:",
+      error
+    );
+  }
 
   return {
     payment: paymentPayload,

@@ -1,11 +1,22 @@
 export function buildCreateAudit(userData) {
   const now = Date.now();
+  const uid =
+    userData?.uid ||
+    userData?.id ||
+    null;
+
+  if (!uid) {
+    return {
+      createdAt: now,
+      updatedAt: now,
+    };
+  }
 
   return {
     createdAt: now,
-    createdByUid: userData?.uid || null,
+    createdByUid: uid,
     updatedAt: now,
-    updatedByUid: userData?.uid || null,
+    updatedByUid: uid,
   };
 }
 

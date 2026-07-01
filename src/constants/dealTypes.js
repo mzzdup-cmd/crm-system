@@ -205,6 +205,28 @@ export function isLegacyTableTtDealType(
   );
 }
 
+const REJECT_DEAL_TYPE_IDS = [
+  "reject_new",
+  "reject_bb",
+  "reject_upsell",
+  "reject_mailing",
+];
+
+export function isRejectDealType(value) {
+  const id = resolveDealTypeId(value);
+
+  if (REJECT_DEAL_TYPE_IDS.includes(id)) {
+    return true;
+  }
+
+  const label = getDealTypeLabel(value);
+
+  return (
+    typeof label === "string" &&
+    label.startsWith("Отказ")
+  );
+}
+
 export function resolveLegacyTtDealTypeId(
   value
 ) {

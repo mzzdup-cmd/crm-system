@@ -8,7 +8,11 @@ import {
 } from "./managerMigration";
 import {
   getManagerNameById,
+  getManagerById,
 } from "../../constants/managers";
+import {
+  normalizeManagerFields,
+} from "./managerMigration";
 
 export function isAdmin(userData) {
   return userData?.role === ROLES.ADMIN;
@@ -46,19 +50,25 @@ export function getCurrentManagerId(userData) {
     return null;
   }
 
-  if (userData.managerId) {
-    const resolved = resolveManagerIdFromLegacy(
-      userData.managerId
-    );
+  const fromDoc = userData.managerId
+    ? resolveManagerIdFromLegacy(
+        userData.managerId
+      )
+    : null;
 
-    return resolved || userData.managerId;
+  if (
+    fromDoc &&
+    getManagerById(fromDoc)
+  ) {
+    return fromDoc;
   }
 
   if (userData.role === ROLES.MANAGER) {
     if (userData.name) {
-      const fromName = resolveManagerIdFromLegacy(
-        userData.name
-      );
+      const fromName =
+        resolveManagerIdFromLegacy(
+          userData.name
+        );
 
       if (fromName) {
         return fromName;
@@ -66,10 +76,23 @@ export function getCurrentManagerId(userData) {
     }
 
     if (userData.email) {
-      return resolveManagerIdFromEmail(
-        userData.email
-      );
+      const fromEmail =
+        resolveManagerIdFromEmail(
+          userData.email
+        );
+
+      if (fromEmail) {
+        return fromEmail;
+      }
     }
+  }
+
+  if (userData.managerId) {
+    return (
+      resolveManagerIdFromLegacy(
+        userData.managerId
+      ) || userData.managerId
+    );
   }
 
   return null;
@@ -196,6 +219,36 @@ export function normalizeUserRole(userData) {
         : null,
     name,
   };
+}
+
+/** Manager id + display name for Firestore writes (managers always own their rows). */
+export function resolveManagerFieldsForWrite(
+  userData,
+  selectedManager = ""
+) {
+  if (isLeadership(userData)) {
+    return normalizeManagerFields({
+      manager: selectedManager,
+    });
+  }
+
+  const fromProfile =
+    getCurrentManagerId(userData);
+
+  if (fromProfile) {
+    return {
+      managerId: fromProfile,
+      manager:
+        getManagerNameById(fromProfile) ||
+        userData?.name?.trim() ||
+        selectedManager?.trim() ||
+        "",
+    };
+  }
+
+  return normalizeManagerFields({
+    manager: selectedManager,
+  });
 }
 
 function isValidRoleValue(role) {

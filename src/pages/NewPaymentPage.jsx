@@ -57,6 +57,7 @@ import {
   isLegacyDealType,
   isLegacyTableTtDealType,
   isBbDealType,
+  isRejectDealType,
   resolveDealTypeId,
   resolveLegacyTtDealTypeId,
 } from "../constants/dealTypes";
@@ -300,6 +301,23 @@ export default function NewPaymentPage() {
   const isBbDeal =
     isBbDealType(dealTypeId);
 
+  const activeDealTypeLabel =
+    getDealTypeLabel(
+      isLegacy &&
+        isRejectDealType(
+          legacyTtDealTypeId
+        )
+        ? legacyTtDealTypeId
+        : dealTypeId
+    );
+
+  const isRejectDeal =
+    isRejectDealType(dealTypeId) ||
+    (isLegacy &&
+      isRejectDealType(
+        legacyTtDealTypeId
+      ));
+
   useEffect(() => {
     if (
       userData?.managerId &&
@@ -436,6 +454,16 @@ export default function NewPaymentPage() {
     });
   }
 
+  function resolvePaymentAmount() {
+    if (isRejectDeal) {
+      return 0;
+    }
+
+    return parseMoneyNumber(
+      paymentAmount
+    );
+  }
+
   function validatePaymentSystemFields() {
     if (!paymentSystem) {
       return "Выберите платежную систему";
@@ -476,7 +504,11 @@ export default function NewPaymentPage() {
       return "Выберите тариф";
     }
 
-    if (!budget) {
+    if (
+      !isLegacyClientMode &&
+      !isRejectDeal &&
+      !budget
+    ) {
       return "Укажите бюджет (сумма тарифа)";
     }
 
@@ -513,7 +545,10 @@ export default function NewPaymentPage() {
       return "Укажите дату оплаты";
     }
 
-    if (!paymentAmount) {
+    if (
+      !isRejectDeal &&
+      !paymentAmount
+    ) {
       return "Укажите сумму оплаты";
     }
 
@@ -530,6 +565,7 @@ export default function NewPaymentPage() {
     }
 
     if (
+      !isRejectDeal &&
       !isBbDeal &&
       paymentDate &&
       !getStartDateValue()
@@ -690,15 +726,16 @@ export default function NewPaymentPage() {
         course,
         tariff,
         dealType: dealTypeLabel,
-        paymentAmount: parseMoneyNumber(
-          paymentAmount
-        ),
+        paymentAmount:
+          resolvePaymentAmount(),
         paymentSystem,
         invoiceNumber,
         comment: paymentComment,
         manager,
         paymentDate,
-        startDate: getStartDateValue(),
+        startDate: isRejectDeal
+          ? ""
+          : getStartDateValue(),
         firstContactDate: firstContact,
         budget: 0,
         ...getSourcePayload(),
@@ -706,9 +743,11 @@ export default function NewPaymentPage() {
       });
 
       toast.success(
-        `Оплата сохранена: ${formatMoney(
-          paymentAmount
-        )}`
+        isRejectDeal
+          ? `${dealTypeLabel} сохранён`
+          : `Оплата сохранена: ${formatMoney(
+              resolvePaymentAmount()
+            )}`
       );
 
       setClientName("");
@@ -923,15 +962,16 @@ export default function NewPaymentPage() {
         course: profile?.course || course,
         tariff: profile?.tariff || tariff,
         dealType: dealTypeLabel,
-        paymentAmount: parseMoneyNumber(
-          paymentAmount
-        ),
+        paymentAmount:
+          resolvePaymentAmount(),
         paymentSystem,
         invoiceNumber,
         comment: paymentComment,
         manager,
         paymentDate,
-        startDate: getStartDateValue(),
+        startDate: isRejectDeal
+          ? ""
+          : getStartDateValue(),
         firstContactDate:
           profile?.firstContact ||
           profile?.firstContactDate ||
@@ -951,9 +991,11 @@ export default function NewPaymentPage() {
       });
 
       toast.success(
-        `Оплата сохранена: ${formatMoney(
-          paymentAmount
-        )}`
+        isRejectDeal
+          ? `${dealTypeLabel} сохранён`
+          : `Оплата сохранена: ${formatMoney(
+              resolvePaymentAmount()
+            )}`
       );
 
       setDialogLink("");
@@ -1005,16 +1047,17 @@ export default function NewPaymentPage() {
       const result = await createPayment({
         client: foundClient,
         dealType: dealTypeLabel,
-        paymentAmount: parseMoneyNumber(
-          paymentAmount
-        ),
+        paymentAmount:
+          resolvePaymentAmount(),
         paymentSystem,
         invoiceNumber,
         comment: paymentComment,
         clientNote: clientNote.trim(),
         manager,
         paymentDate,
-        startDate: getStartDateValue(),
+        startDate: isRejectDeal
+          ? ""
+          : getStartDateValue(),
         ...getSourcePayload(),
         userData: actor,
       });
@@ -1061,9 +1104,11 @@ export default function NewPaymentPage() {
 
       resetAfterSubmit();
       toast.success(
-        `Оплата сохранена: ${formatMoney(
-          paymentAmount
-        )}`
+        isRejectDeal
+          ? `${dealTypeLabel} сохранён`
+          : `Оплата сохранена: ${formatMoney(
+              resolvePaymentAmount()
+            )}`
       );
       showVkSuccessHint(foundClient);
     } catch (error) {
@@ -1141,14 +1186,14 @@ export default function NewPaymentPage() {
         paymentDate,
         startDate,
         ...getSourcePayload(),
+        userData: actor,
       });
 
       await createPayment({
         client,
         dealType: dealTypeLabel,
-        paymentAmount: parseMoneyNumber(
-          paymentAmount
-        ),
+        paymentAmount:
+          resolvePaymentAmount(),
         paymentSystem,
         invoiceNumber,
         comment: paymentComment,
@@ -1161,9 +1206,11 @@ export default function NewPaymentPage() {
       });
 
       toast.success(
-        `Оплата сохранена: ${formatMoney(
-          paymentAmount
-        )}`
+        isRejectDeal
+          ? `${dealTypeLabel} сохранён`
+          : `Оплата сохранена: ${formatMoney(
+              resolvePaymentAmount()
+            )}`
       );
       showVkSuccessHint(client);
 
@@ -1519,13 +1566,17 @@ export default function NewPaymentPage() {
                     className={inputClass}
                   />
 
-                  <MoneyInput
-                    placeholder="Сумма оплаты *"
-                    required
-                    value={paymentAmount}
-                    onChange={setPaymentAmount}
-                    className={inputClass}
-                  />
+                  {!isRejectDealType(
+                    legacyTtDealTypeId
+                  ) && (
+                    <MoneyInput
+                      placeholder="Сумма оплаты *"
+                      required
+                      value={paymentAmount}
+                      onChange={setPaymentAmount}
+                      className={inputClass}
+                    />
+                  )}
 
                   <label className="block">
                     <span className="text-sm text-slate-400">
@@ -1710,13 +1761,17 @@ export default function NewPaymentPage() {
                     ))}
                   </select>
 
-                  <MoneyInput
-                    placeholder="Бюджет (сумма тарифа) *"
-                    required
-                    value={budget}
-                    onChange={setBudget}
-                    className={inputClass}
-                  />
+                  {!isRejectDealType(
+                    legacyTtDealTypeId
+                  ) && (
+                    <MoneyInput
+                      placeholder="Бюджет (сумма тарифа) *"
+                      required
+                      value={budget}
+                      onChange={setBudget}
+                      className={inputClass}
+                    />
+                  )}
 
                   <input
                     placeholder="Ссылка на диалог *"
@@ -1782,13 +1837,17 @@ export default function NewPaymentPage() {
                     }
                   />
 
-                  <MoneyInput
-                    placeholder="Сумма оплаты *"
-                    required
-                    value={paymentAmount}
-                    onChange={setPaymentAmount}
-                    className={inputClass}
-                  />
+                  {!isRejectDealType(
+                    legacyTtDealTypeId
+                  ) && (
+                    <MoneyInput
+                      placeholder="Сумма оплаты *"
+                      required
+                      value={paymentAmount}
+                      onChange={setPaymentAmount}
+                      className={inputClass}
+                    />
+                  )}
 
                   <label className="block">
                     <span className="text-sm text-slate-400">
@@ -2408,22 +2467,24 @@ export default function NewPaymentPage() {
               {(foundClient ||
                 isLegacyClientMode) && (
                 <>
-                  <FormSection title="Сделка">
-                    <MoneyInput
-                      placeholder={
-                        dealTypeId ===
-                        "refund"
-                          ? "Сумма возврата *"
-                          : "Сумма оплаты *"
-                      }
-                      required
-                      value={paymentAmount}
-                      onChange={
-                        setPaymentAmount
-                      }
-                      className={inputClass}
-                    />
-                  </FormSection>
+                  {!isRejectDeal && (
+                    <FormSection title="Сделка">
+                      <MoneyInput
+                        placeholder={
+                          dealTypeId ===
+                          "refund"
+                            ? "Сумма возврата *"
+                            : "Сумма оплаты *"
+                        }
+                        required
+                        value={paymentAmount}
+                        onChange={
+                          setPaymentAmount
+                        }
+                        className={inputClass}
+                      />
+                    </FormSection>
+                  )}
 
                   <FormSection title="Даты">
                     <label className="block">
@@ -2460,24 +2521,26 @@ export default function NewPaymentPage() {
                       </label>
                     )}
 
-                    <StartDateField
-                      dealTypeId={dealTypeId}
-                      paymentDate={
-                        paymentDate
-                      }
-                      selectedStream={
-                        selectedStream
-                      }
-                      onSelectedStreamChange={
-                        setSelectedStream
-                      }
-                      manualStartDate={
-                        manualStartDate
-                      }
-                      onManualStartDateChange={
-                        setManualStartDate
-                      }
-                    />
+                    {!isRejectDeal && (
+                      <StartDateField
+                        dealTypeId={dealTypeId}
+                        paymentDate={
+                          paymentDate
+                        }
+                        selectedStream={
+                          selectedStream
+                        }
+                        onSelectedStreamChange={
+                          setSelectedStream
+                        }
+                        manualStartDate={
+                          manualStartDate
+                        }
+                        onManualStartDateChange={
+                          setManualStartDate
+                        }
+                      />
+                    )}
                   </FormSection>
 
                   {isLegacyClientMode && (
@@ -2609,7 +2672,9 @@ export default function NewPaymentPage() {
                       {submitting
                         ? "Сохранение..."
                         : isLegacyClientMode
-                          ? "Сохранить оплату (старый клиент)"
+                          ? isRejectDeal
+                            ? "Сохранить отказ"
+                            : "Сохранить оплату (старый клиент)"
                           : pendingSale
                             ? "Подтвердить и добавить оплату"
                             : "Добавить оплату"}
@@ -2651,12 +2716,18 @@ export default function NewPaymentPage() {
 
       <ConfirmModal
         open={Boolean(confirmSave)}
-        title="Проверьте сумму оплаты"
-        message={`Сохранить оплату на ${formatMoney(
-          parseMoneyNumber(
-            paymentAmount
-          )
-        )}?`}
+        title={
+          isRejectDeal
+            ? "Сохранить отказ?"
+            : "Проверьте сумму оплаты"
+        }
+        message={
+          isRejectDeal
+            ? `Сохранить «${activeDealTypeLabel}» без суммы?`
+            : `Сохранить оплату на ${formatMoney(
+                resolvePaymentAmount()
+              )}?`
+        }
         confirmLabel="Подтвердить"
         variant="default"
         loading={submitting}

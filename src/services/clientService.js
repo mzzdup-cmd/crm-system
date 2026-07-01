@@ -20,7 +20,11 @@ import {
 import {
   isLeadership,
   getCurrentManagerId,
+  resolveManagerFieldsForWrite,
 } from "../domain/auth/roleHelpers";
+import {
+  buildCreateAudit,
+} from "../domain/audit/auditFields";
 import {
   canAccessClient,
 } from "../domain/auth/permissionHelpers";
@@ -162,7 +166,20 @@ export async function findClientByDialogLink(
 }
 
 export async function addClient(formData) {
-  const payload = normalizeClientPayload(formData);
+  const { userData, ...rest } = formData;
+
+  const managerFields =
+    userData
+      ? resolveManagerFieldsForWrite(
+          userData,
+          rest.manager
+        )
+      : normalizeManagerFields(rest);
+
+  const payload = normalizeClientPayload({
+    ...rest,
+    ...managerFields,
+  });
 
   const nextPaymentDate = resolveNextPaymentDate({
     amount: payload.amount,
@@ -177,6 +194,9 @@ export async function addClient(formData) {
       nextPaymentDate,
       createdAt: Date.now(),
       updatedAt: Date.now(),
+      ...(userData
+        ? buildCreateAudit(userData)
+        : {}),
     }
   );
 

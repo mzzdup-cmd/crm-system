@@ -13,8 +13,15 @@ service cloud.firestore {
       ).data;
     }
 
-    function isRop() {
+    function hasUserProfile() {
       return isSignedIn()
+        && exists(
+          /databases/$(database)/documents/users/$(request.auth.uid)
+        );
+    }
+
+    function isRop() {
+      return hasUserProfile()
         && userDoc().role == 'rop';
     }
 
@@ -23,13 +30,18 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      return isSignedIn()
+      return hasUserProfile()
         && userDoc().role == 'admin';
     }
 
     function isManager() {
-      return isSignedIn()
+      return hasUserProfile()
         && userDoc().role == 'manager';
+    }
+
+    function isOperationalUser() {
+      return hasUserProfile()
+        && !isLeadership();
     }
 
     function ownerManagerId() {
@@ -40,32 +52,119 @@ service cloud.firestore {
       return userDoc().name;
     }
 
-    function isOwnerByManagerId(managerId) {
-      return isManager()
-        && managerId != null
-        && ownerManagerId() == managerId;
+    function canonicalManagerId(managerId) {
+      return managerId == 'polina_plamadyala'
+        ? 'polina_plamadya'
+        : managerId == 'vilu_petrova'
+          ? 'violeta_petrova'
+          : managerId == 'denis'
+            ? 'denis_manuilov'
+            : managerId == 'ruslan'
+              ? 'ruslan_romanyuk'
+              : managerId == 'alexander'
+                ? 'alexander_simanov'
+                : managerId == 'sergey'
+                  ? 'sergey_grebenshchikov'
+                  : managerId == 'andrey'
+                    ? 'andrey_volkov'
+                    : managerId == 'katya'
+                      ? 'katya_bakaeva'
+                      : managerId == 'vilu'
+                        ? 'violeta_petrova'
+                        : managerId == 'violeta'
+                          ? 'violeta_petrova'
+                          : managerId == 'Денис М'
+                            ? 'denis_manuilov'
+                            : managerId;
     }
 
-    function isLegacyOwner(managerName) {
-      return isManager()
-        && managerName != null
-        && ownerManagerName() == managerName;
+    function managerIdFromOwnerName() {
+      return ownerManagerName() == 'Денис Мануйлов'
+        ? 'denis_manuilov'
+        : ownerManagerName() == 'Денис М'
+          ? 'denis_manuilov'
+          : ownerManagerName() == 'Катя Бакаева'
+            ? 'katya_bakaeva'
+            : ownerManagerName() == 'Руслан Романюк'
+              ? 'ruslan_romanyuk'
+              : ownerManagerName() == 'Александр Симанов'
+                ? 'alexander_simanov'
+                : ownerManagerName() == 'Сергей Гребенщиков'
+                  ? 'sergey_grebenshchikov'
+                  : ownerManagerName() == 'Андрей Волков'
+                    ? 'andrey_volkov'
+                    : ownerManagerName() == 'Полина Пенькова'
+                      ? 'polina_penkova'
+                      : ownerManagerName() == 'Полина Пламадяла'
+                        ? 'polina_plamadya'
+                        : ownerManagerName() == 'Виолетта Петрова'
+                          ? 'violeta_petrova'
+                          : null;
     }
 
-    function canReadManagerData(data) {
-      return isLeadership()
-        || isOwnerByManagerId(data.managerId)
-        || (
-          data.managerId == null
-          && isLegacyOwner(data.manager)
-        );
+    function authEmailLocalPart() {
+      return request.auth.token.email != null
+        ? request.auth.token.email.lower().split('@')[0]
+        : '';
+    }
+
+    function managerIdFromAuthEmail() {
+      return authEmailLocalPart() == 'katya'
+        ? 'katya_bakaeva'
+        : authEmailLocalPart() == 'denis'
+          ? 'denis_manuilov'
+          : authEmailLocalPart() == 'ruslan'
+            ? 'ruslan_romanyuk'
+            : authEmailLocalPart() == 'alexander'
+              ? 'alexander_simanov'
+              : authEmailLocalPart() == 'sergey'
+                ? 'sergey_grebenshchikov'
+                : authEmailLocalPart() == 'andrey'
+                  ? 'andrey_volkov'
+                  : authEmailLocalPart() == 'polina.p'
+                    ? 'polina_penkova'
+                    : authEmailLocalPart() == 'polina.pl'
+                      ? 'polina_plamadya'
+                      : authEmailLocalPart() == 'vilu'
+                        ? 'violeta_petrova'
+                        : authEmailLocalPart() == 'violeta'
+                          ? 'violeta_petrova'
+                          : null;
+    }
+
+    function effectiveOwnerManagerId() {
+      return managerIdFromAuthEmail() != null
+        ? managerIdFromAuthEmail()
+        : managerIdFromOwnerName() != null
+          ? managerIdFromOwnerName()
+          : (
+            ownerManagerId() != null
+            && ownerManagerId() != ''
+              ? canonicalManagerId(
+                  ownerManagerId()
+                )
+              : null
+          );
+    }
+
+    function isOwnAuditCreate() {
+      return request.resource.data.createdByUid
+        == request.auth.uid;
+    }
+
+    function hasManagerAttribution(data) {
+      return data.managerId is string
+        && data.manager is string
+        && data.managerId != ''
+        && data.manager != '';
     }
 
     function canCreateManagerData(data) {
       return isLeadership()
         || (
-          isOwnerByManagerId(data.managerId)
-          && data.managerId != null
+          isSignedIn()
+          && isOwnAuditCreate()
+          && hasManagerAttribution(data)
         );
     }
 
@@ -75,13 +174,53 @@ service cloud.firestore {
     ) {
       return isLeadership()
         || (
-          isOwnerByManagerId(existing.managerId)
+          isSignedIn()
+          && existing.createdByUid
+            == request.auth.uid
+        )
+        || (
+          ownsManagerRecord(existing)
           && incoming.managerId == existing.managerId
+          && incoming.manager == existing.manager
         )
         || (
           existing.managerId == null
           && isLegacyOwner(existing.manager)
           && incoming.manager == existing.manager
+        );
+    }
+
+    function managerIdsMatch(leftId, rightId) {
+      return leftId != null
+        && rightId != null
+        && canonicalManagerId(leftId)
+          == canonicalManagerId(rightId);
+    }
+
+    function isOwnerByManagerId(managerId) {
+      return managerIdsMatch(
+        effectiveOwnerManagerId(),
+        managerId
+      );
+    }
+
+    function isLegacyOwner(managerName) {
+      return managerName != null
+        && ownerManagerName() != null
+        && ownerManagerName() == managerName;
+    }
+
+    function ownsManagerRecord(data) {
+      return isOwnerByManagerId(data.managerId)
+        || isLegacyOwner(data.manager);
+    }
+
+    function canReadManagerData(data) {
+      return isLeadership()
+        || ownsManagerRecord(data)
+        || (
+          data.managerId == null
+          && isLegacyOwner(data.manager)
         );
     }
 
@@ -119,8 +258,8 @@ service cloud.firestore {
     }
 
     function managerCanEditPayment() {
-      return isManager()
-        && isOwnerByManagerId(resource.data.managerId)
+      return isOperationalUser()
+        && ownsManagerRecord(resource.data)
         && isRecentPayment()
         && resource.data.deletedAt == null
         && request.resource.data.managerId

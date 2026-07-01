@@ -144,10 +144,16 @@ function mapPaymentToTtRow({
     payment.isLegacy === true &&
     !isLegacyClient;
 
+  const isRejectDeal = String(
+    payment.dealType || ""
+  ).startsWith("Отказ");
+
   const startDate = isMinimalLegacy
     ? ""
-    : payment.startDate ||
-      getStartDate(payment.paymentDate);
+    : isRejectDeal
+      ? ""
+      : payment.startDate ||
+        getStartDate(payment.paymentDate);
 
   const budget = isMinimalLegacy
     ? ""
@@ -164,8 +170,10 @@ function mapPaymentToTtRow({
     payment.vkLink ||
       client.vkLink ||
       "",
-    Number(payment.amount || 0),
-    budget,
+    isRejectDeal
+      ? ""
+      : Number(payment.amount || 0),
+    isRejectDeal ? "" : budget,
     formatDateRu(startDate),
     formatDateRu(
       payment.firstContact ||

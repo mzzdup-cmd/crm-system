@@ -1,9 +1,14 @@
 import {
   useState,
+  useMemo,
 } from "react";
 
 import { useNotifications }
 from "../../hooks/useNotifications";
+
+import {
+  NOTIFICATION_TYPES,
+} from "../../constants/notifications";
 
 import NotificationDropdown
 from "./NotificationDropdown";
@@ -15,10 +20,41 @@ export default function NotificationBell({
 
   const {
     notifications,
+    missingVkReminders,
     unreadCount,
     markRead,
     markAllRead,
   } = useNotifications();
+
+  const visibleNotifications = useMemo(() => {
+    const otherActive = notifications.filter(
+      (item) =>
+        !item.resolved &&
+        item.type !==
+          NOTIFICATION_TYPES.MISSING_VK_LINK
+    );
+
+    return [
+      ...missingVkReminders,
+      ...otherActive,
+    ].sort(
+      (a, b) =>
+        Number(b.createdAt || 0) -
+        Number(a.createdAt || 0)
+    );
+  }, [notifications, missingVkReminders]);
+
+  function handleMarkRead(id) {
+    if (
+      String(id).startsWith(
+        "missing_vk_client_"
+      )
+    ) {
+      return Promise.resolve();
+    }
+
+    return markRead(id);
+  }
 
   return (
     <div className={`relative z-30 ${className}`}>
@@ -68,9 +104,9 @@ export default function NotificationBell({
       <NotificationDropdown
         open={open}
         onClose={() => setOpen(false)}
-        notifications={notifications}
+        notifications={visibleNotifications}
         unreadCount={unreadCount}
-        onMarkRead={markRead}
+        onMarkRead={handleMarkRead}
         onMarkAllRead={markAllRead}
       />
 

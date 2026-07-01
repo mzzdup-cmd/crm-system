@@ -22,9 +22,6 @@ from "../components/pendingSales/QuickSaleModal";
 import { useDashboardRealtime }
 from "../hooks/useRealtimeDashboard";
 
-import { useNotifications }
-from "../hooks/useNotifications";
-
 import { usePendingSales }
 from "../hooks/usePendingSales";
 
@@ -39,7 +36,7 @@ import {
   getQuickSaleButtonLabel,
 } from "../domain/pendingSales/pendingSalesLogic";
 
-import { countActiveMissingVkReminders }
+import { countClientsMissingVk }
 from "../services/missingVkReminderService";
 
 import { usePermissions }
@@ -376,43 +373,17 @@ function AdminOperationalCard({ summary }) {
   );
 }
 
-function formatSalesCountLabel(count) {
-  const mod10 = count % 10;
-  const mod100 = count % 100;
-
-  if (
-    mod100 >= 11 &&
-    mod100 <= 14
-  ) {
-    return `${count} продаж`;
-  }
-
-  if (mod10 === 1) {
-    return `${count} продажа`;
-  }
-
-  if (mod10 >= 2 && mod10 <= 4) {
-    return `${count} продажи`;
-  }
-
-  return `${count} продаж`;
-}
-
 function MotivationalLeaderBlock({
   leaderInfo,
 }) {
   const {
-    leader,
+    current,
     isLeader,
-    difference,
     teamAverageRevenue,
-    salesToCloseGap,
-    motivationSaleAmount,
   } = leaderInfo;
 
-  if (!leader) {
-    return null;
-  }
+  const myRevenue =
+    current?.revenue || 0;
 
   return (
     <section
@@ -420,66 +391,40 @@ function MotivationalLeaderBlock({
         p-5 md:p-6 rounded-2xl
         bg-gradient-to-r from-violet-500/15 to-cyan-500/10
         border border-violet-500/30
-        space-y-3
+        space-y-2
       "
     >
       {isLeader ? (
         <>
-          <div className="text-2xl font-bold">
-            Поздравляем 🎉
-          </div>
-          <div className="text-lg text-green-300">
-            Сейчас у вас самая большая выручка:{" "}
-            <strong>
-              {formatMoney(leader.revenue)}
-            </strong>
+          <div className="text-lg font-bold text-green-300">
+            Поздравляю, вы лидер!
           </div>
           <div className="text-slate-300">
-            Вы лидер месяца 🔥
+            У вас самая большая выручка:{" "}
+            <strong className="text-green-300">
+              {formatMoney(myRevenue)}
+            </strong>
+            , средняя по команде сейчас{" "}
+            <strong>
+              {formatMoney(
+                teamAverageRevenue
+              )}
+            </strong>
           </div>
         </>
       ) : (
-        <>
-          <div className="text-2xl font-bold">
-            До максимума 🔥
-          </div>
-
-          <div className="grid gap-2 text-sm md:text-base">
-            <div className="text-slate-300">
-              Максимальная выручка сейчас:{" "}
-              <strong className="text-green-300">
-                {formatMoney(leader.revenue)}
-              </strong>
-            </div>
-
-            <div className="text-slate-300">
-              Средняя по команде:{" "}
-              <strong>
-                {formatMoney(
-                  teamAverageRevenue
-                )}
-              </strong>
-            </div>
-
-            <div className="text-lg font-bold text-amber-300 pt-1">
-              До максимума осталось:{" "}
-              {formatMoney(difference)}
-            </div>
-
-            {salesToCloseGap > 0 && (
-              <div className="text-slate-300">
-                Это всего{" "}
-                {formatSalesCountLabel(
-                  salesToCloseGap
-                )}{" "}
-                по{" "}
-                {formatMoney(
-                  motivationSaleAmount
-                )}
-              </div>
+        <div className="text-slate-300">
+          Ваша выручка:{" "}
+          <strong className="text-green-300">
+            {formatMoney(myRevenue)}
+          </strong>
+          , средняя по команде{" "}
+          <strong>
+            {formatMoney(
+              teamAverageRevenue
             )}
-          </div>
-        </>
+          </strong>
+        </div>
       )}
     </section>
   );
@@ -498,6 +443,7 @@ function DashboardPageContent() {
     usePermissions();
 
   const {
+    clients,
     payments,
     summary,
     schedule,
@@ -519,13 +465,8 @@ function DashboardPageContent() {
   const quickSaleLabel =
     getQuickSaleButtonLabel(coveringTargets);
 
-  const { notifications } =
-    useNotifications();
-
   const missingVkCount =
-    countActiveMissingVkReminders(
-      notifications
-    );
+    countClientsMissingVk(clients);
 
   const todayPaymentsCount =
     payments.filter(
@@ -964,15 +905,15 @@ function DashboardPageContent() {
               <PersonalKpiCard kpi={personalKpi} />
             )}
 
-            <OperationalRequestsCard
-              summary={requestsSummary}
-            />
-
             {summary.leaderInfo && (
               <MotivationalLeaderBlock
                 leaderInfo={summary.leaderInfo}
               />
             )}
+
+            <OperationalRequestsCard
+              summary={requestsSummary}
+            />
 
           </section>
 

@@ -20,12 +20,21 @@ import {
 
 import {
   syncMissingVkResolutionForUser,
+  syncMissingVkRemindersForUser,
+  mergeMissingVkReminders,
 } from "../services/missingVkReminderService";
+
+import {
+  NOTIFICATION_TYPES,
+} from "../constants/notifications";
 
 export function useNotifications() {
   const { userData } = useAuth();
 
   const [notifications, setNotifications] =
+    useState([]);
+
+  const [clients, setClients] =
     useState([]);
 
   const [connected, setConnected] =
@@ -34,6 +43,7 @@ export function useNotifications() {
   useEffect(() => {
     if (!userData?.uid) {
       setNotifications([]);
+      setClients([]);
       return undefined;
     }
 
@@ -48,12 +58,20 @@ export function useNotifications() {
       );
 
     getClientsForUser(userData)
-      .then((clients) =>
-        syncMissingVkResolutionForUser(
-          userData.uid,
-          clients
-        )
-      )
+      .then((items) => {
+        setClients(items);
+
+        return Promise.all([
+          syncMissingVkResolutionForUser(
+            userData.uid,
+            items
+          ),
+          syncMissingVkRemindersForUser(
+            userData,
+            items
+          ),
+        ]);
+      })
       .catch((error) => {
         console.error(
           "Missing VK sync failed:",
@@ -67,12 +85,24 @@ export function useNotifications() {
     };
   }, [userData]);
 
+  const missingVkReminders = useMemo(
+    () =>
+      mergeMissingVkReminders(
+        notifications,
+        clients
+      ),
+    [notifications, clients]
+  );
+
   const unreadCount = useMemo(
     () =>
       countUnreadNotifications(
         notifications
-      ),
-    [notifications]
+      ) +
+      missingVkReminders.filter(
+        (item) => item.data?.fromClient
+      ).length,
+    [notifications, missingVkReminders]
   );
 
   async function markRead(id) {
@@ -130,6 +160,7 @@ export function useNotifications() {
 
   return {
     notifications,
+    missingVkReminders,
     unreadCount,
     connected,
     markRead,

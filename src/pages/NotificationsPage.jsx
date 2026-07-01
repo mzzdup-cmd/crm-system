@@ -21,6 +21,7 @@ export default function NotificationsPage() {
 
   const {
     notifications,
+    missingVkReminders,
     unreadCount,
     connected,
     markRead,
@@ -33,13 +34,6 @@ export default function NotificationsPage() {
       (item) => !item.resolved
     );
 
-  const fillInReminders =
-    activeNotifications.filter(
-      (item) =>
-        item.type ===
-        NOTIFICATION_TYPES.MISSING_VK_LINK
-    );
-
   const otherNotifications =
     activeNotifications.filter(
       (item) =>
@@ -47,7 +41,15 @@ export default function NotificationsPage() {
         NOTIFICATION_TYPES.MISSING_VK_LINK
     );
 
+  const isEmpty =
+    missingVkReminders.length === 0 &&
+    otherNotifications.length === 0;
+
   async function handleResolve(id) {
+    if (String(id).startsWith("missing_vk_client_")) {
+      return;
+    }
+
     try {
       await markResolved(id);
       toast.success("Уведомление закрыто");
@@ -56,6 +58,14 @@ export default function NotificationsPage() {
         "Не удалось закрыть уведомление"
       );
     }
+  }
+
+  function handleRead(id) {
+    if (String(id).startsWith("missing_vk_client_")) {
+      return Promise.resolve();
+    }
+
+    return markRead(id);
   }
 
   return (
@@ -115,22 +125,26 @@ export default function NotificationsPage() {
 
       </div>
 
-      {fillInReminders.length > 0 && (
+      {missingVkReminders.length > 0 && (
         <section className="space-y-3">
           <h2 className="text-lg font-bold text-amber-400">
-            Нужно дозаполнить
+            Нужно дозаполнить VK
           </h2>
 
           <div className="space-y-2 bg-amber-500/5 border border-amber-500/20 rounded-2xl p-2">
-            {fillInReminders.map(
+            {missingVkReminders.map(
               (notification) => (
                 <NotificationItem
                   key={notification.id}
                   notification={
                     notification
                   }
-                  onRead={markRead}
-                  onResolve={handleResolve}
+                  onRead={handleRead}
+                  onResolve={
+                    notification.data?.fromClient
+                      ? undefined
+                      : handleResolve
+                  }
                 />
               )
             )}
@@ -140,7 +154,7 @@ export default function NotificationsPage() {
 
       {
 
-        activeNotifications.length === 0
+        isEmpty
 
           ? (
 
@@ -156,7 +170,7 @@ export default function NotificationsPage() {
 
             otherNotifications.length > 0 && (
               <section className="space-y-3">
-                {fillInReminders.length >
+                {missingVkReminders.length >
                   0 && (
                   <h2 className="text-lg font-bold">
                     Остальные

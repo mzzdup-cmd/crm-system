@@ -1,4 +1,7 @@
 import {
+  MANAGERS,
+  getManagerById,
+  getManagerByName,
   getManagerNameById,
 } from "../../constants/managers";
 
@@ -230,6 +233,24 @@ export function buildPersonalMonthKpi({
   };
 }
 
+function normalizeManagerKey(managerKey) {
+  if (!managerKey) {
+    return null;
+  }
+
+  if (getManagerById(managerKey)) {
+    return managerKey;
+  }
+
+  const byName = getManagerByName(managerKey);
+
+  if (byName) {
+    return byName.id;
+  }
+
+  return managerKey;
+}
+
 export function buildMonthLeaderboard(
   payments = [],
   range = getCurrentMonthRange()
@@ -240,8 +261,44 @@ export function buildMonthLeaderboard(
       range
     );
 
-  return buildManagerStatsFromPayments(
-    monthPayments
+  const statsFromPayments =
+    buildManagerStatsFromPayments(
+      monthPayments
+    );
+
+  const stats = Object.fromEntries(
+    MANAGERS.map((manager) => [
+      manager.id,
+      {
+        managerKey: manager.id,
+        name: manager.name,
+        revenue: 0,
+        deals: 0,
+      },
+    ])
+  );
+
+  statsFromPayments.forEach((item) => {
+    const normalizedKey =
+      normalizeManagerKey(
+        item.managerKey
+      );
+
+    if (
+      !normalizedKey ||
+      !stats[normalizedKey]
+    ) {
+      return;
+    }
+
+    stats[normalizedKey].revenue +=
+      item.revenue;
+    stats[normalizedKey].deals +=
+      item.deals;
+  });
+
+  return Object.values(stats).sort(
+    (a, b) => b.revenue - a.revenue
   );
 }
 
@@ -312,8 +369,8 @@ export function getMonthLeaderInfo({
 
   const isLeader =
     current &&
-    current.managerKey ===
-      leader.managerKey;
+    leader.revenue > 0 &&
+    current.revenue === leader.revenue;
 
   const difference = isLeader
     ? 0
