@@ -98,6 +98,27 @@ export function getDefaultStream(
   return getStartDate(paymentDate);
 }
 
+/** Older cohorts (table clients, return after refusal) may start months before payment. */
+export function resolveStreamOptionWeeks({
+  dealTypeId,
+  isLegacyClientMode = false,
+} = {}) {
+  if (
+    isLegacyClientMode ||
+    dealTypeId === "topup_po"
+  ) {
+    return {
+      weeksBefore: 16,
+      weeksAfter: 8,
+    };
+  }
+
+  return {
+    weeksBefore: 4,
+    weeksAfter: 8,
+  };
+}
+
 /**
  * Resolves client/payment startDate (stream Monday).
  * BB: manual date. Others: selected stream Monday.

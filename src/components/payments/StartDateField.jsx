@@ -1,10 +1,13 @@
 import {
   generateStreamOptions,
   getDefaultStream,
+  resolveStreamOptionWeeks,
 } from "../../domain/client/clientDates";
 
-import { isBbDealType }
-from "../../constants/dealTypes";
+import {
+  isBbDealType,
+  resolveDealTypeId,
+} from "../../constants/dealTypes";
 
 function formatDisplayDate(value) {
   if (!value) {
@@ -30,8 +33,16 @@ export default function StartDateField({
   onSelectedStreamChange,
   manualStartDate,
   onManualStartDateChange,
+  isLegacyClientMode = false,
 }) {
   const isBb = isBbDealType(dealTypeId);
+  const resolvedDealTypeId =
+    resolveDealTypeId(dealTypeId);
+  const isReturnAfterRefusal =
+    resolvedDealTypeId === "topup_po";
+  const useHistoricalStreams =
+    isLegacyClientMode ||
+    isReturnAfterRefusal;
 
   if (isBb) {
     return (
@@ -67,8 +78,18 @@ export default function StartDateField({
     );
   }
 
+  const { weeksBefore, weeksAfter } =
+    resolveStreamOptionWeeks({
+      dealTypeId: resolvedDealTypeId,
+      isLegacyClientMode,
+    });
+
   const streamOptions =
-    generateStreamOptions(paymentDate);
+    generateStreamOptions(
+      paymentDate,
+      weeksBefore,
+      weeksAfter
+    );
 
   const suggestedStream =
     getDefaultStream(paymentDate);
@@ -98,8 +119,9 @@ export default function StartDateField({
             value={streamDate}
           >
             {formatDisplayDate(streamDate)}
-            {streamDate ===
-              suggestedStream &&
+            {!useHistoricalStreams &&
+              streamDate ===
+                suggestedStream &&
               " · рекомендуемый"}
           </option>
         ))}
@@ -112,12 +134,20 @@ export default function StartDateField({
         </p>
       )}
 
-      <p className="text-xs text-slate-500 mt-1">
-        startDate = понедельник потока.
-        Дата оплаты ({formatDisplayDate(
-          paymentDate
-        )}) и поток — разные поля
-      </p>
+      {useHistoricalStreams ? (
+        <p className="text-xs text-amber-200/80 mt-1">
+          {isReturnAfterRefusal
+            ? "Вернулся после отказа: выберите исходный поток из Google ТТ (колонка «Когда старт»), например 06.04 — не рекомендуемый от даты оплаты."
+            : "Для старого клиента из таблицы — поток из Google ТТ (колонка «Когда старт»), не от текущей даты оплаты."}
+        </p>
+      ) : (
+        <p className="text-xs text-slate-500 mt-1">
+          startDate = понедельник потока.
+          Дата оплаты ({formatDisplayDate(
+            paymentDate
+          )}) и поток — разные поля
+        </p>
+      )}
     </label>
   );
 }

@@ -318,6 +318,14 @@ export default function NewPaymentPage() {
         legacyTtDealTypeId
       ));
 
+  const streamDealTypeId =
+    isLegacy &&
+    isLegacyTableTtDealType(
+      legacyTtDealTypeId
+    )
+      ? legacyTtDealTypeId
+      : dealTypeId;
+
   useEffect(() => {
     if (
       userData?.managerId &&
@@ -815,6 +823,10 @@ export default function NewPaymentPage() {
     );
     if (payment.budget) {
       setBudget(String(payment.budget));
+    }
+
+    if (payment.startDate) {
+      setSelectedStream(payment.startDate);
     }
   }
 
@@ -2133,7 +2145,7 @@ export default function NewPaymentPage() {
               </label>
 
               <StartDateField
-                dealTypeId={dealTypeId}
+                dealTypeId={streamDealTypeId}
                 paymentDate={paymentDate}
                 selectedStream={
                   selectedStream
@@ -2526,9 +2538,14 @@ export default function NewPaymentPage() {
 
                     {!isRejectDeal && (
                       <StartDateField
-                        dealTypeId={dealTypeId}
+                        dealTypeId={
+                          streamDealTypeId
+                        }
                         paymentDate={
                           paymentDate
+                        }
+                        isLegacyClientMode={
+                          isLegacyClientMode
                         }
                         selectedStream={
                           selectedStream
