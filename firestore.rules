@@ -269,6 +269,39 @@ service cloud.firestore {
         && request.resource.data.deletedAt == null;
     }
 
+    function isOptionalStartDateDealType(
+      dealType
+    ) {
+      return dealType == 'ББ'
+        || dealType == 'Рассылка';
+    }
+
+    function managerCanUpdateBbMailingStartDate() {
+      return isOperationalUser()
+        && ownsManagerRecord(resource.data)
+        && resource.data.deletedAt == null
+        && request.resource.data.deletedAt == null
+        && isOptionalStartDateDealType(
+          resource.data.dealType
+        )
+        && request.resource.data.dealType
+          == resource.data.dealType
+        && request.resource.data.managerId
+          == resource.data.managerId
+        && request.resource.data.clientId
+          == resource.data.clientId
+        && request.resource.data.amount
+          == resource.data.amount
+        && request.resource.data.paymentDate
+          == resource.data.paymentDate
+        && request.resource.data.paymentSystem
+          == resource.data.paymentSystem
+        && request.resource.data.invoiceNumber
+          == resource.data.invoiceNumber
+        && request.resource.data.syncedToSheets
+          == resource.data.syncedToSheets;
+    }
+
     match /payments/{paymentId} {
       allow read: if isSignedIn();
 
@@ -279,6 +312,7 @@ service cloud.firestore {
         && (
           isLeadership()
           || managerCanEditPayment()
+          || managerCanUpdateBbMailingStartDate()
         );
 
       allow delete: if false;
