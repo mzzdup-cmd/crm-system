@@ -195,6 +195,35 @@ async function queryPaymentsByManagerId(
   );
 }
 
+async function queryPaymentsByManagerIds(
+  managerIds
+) {
+  const paymentMap = new Map();
+
+  for (const managerId of managerIds) {
+    try {
+      const payments =
+        await queryPaymentsByManagerId(
+          managerId
+        );
+
+      for (const payment of payments) {
+        paymentMap.set(
+          payment.id,
+          payment
+        );
+      }
+    } catch (error) {
+      console.warn(
+        `[paymentService] payments query failed for ${managerId}:`,
+        error
+      );
+    }
+  }
+
+  return [...paymentMap.values()];
+}
+
 export async function getPaymentsForUser(userData) {
   if (isLeadership(userData)) {
     return getAllPayments();
@@ -207,20 +236,13 @@ export async function getPaymentsForUser(userData) {
     return [];
   }
 
-  for (const managerId of queryIds) {
-    try {
-      const payments =
-        await queryPaymentsByManagerId(
-          managerId
-        );
+  const payments =
+    await queryPaymentsByManagerIds(
+      queryIds
+    );
 
-      return sortPaymentsDesc(payments);
-    } catch (error) {
-      console.warn(
-        `[paymentService] payments query failed for ${managerId}:`,
-        error
-      );
-    }
+  if (payments.length > 0) {
+    return sortPaymentsDesc(payments);
   }
 
   try {
