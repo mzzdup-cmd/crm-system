@@ -1,68 +1,99 @@
 const DEFAULT_TT_SHEET_TAB = "TT";
 
-const TEST_KATYA_SPREADSHEET_ID =
-  "1B1IBqS3hdpBSv6Ge8l8poWqS-YIHTv_UF4yFIoBPDCc";
+const PRODUCTION_MANAGER_TT_SHEETS = require(
+  "./managerTtSpreadsheets.json"
+);
 
-function buildDefaultTestConfig() {
-  const sheetName =
-    process.env.TT_SHEET_TAB ||
-    DEFAULT_TT_SHEET_TAB;
+/** Firestore typos → canonical managerId in config */
+const MANAGER_ID_ALIASES = {
+  polina_plamadyala: "polina_plamadya",
+  vilu_petrova: "violeta_petrova",
+};
 
-  const katyaSpreadsheetId =
-    process.env.TT_KATYA_BAKAEVA_SPREADSHEET_ID ||
-    TEST_KATYA_SPREADSHEET_ID;
-
+function normalizeSheetConfig(
+  managerId,
+  config
+) {
   return {
-    katya_bakaeva: {
-      spreadsheetId: katyaSpreadsheetId,
-      sheetName,
-      label: "Копия ТТ Академия Катя Б",
-    },
+    spreadsheetId: config.spreadsheetId,
+    sheetName:
+      config.sheetName ||
+      DEFAULT_TT_SHEET_TAB,
+    label:
+      config.label || managerId,
   };
+}
+
+function buildProductionConfig() {
+  return Object.fromEntries(
+    Object.entries(
+      PRODUCTION_MANAGER_TT_SHEETS
+    ).map(([managerId, config]) => [
+      managerId,
+      normalizeSheetConfig(
+        managerId,
+        config
+      ),
+    ])
+  );
 }
 
 function getManagerTtSheetsConfig() {
   const rawJson =
     process.env.MANAGER_TT_SPREADSHEETS_JSON;
 
-  if (rawJson) {
+  if (rawJson?.trim()) {
     const parsed = JSON.parse(rawJson);
 
     return Object.fromEntries(
       Object.entries(parsed).map(
         ([managerId, config]) => [
           managerId,
-          {
-            spreadsheetId:
-              config.spreadsheetId,
-            sheetName:
-              config.sheetName ||
-              DEFAULT_TT_SHEET_TAB,
-            label: config.label || managerId,
-          },
+          normalizeSheetConfig(
+            managerId,
+            config
+          ),
         ]
       )
     );
   }
 
-  return buildDefaultTestConfig();
+  return buildProductionConfig();
 }
 
-function getTtSheetForManager(managerId) {
+function resolveManagerConfigKey(managerId) {
   if (!managerId) {
     return null;
   }
 
   const config =
-    getManagerTtSheetsConfig()[managerId];
+    getManagerTtSheetsConfig();
 
-  if (
-    !config?.spreadsheetId
-  ) {
+  if (config[managerId]) {
+    return managerId;
+  }
+
+  const alias =
+    MANAGER_ID_ALIASES[managerId];
+
+  if (alias && config[alias]) {
+    return alias;
+  }
+
+  return null;
+}
+
+function getTtSheetForManager(managerId) {
+  const configKey =
+    resolveManagerConfigKey(managerId);
+
+  if (!configKey) {
     return null;
   }
 
-  return config;
+  return getManagerTtSheetsConfig()[
+    configKey
+  ];
 }
 
 function listConfiguredManagers() {
@@ -73,6 +104,7 @@ function listConfiguredManagers() {
 
 module.exports = {
   DEFAULT_TT_SHEET_TAB,
+  PRODUCTION_MANAGER_TT_SHEETS,
   getManagerTtSheetsConfig,
   getTtSheetForManager,
   listConfiguredManagers,

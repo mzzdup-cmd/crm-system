@@ -21,6 +21,8 @@ const LEGACY_MANAGER_ALIASES = {
   "Александр С": "alexander_simanov",
   "Виолетта П": "violeta_petrova",
   "Полина Пламадяла": "polina_plamadya",
+  polina_plamadyala: "polina_plamadya",
+  vilu_petrova: "violeta_petrova",
 };
 
 function getStartDate(dateString) {
@@ -83,11 +85,19 @@ function formatDateRu(value) {
 
 function resolveManagerId(payment, client) {
   if (payment?.managerId) {
-    return payment.managerId;
+    const id = payment.managerId;
+
+    return (
+      LEGACY_MANAGER_ALIASES[id] || id
+    );
   }
 
   if (client?.managerId) {
-    return client.managerId;
+    const id = client.managerId;
+
+    return (
+      LEGACY_MANAGER_ALIASES[id] || id
+    );
   }
 
   const name =
