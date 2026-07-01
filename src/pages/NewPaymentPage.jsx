@@ -126,7 +126,7 @@ export default function NewPaymentPage() {
   const { user, userData } = useAuth();
   const toast = useToast();
   const navigate = useNavigate();
-  const { isAdmin } = usePermissions();
+  const { isLeadership } = usePermissions();
   const {
     sources: trafficSources,
     loading: trafficSourcesLoading,
@@ -1401,7 +1401,7 @@ export default function NewPaymentPage() {
                     onChange={
                       handleSourceChange
                     }
-                    allowCreate={isAdmin}
+                    allowCreate={isLeadership}
                     onCreate={
                       handleCreateTrafficSource
                     }
@@ -1789,7 +1789,7 @@ export default function NewPaymentPage() {
                               handleSourceChange
                             }
                             allowCreate={
-                              isAdmin
+                              isLeadership
                             }
                             onCreate={
                               handleCreateTrafficSource

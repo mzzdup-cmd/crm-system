@@ -46,7 +46,7 @@ import { SCRIPT_TAGS } from "../constants/knowledgeBase";
 
 export function useKnowledgeBase() {
   const { user, userData } = useAuth();
-  const { isAdmin } = usePermissions();
+  const { isLeadership } = usePermissions();
   const toast = useToast();
 
   const [faq, setFaq] = useState([]);
@@ -233,7 +233,7 @@ export function useKnowledgeBase() {
   }
 
   function canEdit(item) {
-    if (isAdmin) {
+    if (isLeadership) {
       return true;
     }
 
@@ -261,7 +261,7 @@ export function useKnowledgeBase() {
 
   return {
     loading,
-    isAdmin,
+    isLeadership,
     search,
     setSearch,
     selectedTags,

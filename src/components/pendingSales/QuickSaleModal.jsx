@@ -46,7 +46,7 @@ export default function QuickSaleModal({
   schedule,
   coveringTargets = [],
 }) {
-  const { userData, managerId, isAdmin } =
+  const { userData, managerId, isLeadership, isManager } =
     usePermissions();
 
   const toast = useToast();
@@ -73,7 +73,7 @@ export default function QuickSaleModal({
 
   const [saving, setSaving] = useState(false);
 
-  const availableTargets = isAdmin
+  const availableTargets = (isLeadership || isManager)
     ? MANAGERS.filter(
         (m) => m.id !== managerId
       ).map((m) => m.id)

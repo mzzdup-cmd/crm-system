@@ -18,7 +18,7 @@ import {
   normalizeManagerFields,
 } from "../domain/auth/managerMigration";
 import {
-  isAdmin,
+  isLeadership,
   getCurrentManagerId,
 } from "../domain/auth/roleHelpers";
 import {
@@ -71,7 +71,7 @@ export async function getAllClients() {
 }
 
 export async function getClientsForUser(userData) {
-  if (isAdmin(userData)) {
+  if (isLeadership(userData)) {
     return getAllClients();
   }
 

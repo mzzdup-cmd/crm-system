@@ -4,8 +4,15 @@ from "../context/AuthContext";
 import {
   isAdmin,
   isManager,
+  isRop,
+  isLeadership,
   getCurrentManagerId,
+  getRoleLabel,
 } from "../domain/auth/roleHelpers";
+
+import {
+  getManagerNameById,
+} from "../constants/managers";
 
 import {
   canViewAll,
@@ -22,17 +29,27 @@ export function usePermissions() {
   } = useAuth();
 
   const admin = isAdmin(userData);
+  const rop = isRop(userData);
+  const leadership = isLeadership(userData);
   const manager = isManager(userData);
   const managerId =
     getCurrentManagerId(userData);
+
+  const displayName =
+    userData?.name ||
+    getManagerNameById(managerId) ||
+    "";
 
   return {
     userData,
     loading,
     role: userData?.role ?? null,
-    displayName: userData?.name ?? "",
+    roleLabel: getRoleLabel(userData),
+    displayName,
     managerId,
     isAdmin: admin,
+    isRop: rop,
+    isLeadership: leadership,
     isManager: manager,
     canViewAll: canViewAll(userData),
     canManageTeam: canManageTeam(userData),

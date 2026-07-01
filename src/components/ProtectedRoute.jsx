@@ -18,6 +18,8 @@ export default function ProtectedRoute({
 
   requireAdmin = false,
 
+  requireLeadership = false,
+
   fallbackPath = "/unauthorized",
 
 }) {
@@ -46,16 +48,15 @@ export default function ProtectedRoute({
 
   }
 
-  const roles =
+  let roles = allowedRoles;
 
-    requireAdmin
-
-      ? [ROLES.ADMIN]
-
-      : allowedRoles;
+  if (requireAdmin) {
+    roles = [ROLES.ADMIN];
+  } else if (requireLeadership) {
+    roles = [ROLES.ADMIN, ROLES.ROP];
+  }
 
   const hasAccess =
-
     roles?.includes(
       userData.role
     );

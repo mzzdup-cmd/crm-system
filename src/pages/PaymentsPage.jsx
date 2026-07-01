@@ -9,6 +9,9 @@ from "../context/ToastContext";
 import { usePageLoad }
 from "../hooks/usePageLoad";
 
+import { usePermissions }
+from "../hooks/usePermissions";
+
 import {
   getPaymentsForUser,
   updatePaymentWithClient,
@@ -110,8 +113,7 @@ export default function PaymentsPage({
       }
     : null;
 
-  const isAdmin =
-    userData?.role === "admin";
+  const { isLeadership } = usePermissions();
 
   const paymentList =
     payments || [];
@@ -367,7 +369,7 @@ export default function PaymentsPage({
                         </button>
                       )}
 
-                      {!isAdmin &&
+                      {!isLeadership &&
                         editable &&
                         timeLeft > 0 && (
                           <span className="text-xs text-amber-400">
@@ -389,7 +391,7 @@ export default function PaymentsPage({
         open={Boolean(editPayment)}
         payment={editPayment}
         userData={userData}
-        isAdmin={isAdmin}
+        isAdmin={isLeadership}
         saving={saving}
         onSave={handleSaveEdit}
         onClose={() =>

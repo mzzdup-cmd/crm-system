@@ -17,7 +17,7 @@ import {
   buildDeleteAudit,
 } from "../domain/audit/auditFields";
 
-import { isAdmin } from "../domain/auth/roleHelpers";
+import { isLeadership } from "../domain/auth/roleHelpers";
 
 const COLLECTION = "knowledgeNotes";
 
@@ -60,7 +60,7 @@ export async function createKnowledgeNote(
   data,
   userData
 ) {
-  if (!isAdmin(userData)) {
+  if (!isLeadership(userData)) {
     throw new Error("Нет прав");
   }
 
@@ -84,7 +84,7 @@ export async function updateKnowledgeNote({
   updates,
   userData,
 }) {
-  if (!isAdmin(userData)) {
+  if (!isLeadership(userData)) {
     throw new Error("Нет прав");
   }
 
@@ -101,7 +101,7 @@ export async function deleteKnowledgeNote({
   id,
   userData,
 }) {
-  if (!isAdmin(userData)) {
+  if (!isLeadership(userData)) {
     throw new Error("Нет прав");
   }
 

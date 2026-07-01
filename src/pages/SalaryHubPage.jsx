@@ -43,19 +43,19 @@ const ALL_TABS = [
 ];
 
 export default function SalaryHubPage() {
-  const { isAdmin } = usePermissions();
+  const { isLeadership } = usePermissions();
 
   const [searchParams, setSearchParams] =
     useSearchParams();
 
   const tabs = useMemo(
     () =>
-      isAdmin
+      isLeadership
         ? ALL_TABS
         : ALL_TABS.filter(
             (tab) => !tab.adminOnly
           ),
-    [isAdmin]
+    [isLeadership]
   );
 
   const requestedTab =
@@ -100,7 +100,7 @@ export default function SalaryHubPage() {
       <PageHeader
         title="Зарплата"
         subtitle={
-          isAdmin
+          isLeadership
             ? "Расчёт ЗП, ночные смены и бонусы"
             : "Ваш расчёт за текущий месяц"
         }
@@ -118,12 +118,12 @@ export default function SalaryHubPage() {
         <SalaryPage embedded />
       )}
 
-      {isAdmin &&
+      {isLeadership &&
         activeTab === "night-shifts" && (
           <NightShiftsPage embedded />
         )}
 
-      {isAdmin &&
+      {isLeadership &&
         activeTab === "bonuses" && (
           <BonusesPage embedded />
         )}

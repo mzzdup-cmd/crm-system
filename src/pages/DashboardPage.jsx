@@ -494,7 +494,7 @@ export default function DashboardPage() {
 }
 
 function DashboardPageContent() {
-  const { isAdmin, isManager, displayName } =
+  const { isManager, isLeadership, displayName, managerId } =
     usePermissions();
 
   const {
@@ -636,7 +636,7 @@ function DashboardPageContent() {
 
       {
 
-        isAdmin &&
+        isLeadership &&
         requestsSummary.pendingTotal > 0 && (
 
           <Link
@@ -683,7 +683,7 @@ function DashboardPageContent() {
 
       {
 
-        isAdmin && summary.unsyncedTtCount > 0 && (
+        isLeadership && summary.unsyncedTtCount > 0 && (
 
             <Link
               to="/management"
@@ -704,7 +704,7 @@ function DashboardPageContent() {
 
       {
 
-        isManager && displayName && (
+        isManager && !isLeadership && (
 
           <section className="bg-slate-900 p-5 md:p-6 rounded-2xl space-y-6">
 
@@ -712,7 +712,7 @@ function DashboardPageContent() {
 
               <div className="text-2xl font-bold">
 
-                Доброго дня, {displayName}
+                Доброго дня, {displayName || "коллега"}
 
               </div>
 
@@ -982,7 +982,7 @@ function DashboardPageContent() {
 
       {
 
-        isAdmin && (
+        isLeadership && (
 
           <section className="bg-slate-900 p-5 md:p-6 rounded-2xl space-y-4">
 
@@ -1090,7 +1090,7 @@ function DashboardPageContent() {
 
       }
 
-      {isAdmin && (
+      {isLeadership && (
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 md:gap-6">
 
         <StatCard
@@ -1205,7 +1205,7 @@ function DashboardPageContent() {
 
       </section>
 
-      {isAdmin && (
+      {isLeadership && (
       <section>
 
         <h2 className="text-xl md:text-2xl font-bold mb-4">
@@ -1271,7 +1271,7 @@ function DashboardPageContent() {
       </section>
       )}
 
-      {isAdmin && (
+      {isLeadership && (
       <section>
 
         <h2 className="text-xl md:text-2xl font-bold mb-4">

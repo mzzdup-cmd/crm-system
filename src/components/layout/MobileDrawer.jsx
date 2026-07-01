@@ -6,7 +6,7 @@ export default function MobileDrawer({
   onClose,
   navItems,
   displayName,
-  isAdmin,
+  roleLabel = "",
   onLogout,
 }) {
   if (!open) {
@@ -34,7 +34,7 @@ export default function MobileDrawer({
         <Sidebar
           navItems={navItems}
           displayName={displayName}
-          isAdmin={isAdmin}
+          roleLabel={roleLabel}
           onLogout={onLogout}
           onNavigate={onClose}
           className="w-full"

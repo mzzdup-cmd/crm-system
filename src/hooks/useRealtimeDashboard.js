@@ -57,7 +57,7 @@ const OPERATIONAL_PAYMENTS_LIMIT = 3000;
 
 export function useDashboardRealtime() {
   const { userData } = useAuth();
-  const { isAdmin, isManager, managerId, displayName } =
+  const { isLeadership, isManager, managerId, displayName } =
     usePermissions();
 
   const [clients, setClients] = useState([]);
@@ -213,7 +213,7 @@ export function useDashboardRealtime() {
       ? getActiveManagers(effectiveSchedule)
       : [];
 
-    const unsyncedTtCount = isAdmin
+    const unsyncedTtCount = isLeadership
       ? payments.filter(
           (payment) =>
             !payment.deletedAt &&
@@ -238,7 +238,7 @@ export function useDashboardRealtime() {
     payments,
     schedule,
     traffic,
-    isAdmin,
+    isLeadership,
     managerId,
     displayName,
   ]);

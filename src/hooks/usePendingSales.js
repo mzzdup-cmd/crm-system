@@ -29,7 +29,8 @@ import {
 
 export function usePendingSales() {
   const { userData } = useAuth();
-  const { managerId, isAdmin } = usePermissions();
+  const { managerId, isManager, isLeadership } =
+    usePermissions();
 
   const today = getTodayDateString();
 
@@ -85,7 +86,7 @@ export function usePendingSales() {
   }, [today]);
 
   const incoming = useMemo(() => {
-    if (isAdmin) {
+    if (isLeadership) {
       return pendingSales.filter(
         (sale) => sale.status === "pending"
       );
@@ -95,7 +96,7 @@ export function usePendingSales() {
       pendingSales,
       managerId
     );
-  }, [pendingSales, managerId, isAdmin]);
+  }, [pendingSales, managerId, isLeadership]);
 
   const created = useMemo(() => {
     if (!managerId) {
@@ -109,7 +110,7 @@ export function usePendingSales() {
   }, [pendingSales, managerId]);
 
   const pendingCount = useMemo(() => {
-    if (isAdmin) {
+    if (isLeadership) {
       return incoming.length;
     }
 
@@ -117,7 +118,7 @@ export function usePendingSales() {
       pendingSales,
       managerId
     );
-  }, [pendingSales, managerId, isAdmin, incoming]);
+  }, [pendingSales, managerId, isLeadership, incoming]);
 
   const coveringTargets = useMemo(() => {
     if (!managerId) {
@@ -131,7 +132,8 @@ export function usePendingSales() {
   }, [effectiveSchedule, managerId]);
 
   const canQuickSale =
-    isAdmin || coveringTargets.length > 0;
+    Boolean(managerId) &&
+    (isLeadership || isManager);
 
   return {
     pendingSales,

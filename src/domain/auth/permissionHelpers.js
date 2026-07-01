@@ -1,5 +1,5 @@
 import {
-  isAdmin,
+  isLeadership,
   getCurrentManagerId,
 } from "./roleHelpers";
 
@@ -8,11 +8,11 @@ import {
 } from "./managerMigration";
 
 export function canViewAll(userData) {
-  return isAdmin(userData);
+  return isLeadership(userData);
 }
 
 export function canManageTeam(userData) {
-  return isAdmin(userData);
+  return isLeadership(userData);
 }
 
 export function canAccessByManagerId(
@@ -24,7 +24,7 @@ export function canAccessByManagerId(
     return false;
   }
 
-  if (isAdmin(userData)) {
+  if (isLeadership(userData)) {
     return true;
   }
 
@@ -60,7 +60,7 @@ export function canAccessClient(
     return false;
   }
 
-  if (isAdmin(userData)) {
+  if (isLeadership(userData)) {
     return true;
   }
 
@@ -85,7 +85,7 @@ export function canAccessPayment(
     return false;
   }
 
-  if (isAdmin(userData)) {
+  if (isLeadership(userData)) {
     return true;
   }
 

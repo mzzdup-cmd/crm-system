@@ -13,7 +13,7 @@ import {
   normalizeManagerFields,
 } from "../domain/auth/managerMigration";
 import {
-  isAdmin,
+  isLeadership,
   getCurrentManagerId,
 } from "../domain/auth/roleHelpers";
 import {
@@ -73,7 +73,7 @@ export async function getAllNightShifts() {
 export async function getNightShiftsForUser(
   userData
 ) {
-  if (isAdmin(userData)) {
+  if (isLeadership(userData)) {
     return getAllNightShifts();
   }
 

@@ -28,7 +28,7 @@ export default function CalendarDayModal({
   open,
   dateKey,
   events = [],
-  isAdmin,
+  isLeadership,
   onClose,
   onEditEvent,
   onDeleteEvent,
@@ -131,7 +131,7 @@ export default function CalendarDayModal({
                   )}
                 </div>
 
-                {isAdmin &&
+                {isLeadership &&
                   event.editable && (
                     <div className="mt-3 flex gap-2">
                       <button

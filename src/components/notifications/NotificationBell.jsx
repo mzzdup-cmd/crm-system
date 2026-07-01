@@ -21,7 +21,7 @@ export default function NotificationBell({
   } = useNotifications();
 
   return (
-    <div className={`relative ${className}`}>
+    <div className={`relative z-30 ${className}`}>
 
       <button
         type="button"

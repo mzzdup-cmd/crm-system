@@ -65,7 +65,7 @@ export default function TimeOffPage({
 }) {
   const { user, userData } = useAuth();
   const toast = useToast();
-  const { isAdmin } = usePermissions();
+  const { isLeadership } = usePermissions();
 
   const {
     timeOffRequests,
@@ -220,7 +220,7 @@ export default function TimeOffPage({
         />
       )}
 
-      {isAdmin &&
+      {isLeadership &&
         summary.pendingTotal > 0 && (
           <section className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-5 space-y-4">
             <h2 className="text-lg font-bold text-amber-200">
@@ -254,7 +254,7 @@ export default function TimeOffPage({
           </section>
         )}
 
-      {!isAdmin && (
+      {!isLeadership && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <section className="bg-slate-900 rounded-2xl p-5 space-y-4">
             <h2 className="text-lg font-bold">
@@ -362,7 +362,7 @@ export default function TimeOffPage({
 
       <section className="space-y-4">
         <h2 className="text-xl font-bold">
-          {isAdmin
+          {isLeadership
             ? "Все запросы"
             : "Мои запросы"}
         </h2>
@@ -380,7 +380,7 @@ export default function TimeOffPage({
             request={request}
             type="dayOff"
             onReview={
-              isAdmin
+              isLeadership
                 ? handleReview
                 : null
             }
@@ -394,7 +394,7 @@ export default function TimeOffPage({
             request={request}
             type="vacation"
             onReview={
-              isAdmin
+              isLeadership
                 ? handleReview
                 : null
             }

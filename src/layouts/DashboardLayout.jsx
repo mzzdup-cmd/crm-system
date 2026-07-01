@@ -44,7 +44,7 @@ export default function DashboardLayout({ children }) {
     userData,
     loading,
     displayName,
-    isAdmin,
+    roleLabel,
   } = usePermissions();
 
   const [sidebarOpen, setSidebarOpen] =
@@ -98,7 +98,7 @@ export default function DashboardLayout({ children }) {
           <Sidebar
             navItems={navItems}
             displayName={displayName}
-            isAdmin={isAdmin}
+            roleLabel={roleLabel}
             onLogout={handleLogout}
             className="fixed inset-y-0 left-0 w-64"
             notificationBell={<NotificationBell />}
@@ -132,7 +132,7 @@ export default function DashboardLayout({ children }) {
                 <Sidebar
                   navItems={navItems}
                   displayName={displayName}
-                  isAdmin={isAdmin}
+                  roleLabel={roleLabel}
                   onLogout={handleLogout}
                   onNavigate={() =>
                     setSidebarOpen(false)
@@ -238,7 +238,7 @@ export default function DashboardLayout({ children }) {
         }
         navItems={navItems}
         displayName={displayName}
-        isAdmin={isAdmin}
+        roleLabel={roleLabel}
         onLogout={handleLogout}
       />
 

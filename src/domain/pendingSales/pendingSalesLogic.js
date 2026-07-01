@@ -1,5 +1,5 @@
 import {
-  isAdmin,
+  isLeadership,
   getCurrentManagerId,
 } from "../auth/roleHelpers";
 
@@ -55,16 +55,14 @@ export function canCreatePendingSale(
     return false;
   }
 
-  if (isAdmin(userData)) {
+  if (isLeadership(userData)) {
     return true;
   }
 
-  const targets = getCoveringTargets(
-    schedule,
-    creatorId
+  return (
+    !!creatorId &&
+    creatorId !== ownerManagerId
   );
-
-  return targets.includes(ownerManagerId);
 }
 
 export function getQuickSaleButtonLabel(
@@ -108,7 +106,7 @@ export function canConfirmPendingSale(
     return false;
   }
 
-  if (isAdmin(userData)) {
+  if (isLeadership(userData)) {
     return true;
   }
 

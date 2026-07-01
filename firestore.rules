@@ -13,6 +13,15 @@ service cloud.firestore {
       ).data;
     }
 
+    function isRop() {
+      return isSignedIn()
+        && userDoc().role == 'rop';
+    }
+
+    function isLeadership() {
+      return isAdmin() || isRop();
+    }
+
     function isAdmin() {
       return isSignedIn()
         && userDoc().role == 'admin';
@@ -44,7 +53,7 @@ service cloud.firestore {
     }
 
     function canReadManagerData(data) {
-      return isAdmin()
+      return isLeadership()
         || isOwnerByManagerId(data.managerId)
         || (
           data.managerId == null
@@ -53,7 +62,7 @@ service cloud.firestore {
     }
 
     function canCreateManagerData(data) {
-      return isAdmin()
+      return isLeadership()
         || (
           isOwnerByManagerId(data.managerId)
           && data.managerId != null
@@ -64,7 +73,7 @@ service cloud.firestore {
       existing,
       incoming
     ) {
-      return isAdmin()
+      return isLeadership()
         || (
           isOwnerByManagerId(existing.managerId)
           && incoming.managerId == existing.managerId
@@ -80,8 +89,8 @@ service cloud.firestore {
       allow read: if isSignedIn()
         && (
           request.auth.uid == uid
-          || isAdmin()
-          || resource.data.role in ['manager', 'admin']
+          || isLeadership()
+          || resource.data.role in ['manager', 'admin', 'rop']
         );
 
       allow create, update, delete: if isAdmin();
@@ -129,7 +138,7 @@ service cloud.firestore {
 
       allow update: if isSignedIn()
         && (
-          isAdmin()
+          isLeadership()
           || managerCanEditPayment()
         );
 
@@ -140,20 +149,20 @@ service cloud.firestore {
       allow read: if isSignedIn()
         && canReadManagerData(resource.data);
 
-      allow create, update, delete: if isAdmin();
+      allow create, update, delete: if isLeadership();
     }
 
     match /nightShifts/{shiftId} {
       allow read: if isSignedIn()
         && canReadManagerData(resource.data);
 
-      allow create, update, delete: if isAdmin();
+      allow create, update, delete: if isLeadership();
     }
 
     match /schedule/{dateId} {
       allow read: if isSignedIn();
 
-      allow create, update, delete: if isAdmin();
+      allow create, update, delete: if isLeadership();
     }
 
     match /syncLog/{logId} {
@@ -165,13 +174,13 @@ service cloud.firestore {
     match /traffic/{docId} {
       allow read: if isSignedIn();
 
-      allow create, update, delete: if isAdmin();
+      allow create, update, delete: if isLeadership();
     }
 
     match /trafficSources/{sourceId} {
       allow read: if isSignedIn();
 
-      allow create, update, delete: if isAdmin();
+      allow create, update, delete: if isLeadership();
     }
 
     match /notifications/{notificationId} {
@@ -180,7 +189,7 @@ service cloud.firestore {
 
       allow create: if isSignedIn()
         && (
-          isAdmin()
+          isLeadership()
           || request.resource.data.userId == request.auth.uid
           || (
             request.resource.data.type == 'pending_sale'
@@ -195,19 +204,19 @@ service cloud.firestore {
             resource.data.userId == request.auth.uid
             && request.resource.data.userId == resource.data.userId
           )
-          || isAdmin()
+          || isLeadership()
         );
 
-      allow delete: if isAdmin();
+      allow delete: if isLeadership();
     }
 
     function isPendingOwner(data) {
-      return isAdmin()
+      return isLeadership()
         || isOwnerByManagerId(data.ownerManagerId);
     }
 
     function isPendingCreator(data) {
-      return isAdmin()
+      return isLeadership()
         || isOwnerByManagerId(data.createdByManagerId);
     }
 
@@ -220,7 +229,7 @@ service cloud.firestore {
 
       allow create: if isSignedIn()
         && (
-          isAdmin()
+          isLeadership()
           || (
             request.resource.data.createdByManagerId == ownerManagerId()
             && request.resource.data.ownerManagerId != ownerManagerId()
@@ -230,7 +239,7 @@ service cloud.firestore {
 
       allow update: if isSignedIn()
         && (
-          isAdmin()
+          isLeadership()
           || (
             isPendingOwner(resource.data)
             && resource.data.status == 'pending'
@@ -239,7 +248,7 @@ service cloud.firestore {
           )
         );
 
-      allow delete: if isAdmin();
+      allow delete: if isLeadership();
     }
 
     function isOwnTimeOffRequest(data) {
@@ -249,7 +258,7 @@ service cloud.firestore {
     match /timeOffRequests/{requestId} {
       allow read: if isSignedIn()
         && (
-          isAdmin()
+          isLeadership()
           || isOwnTimeOffRequest(resource.data)
         );
 
@@ -258,7 +267,7 @@ service cloud.firestore {
         && request.resource.data.managerId == ownerManagerId()
         && request.resource.data.status == 'pending';
 
-      allow update: if isAdmin();
+      allow update: if isLeadership();
 
       allow delete: if false;
     }
@@ -266,7 +275,7 @@ service cloud.firestore {
     match /vacationRequests/{requestId} {
       allow read: if isSignedIn()
         && (
-          isAdmin()
+          isLeadership()
           || isOwnTimeOffRequest(resource.data)
         );
 
@@ -275,7 +284,7 @@ service cloud.firestore {
         && request.resource.data.managerId == ownerManagerId()
         && request.resource.data.status == 'pending';
 
-      allow update: if isAdmin();
+      allow update: if isLeadership();
 
       allow delete: if false;
     }
@@ -283,23 +292,23 @@ service cloud.firestore {
     match /calendarEvents/{eventId} {
       allow read: if isSignedIn();
 
-      allow create, update, delete: if isAdmin();
+      allow create, update, delete: if isLeadership();
     }
 
     match /knowledgeFaq/{itemId} {
       allow read: if isSignedIn();
 
-      allow create, update, delete: if isAdmin();
+      allow create, update, delete: if isLeadership();
     }
 
     match /knowledgeNotes/{itemId} {
       allow read: if isSignedIn();
 
-      allow create, update, delete: if isAdmin();
+      allow create, update, delete: if isLeadership();
     }
 
     function isOwnKnowledgeScript(data) {
-      return isAdmin()
+      return isLeadership()
         || isOwnerByManagerId(data.managerId);
     }
 
@@ -308,7 +317,7 @@ service cloud.firestore {
 
       allow create: if isSignedIn()
         && (
-          isAdmin()
+          isLeadership()
           || (
             isManager()
             && request.resource.data.managerId == ownerManagerId()
@@ -317,7 +326,7 @@ service cloud.firestore {
 
       allow update: if isSignedIn()
         && (
-          isAdmin()
+          isLeadership()
           || (
             isManager()
             && resource.data.managerId == ownerManagerId()
@@ -325,7 +334,7 @@ service cloud.firestore {
           )
         );
 
-      allow delete: if isAdmin();
+      allow delete: if isLeadership();
     }
   }
 }

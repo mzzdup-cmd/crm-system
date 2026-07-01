@@ -44,7 +44,7 @@ import {
 export function useTeamCalendar(
   initialDate = new Date()
 ) {
-  const { userData, isAdmin } =
+  const { userData, isLeadership } =
     usePermissions();
 
   const [year, setYear] = useState(
@@ -246,7 +246,7 @@ export function useTeamCalendar(
     calendarEvents,
     loading,
     connected,
-    isAdmin,
+    isLeadership,
     goToPreviousMonth,
     goToNextMonth,
     goToToday,

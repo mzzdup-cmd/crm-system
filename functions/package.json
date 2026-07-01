@@ -12,7 +12,8 @@
     "nightly-sync": "node scripts/nightlySheetsSync.js",
     "tt-sync": "node scripts/ttSheetsSync.js",
     "tt-status": "node scripts/ttSyncStatus.js",
-    "tt-reset-sync": "node scripts/resetPaymentSync.js"
+    "tt-reset-sync": "node scripts/resetPaymentSync.js",
+    "provision-users": "node scripts/provisionUsers.js"
   },
   "dependencies": {
     "firebase-admin": "^13.6.0",

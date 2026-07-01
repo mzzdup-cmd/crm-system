@@ -71,11 +71,10 @@ export default function NotificationDropdown({
     <div
       ref={panelRef}
       className="
-        absolute right-0 top-full mt-2 z-50
-        w-[min(100vw-2rem,24rem)]
+        absolute left-full top-0 ml-2 z-[100]
+        w-[min(calc(100vw-2rem),20rem)]
         bg-slate-900 border border-slate-700
         rounded-2xl shadow-2xl
-        animate-slide-in-right
         overflow-hidden
       "
     >

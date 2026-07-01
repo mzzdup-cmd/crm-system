@@ -241,7 +241,7 @@ function AppRoutes() {
             path="/analytics"
             element={
               <LazyPage>
-                <ProtectedRoute requireAdmin>
+                <ProtectedRoute requireLeadership>
                   <AnalyticsHubPage />
                 </ProtectedRoute>
               </LazyPage>
@@ -262,7 +262,7 @@ function AppRoutes() {
             path="/management"
             element={
               <LazyPage>
-                <ProtectedRoute requireAdmin>
+                <ProtectedRoute requireLeadership>
                   <ManagementPage />
                 </ProtectedRoute>
               </LazyPage>

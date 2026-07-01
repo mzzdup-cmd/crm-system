@@ -1,4 +1,7 @@
-import { ROLES } from "../../constants/roles";
+import {
+  ROLES,
+  ROLE_LABELS,
+} from "../../constants/roles";
 import {
   resolveManagerIdFromLegacy,
 } from "./managerMigration";
@@ -10,8 +13,30 @@ export function isAdmin(userData) {
   return userData?.role === ROLES.ADMIN;
 }
 
+export function isRop(userData) {
+  return userData?.role === ROLES.ROP;
+}
+
 export function isManager(userData) {
   return userData?.role === ROLES.MANAGER;
+}
+
+export function isLeadership(userData) {
+  return (
+    isAdmin(userData) ||
+    isRop(userData)
+  );
+}
+
+export function getRoleLabel(userData) {
+  if (!userData?.role) {
+    return "";
+  }
+
+  return (
+    ROLE_LABELS[userData.role] ||
+    userData.role
+  );
 }
 
 export function getCurrentManagerId(userData) {
@@ -23,7 +48,10 @@ export function getCurrentManagerId(userData) {
     return userData.managerId;
   }
 
-  if (userData.name) {
+  if (
+    userData.role === ROLES.MANAGER &&
+    userData.name
+  ) {
     return resolveManagerIdFromLegacy(
       userData.name
     );
@@ -37,10 +65,9 @@ export function normalizeUserRole(userData) {
     return null;
   }
 
-  const role =
-    userData.role === ROLES.ADMIN
-      ? ROLES.ADMIN
-      : ROLES.MANAGER;
+  const role = isValidRoleValue(userData.role)
+    ? userData.role
+    : ROLES.MANAGER;
 
   let managerId = userData.managerId || null;
   let name = userData.name || "";
@@ -58,13 +85,25 @@ export function normalizeUserRole(userData) {
     }
   }
 
+  if (
+    role === ROLES.ADMIN ||
+    role === ROLES.ROP
+  ) {
+    managerId = null;
+  }
+
   return {
     ...userData,
     role,
-    managerId:
-      role === ROLES.ADMIN
-        ? null
-        : managerId,
+    managerId,
     name,
   };
+}
+
+function isValidRoleValue(role) {
+  return (
+    role === ROLES.ADMIN ||
+    role === ROLES.ROP ||
+    role === ROLES.MANAGER
+  );
 }

@@ -47,6 +47,11 @@ export default function PendingSalesPage() {
     initialLoading,
   } = usePendingSales();
 
+  const pendingCreated = created.filter(
+    (sale) =>
+      sale.status === PENDING_SALE_STATUS.PENDING
+  );
+
   const [modalOpen, setModalOpen] =
     useState(false);
 
@@ -162,6 +167,50 @@ export default function PendingSalesPage() {
 
       </section>
 
+      <section>
+
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+
+          <h2 className="text-xl font-bold">
+
+            Отправить коллеге
+
+          </h2>
+
+          {canQuickSale && (
+            <button
+              type="button"
+              onClick={() => setModalOpen(true)}
+              className="
+                px-4 py-2.5 rounded-xl font-bold text-sm
+                bg-cyan-500 hover:bg-cyan-400 transition-colors
+              "
+            >
+              {quickSaleLabel}
+            </button>
+          )}
+
+        </div>
+
+        {pendingCreated.length === 0 ? (
+          <EmptyState
+            icon="⚡"
+            title="Нет исходящих продаж"
+            description="Зафиксируйте продажу за коллегу — она получит её на подтверждение."
+          />
+        ) : (
+          <div className="grid gap-4">
+            {pendingCreated.map((sale) => (
+              <PendingSaleCard
+                key={sale.id}
+                sale={sale}
+              />
+            ))}
+          </div>
+        )}
+
+      </section>
+
       {
 
         created.length > 0 && (
@@ -170,7 +219,7 @@ export default function PendingSalesPage() {
 
             <h2 className="text-xl font-bold mb-4">
 
-              Внесённые вами
+              История ваших продаж
 
             </h2>
 

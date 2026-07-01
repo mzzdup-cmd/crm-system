@@ -16,7 +16,7 @@ import {
   normalizeManagerFields,
 } from "../domain/auth/managerMigration";
 import {
-  isAdmin,
+  isLeadership,
   getCurrentManagerId,
 } from "../domain/auth/roleHelpers";
 import {
@@ -157,7 +157,7 @@ export async function getPaymentById(id) {
 }
 
 export async function getPaymentsForUser(userData) {
-  if (isAdmin(userData)) {
+  if (isLeadership(userData)) {
     return getAllPayments();
   }
 
@@ -262,7 +262,7 @@ export async function getRecentPaymentsForUser(
   userData,
   count = 10
 ) {
-  if (isAdmin(userData)) {
+  if (isLeadership(userData)) {
     return getRecentPayments(count);
   }
 
@@ -815,7 +815,7 @@ export async function getSalaryReportForUser(userData) {
   const managerId =
     getCurrentManagerId(userData);
 
-  const allManagerKeys = isAdmin(userData)
+  const allManagerKeys = isLeadership(userData)
     ? MANAGERS.map(
         (manager) => manager.id
       )
@@ -832,7 +832,7 @@ export async function getSalaryReportForUser(userData) {
     archiveOffsets: [-1],
   });
 
-  if (isAdmin(userData)) {
+  if (isLeadership(userData)) {
     return bundle;
   }
 

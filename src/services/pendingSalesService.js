@@ -15,7 +15,7 @@ import {
 import { db } from "./firebase";
 
 import {
-  isAdmin,
+  isLeadership,
   getCurrentManagerId,
 } from "../domain/auth/roleHelpers";
 
@@ -204,7 +204,7 @@ export function subscribePendingSalesForUser(
     return () => {};
   }
 
-  if (isAdmin(userData)) {
+  if (isLeadership(userData)) {
     const adminQuery = query(
       collection(db, "pendingSales"),
       orderBy("createdAt", "desc"),

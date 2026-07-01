@@ -29,7 +29,7 @@ import {
 
 export function useOperationalRequests() {
   const { userData } = useAuth();
-  const { isAdmin, managerId } =
+  const { isLeadership, managerId } =
     usePermissions();
 
   const [timeOffRequests, setTimeOffRequests] =
@@ -163,6 +163,6 @@ export function useOperationalRequests() {
     vacationRequests,
     summary,
     loading,
-    isAdmin,
+    isLeadership,
   };
 }

@@ -12,7 +12,7 @@ import {
   ensureTrafficSourcesSeeded,
 } from "../services/trafficSourceService";
 
-import { isAdmin }
+import { isLeadership }
 from "../domain/auth/roleHelpers";
 
 export function useTrafficSources() {
@@ -37,7 +37,7 @@ export function useTrafficSources() {
 
     seedStartedRef.current = true;
 
-    if (!isAdmin(userData)) {
+    if (!isLeadership(userData)) {
       return;
     }
 
@@ -47,7 +47,7 @@ export function useTrafficSources() {
         userData.uid ||
         "system",
     }).catch((error) => {
-      if (isAdmin(userData)) {
+      if (isLeadership(userData)) {
         console.error(
           "[useTrafficSources] seed failed:",
           error

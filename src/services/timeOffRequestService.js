@@ -17,7 +17,7 @@ import {
 } from "../domain/auth/managerMigration";
 
 import {
-  isAdmin,
+  isLeadership,
   getCurrentManagerId,
 } from "../domain/auth/roleHelpers";
 
@@ -61,7 +61,7 @@ export function subscribeTimeOffRequests(
 
   let requestsQuery;
 
-  if (isAdmin(userData)) {
+  if (isLeadership(userData)) {
     requestsQuery = query(
       collection(db, "timeOffRequests"),
       orderBy("createdAt", "desc")
@@ -149,7 +149,7 @@ export async function reviewTimeOffRequest({
   reviewComment = "",
   userData,
 }) {
-  if (!isAdmin(userData)) {
+  if (!isLeadership(userData)) {
     throw new Error(
       "Нет прав на рассмотрение"
     );

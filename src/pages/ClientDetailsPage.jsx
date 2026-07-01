@@ -12,6 +12,9 @@ import {
 import { useAuth }
 from "../context/AuthContext";
 
+import { usePermissions }
+from "../hooks/usePermissions";
+
 import {
   getClientByIdForUser,
   updateClient,
@@ -61,8 +64,7 @@ export default function ClientDetailsPage() {
     ? { ...userData, uid: user?.uid }
     : null;
 
-  const isAdmin =
-    userData?.role === "admin";
+  const { isLeadership } = usePermissions();
 
   const [client, setClient] =
     useState(null);
@@ -692,7 +694,7 @@ export default function ClientDetailsPage() {
         open={Boolean(editPayment)}
         payment={editPayment}
         userData={userData}
-        isAdmin={isAdmin}
+        isAdmin={isLeadership}
         saving={savingPayment}
         onSave={handleSavePaymentEdit}
         onClose={() =>

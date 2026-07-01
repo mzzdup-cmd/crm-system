@@ -13,7 +13,7 @@ import {
   normalizeManagerFields,
 } from "../domain/auth/managerMigration";
 import {
-  isAdmin,
+  isLeadership,
   getCurrentManagerId,
 } from "../domain/auth/roleHelpers";
 import {
@@ -71,7 +71,7 @@ export async function getAllManualBonuses() {
 export async function getManualBonusesForUser(
   userData
 ) {
-  if (isAdmin(userData)) {
+  if (isLeadership(userData)) {
     return getAllManualBonuses();
   }
 

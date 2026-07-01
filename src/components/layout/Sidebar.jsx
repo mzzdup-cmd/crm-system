@@ -16,7 +16,7 @@ function navClassName({ isActive }) {
 export default function Sidebar({
   navItems,
   displayName,
-  isAdmin,
+  roleLabel = "",
   onLogout,
   onNavigate,
   className = "",
@@ -31,7 +31,7 @@ export default function Sidebar({
       `}
     >
 
-      <div className="p-6 border-b border-slate-800">
+      <div className="p-6 border-b border-slate-800 overflow-visible relative z-20">
 
         <div className="flex items-start justify-between gap-3">
 
@@ -51,19 +51,11 @@ export default function Sidebar({
 
                   {displayName}
 
-                  {
-
-                    isAdmin && (
-
-                      <span className="ml-2 text-cyan-400">
-
-                        Admin
-
-                      </span>
-
-                    )
-
-                  }
+                  {roleLabel && (
+                    <span className="ml-2 text-cyan-400">
+                      {roleLabel}
+                    </span>
+                  )}
 
                 </div>
 

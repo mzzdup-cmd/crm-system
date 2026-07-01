@@ -34,7 +34,7 @@ const TABS = [
 export default function KnowledgeBasePage() {
   const {
     loading,
-    isAdmin,
+    isLeadership,
     search,
     setSearch,
     selectedTags,
@@ -146,7 +146,7 @@ export default function KnowledgeBasePage() {
         title="База знаний"
         subtitle="FAQ, инструкции и обработки команды"
         actions={
-          (isAdmin ||
+          (isLeadership ||
             tab === "scripts") && (
             <button
               type="button"

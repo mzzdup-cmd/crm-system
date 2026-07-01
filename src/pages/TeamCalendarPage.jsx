@@ -31,7 +31,7 @@ export default function TeamCalendarPage() {
     insights,
     loading,
     connected,
-    isAdmin,
+    isLeadership,
     goToPreviousMonth,
     goToNextMonth,
     goToToday,
@@ -120,7 +120,7 @@ export default function TeamCalendarPage() {
         </div>
 
         <div className="flex flex-wrap gap-2">
-          {isAdmin && (
+          {isLeadership && (
             <button
               type="button"
               onClick={() => {
@@ -199,7 +199,7 @@ export default function TeamCalendarPage() {
             ? getDayEvents(selectedDate)
             : []
         }
-        isAdmin={isAdmin}
+        isLeadership={isLeadership}
         onClose={() => setSelectedDate(null)}
         onEditEvent={(event) => {
           setEditingEvent(event);

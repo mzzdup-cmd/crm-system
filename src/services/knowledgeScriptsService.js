@@ -16,7 +16,7 @@ import {
 } from "../domain/auth/managerMigration";
 
 import {
-  isAdmin,
+  isLeadership,
   getCurrentManagerId,
 } from "../domain/auth/roleHelpers";
 
@@ -89,7 +89,7 @@ export function canEditScript(
     return false;
   }
 
-  if (isAdmin(userData)) {
+  if (isLeadership(userData)) {
     return true;
   }
 
@@ -109,7 +109,7 @@ export async function createKnowledgeScript(
   const managerId =
     getCurrentManagerId(userData);
 
-  if (!managerId && !isAdmin(userData)) {
+  if (!managerId && !isLeadership(userData)) {
     throw new Error("Нет прав");
   }
 
@@ -182,7 +182,7 @@ export async function getKnowledgeScriptsForUser(
     .map(mapDoc)
     .filter((item) => !item.deletedAt);
 
-  if (isAdmin(userData)) {
+  if (isLeadership(userData)) {
     return items;
   }
 

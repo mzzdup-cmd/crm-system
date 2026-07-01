@@ -11,7 +11,7 @@ import {
 import { db } from "./firebase";
 
 import {
-  isAdmin,
+  isLeadership,
   getCurrentManagerId,
 } from "../domain/auth/roleHelpers";
 
@@ -60,7 +60,7 @@ export function subscribeClientsForUser(
 
   let clientsQuery;
 
-  if (isAdmin(userData)) {
+  if (isLeadership(userData)) {
     clientsQuery = collection(
       db,
       "clients"
@@ -151,7 +151,7 @@ export function subscribeRecentPaymentsForUser(
 
   let paymentsQuery;
 
-  if (isAdmin(userData)) {
+  if (isLeadership(userData)) {
     paymentsQuery = query(
       collection(db, "payments"),
       orderBy("createdAt", "desc"),
