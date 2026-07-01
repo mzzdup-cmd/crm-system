@@ -4,10 +4,6 @@ import {
   addDoc,
   doc,
   updateDoc,
-  query,
-  where,
-  orderBy,
-  onSnapshot,
 } from "firebase/firestore";
 
 import { db } from "./firebase";
@@ -17,8 +13,9 @@ import {
 } from "../domain/auth/managerMigration";
 
 import {
-  isLeadership,
   getCurrentManagerId,
+  getFirestoreManagerId,
+  isLeadership,
 } from "../domain/auth/roleHelpers";
 
 import {
@@ -42,6 +39,10 @@ import {
   applyApprovedVacation,
 } from "../domain/schedule/applyApprovedTimeOff";
 
+import {
+  subscribeManagerScopedCollection,
+} from "./managerScopedSubscription";
+
 function mapRequestDoc(snapshot) {
   const data = snapshot.data();
   const normalized =
@@ -58,53 +59,13 @@ export function subscribeVacationRequests(
   userData,
   callback
 ) {
-  if (!userData) {
-    callback([]);
-    return () => {};
-  }
-
-  let requestsQuery;
-
-  if (isLeadership(userData)) {
-    requestsQuery = query(
-      collection(db, "vacationRequests"),
-      orderBy("createdAt", "desc")
-    );
-  } else {
-    const managerId =
-      getCurrentManagerId(userData);
-
-    if (!managerId) {
-      callback([]);
-      return () => {};
-    }
-
-    requestsQuery = query(
-      collection(db, "vacationRequests"),
-      where(
-        "managerId",
-        "==",
-        managerId
-      ),
-      orderBy("createdAt", "desc")
-    );
-  }
-
-  return onSnapshot(
-    requestsQuery,
-    (snapshot) => {
-      callback(
-        snapshot.docs.map(mapRequestDoc)
-      );
-    },
-    (error) => {
-      console.error(
-        "[vacationRequestService] subscription failed:",
-        error
-      );
-      callback([]);
-    }
-  );
+  return subscribeManagerScopedCollection({
+    collectionName: "vacationRequests",
+    userData,
+    mapDoc: mapRequestDoc,
+    callback,
+    logLabel: "vacationRequestService",
+  });
 }
 
 export async function createVacationRequest({
@@ -114,6 +75,7 @@ export async function createVacationRequest({
   userData,
 }) {
   const managerId =
+    getFirestoreManagerId(userData) ||
     getCurrentManagerId(userData);
 
   if (!managerId) {

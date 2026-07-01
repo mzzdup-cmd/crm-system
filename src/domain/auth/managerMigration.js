@@ -98,10 +98,15 @@ export function resolveManagerFromLegacy(value) {
 
 export function normalizeManagerFields(data = {}) {
   if (data.managerId) {
-    const manager = getManagerById(data.managerId);
+    const resolvedId =
+      resolveManagerIdFromLegacy(
+        data.managerId
+      ) || data.managerId;
+    const manager =
+      getManagerById(resolvedId);
 
     return {
-      managerId: data.managerId,
+      managerId: resolvedId,
       manager:
         manager?.name ||
         data.manager ||
@@ -119,6 +124,24 @@ export function normalizeManagerFields(data = {}) {
     managerId: null,
     manager: "",
   };
+}
+
+export function managerIdsMatch(
+  leftId,
+  rightId
+) {
+  if (!leftId || !rightId) {
+    return false;
+  }
+
+  const left =
+    resolveManagerIdFromLegacy(leftId) ||
+    leftId;
+  const right =
+    resolveManagerIdFromLegacy(rightId) ||
+    rightId;
+
+  return left === right;
 }
 
 export function needsManagerIdMigration(data) {

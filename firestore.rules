@@ -252,7 +252,12 @@ service cloud.firestore {
     }
 
     function isOwnTimeOffRequest(data) {
-      return isOwnerByManagerId(data.managerId);
+      return canReadManagerData(data)
+        || (
+          isManager()
+          && data.manager != null
+          && ownerManagerName() == data.manager
+        );
     }
 
     match /timeOffRequests/{requestId} {

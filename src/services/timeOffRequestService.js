@@ -4,10 +4,6 @@ import {
   addDoc,
   doc,
   updateDoc,
-  query,
-  where,
-  orderBy,
-  onSnapshot,
 } from "firebase/firestore";
 
 import { db } from "./firebase";
@@ -19,6 +15,7 @@ import {
 import {
   isLeadership,
   getCurrentManagerId,
+  getFirestoreManagerId,
 } from "../domain/auth/roleHelpers";
 
 import {
@@ -38,6 +35,10 @@ import {
   applyApprovedDayOff,
 } from "../domain/schedule/applyApprovedTimeOff";
 
+import {
+  subscribeManagerScopedCollection,
+} from "./managerScopedSubscription";
+
 function mapRequestDoc(snapshot) {
   const data = snapshot.data();
   const normalized =
@@ -54,53 +55,13 @@ export function subscribeTimeOffRequests(
   userData,
   callback
 ) {
-  if (!userData) {
-    callback([]);
-    return () => {};
-  }
-
-  let requestsQuery;
-
-  if (isLeadership(userData)) {
-    requestsQuery = query(
-      collection(db, "timeOffRequests"),
-      orderBy("createdAt", "desc")
-    );
-  } else {
-    const managerId =
-      getCurrentManagerId(userData);
-
-    if (!managerId) {
-      callback([]);
-      return () => {};
-    }
-
-    requestsQuery = query(
-      collection(db, "timeOffRequests"),
-      where(
-        "managerId",
-        "==",
-        managerId
-      ),
-      orderBy("createdAt", "desc")
-    );
-  }
-
-  return onSnapshot(
-    requestsQuery,
-    (snapshot) => {
-      callback(
-        snapshot.docs.map(mapRequestDoc)
-      );
-    },
-    (error) => {
-      console.error(
-        "[timeOffRequestService] subscription failed:",
-        error
-      );
-      callback([]);
-    }
-  );
+  return subscribeManagerScopedCollection({
+    collectionName: "timeOffRequests",
+    userData,
+    mapDoc: mapRequestDoc,
+    callback,
+    logLabel: "timeOffRequestService",
+  });
 }
 
 export async function createTimeOffRequest({
@@ -109,6 +70,7 @@ export async function createTimeOffRequest({
   userData,
 }) {
   const managerId =
+    getFirestoreManagerId(userData) ||
     getCurrentManagerId(userData);
 
   if (!managerId) {

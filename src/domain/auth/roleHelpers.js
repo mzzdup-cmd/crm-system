@@ -91,6 +91,25 @@ export function getFirestoreManagerId(userData) {
   return getCurrentManagerId(userData);
 }
 
+export function getManagerIdsForScopedQuery(
+  userData
+) {
+  const firestoreId =
+    userData?.firestoreManagerId ||
+    userData?.managerId ||
+    null;
+  const canonicalId =
+    getCurrentManagerId(userData);
+
+  return [
+    ...new Set(
+      [firestoreId, canonicalId].filter(
+        Boolean
+      )
+    ),
+  ];
+}
+
 export function normalizeUserRole(userData) {
   if (!userData) {
     return null;

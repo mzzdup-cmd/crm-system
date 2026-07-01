@@ -1,3 +1,7 @@
+import {
+  managerIdsMatch,
+} from "../auth/managerMigration";
+
 export function enumerateDateRange(
   startDate,
   endDate
@@ -148,7 +152,10 @@ export function getManagerUpcomingAbsences({
     .filter(
       (request) =>
         request.status === "approved" &&
-        request.managerId === managerId &&
+        managerIdsMatch(
+          request.managerId,
+          managerId
+        ) &&
         request.date >= today
     )
     .sort((a, b) =>
@@ -167,7 +174,10 @@ export function getManagerUpcomingAbsences({
     .filter(
       (request) =>
         request.status === "approved" &&
-        request.managerId === managerId &&
+        managerIdsMatch(
+          request.managerId,
+          managerId
+        ) &&
         request.endDate >= today
     )
     .sort((a, b) =>
@@ -211,7 +221,10 @@ export function getUpcomingApprovedDates({
   timeOffRequests.forEach((request) => {
     if (
       request.status !== "approved" ||
-      request.managerId !== managerId ||
+      !managerIdsMatch(
+        request.managerId,
+        managerId
+      ) ||
       request.date < today
     ) {
       return;
@@ -223,7 +236,10 @@ export function getUpcomingApprovedDates({
   vacationRequests.forEach((request) => {
     if (
       request.status !== "approved" ||
-      request.managerId !== managerId
+      !managerIdsMatch(
+        request.managerId,
+        managerId
+      )
     ) {
       return;
     }

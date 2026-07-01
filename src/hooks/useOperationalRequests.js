@@ -27,6 +27,10 @@ import {
   getManagerUpcomingAbsences,
 } from "../domain/schedule/timeOffDates";
 
+import {
+  managerIdsMatch,
+} from "../domain/auth/managerMigration";
+
 export function useOperationalRequests() {
   const { userData } = useAuth();
   const { isLeadership, managerId } =
@@ -75,22 +79,44 @@ export function useOperationalRequests() {
   }, [userData]);
 
   const summary = useMemo(() => {
+    const scopedTimeOffRequests =
+      isLeadership
+        ? timeOffRequests
+        : timeOffRequests.filter(
+            (item) =>
+              managerIdsMatch(
+                item.managerId,
+                managerId
+              )
+          );
+
+    const scopedVacationRequests =
+      isLeadership
+        ? vacationRequests
+        : vacationRequests.filter(
+            (item) =>
+              managerIdsMatch(
+                item.managerId,
+                managerId
+              )
+          );
+
     const pendingTimeOff =
-      timeOffRequests.filter(
+      scopedTimeOffRequests.filter(
         (item) =>
           item.status ===
           REQUEST_STATUS.PENDING
       );
 
     const pendingVacations =
-      vacationRequests.filter(
+      scopedVacationRequests.filter(
         (item) =>
           item.status ===
           REQUEST_STATUS.PENDING
       );
 
     const approvedVacations =
-      vacationRequests.filter(
+      scopedVacationRequests.filter(
         (item) =>
           item.status ===
           REQUEST_STATUS.APPROVED
@@ -108,8 +134,10 @@ export function useOperationalRequests() {
 
     const upcomingAbsences =
       getManagerUpcomingAbsences({
-        timeOffRequests,
-        vacationRequests,
+        timeOffRequests:
+          scopedTimeOffRequests,
+        vacationRequests:
+          scopedVacationRequests,
         managerId,
       });
 
@@ -120,8 +148,10 @@ export function useOperationalRequests() {
 
     const overlappingAbsences =
       findOverlappingAbsences({
-        timeOffRequests,
-        vacationRequests,
+        timeOffRequests:
+          scopedTimeOffRequests,
+        vacationRequests:
+          scopedVacationRequests,
       });
 
     const activeVacation =
@@ -156,6 +186,7 @@ export function useOperationalRequests() {
     timeOffRequests,
     vacationRequests,
     managerId,
+    isLeadership,
   ]);
 
   return {
