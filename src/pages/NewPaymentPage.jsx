@@ -504,11 +504,14 @@ export default function NewPaymentPage() {
       return "Выберите тариф";
     }
 
-    if (
-      !isLegacyClientMode &&
+    const needsProfileBudget =
       !isRejectDeal &&
-      !budget
-    ) {
+      !isLegacyClientMode &&
+      !isExistingClientDealType(
+        dealTypeId
+      );
+
+    if (needsProfileBudget && !budget) {
       return "Укажите бюджет (сумма тарифа)";
     }
 
