@@ -691,6 +691,78 @@ export async function createLegacyClientPayment({
   };
 }
 
+export async function findLegacySubscriber({
+  bsId,
+  dialogLink,
+  userData,
+}) {
+  const normalizedId = bsId?.trim();
+  const normalizedLink =
+    dialogLink?.trim();
+
+  if (
+    (!normalizedId && !normalizedLink) ||
+    !userData
+  ) {
+    return null;
+  }
+
+  const payments =
+    await getPaymentsForUser(userData);
+
+  const legacyPayments = payments
+    .filter(
+      (payment) => payment.isLegacyClient
+    )
+    .sort(
+      (a, b) =>
+        Number(b.createdAt || 0) -
+        Number(a.createdAt || 0)
+    );
+
+  if (normalizedId) {
+    const byBsId = legacyPayments.find(
+      (payment) => {
+        const storedId =
+          payment.legacyClientBsId ||
+          payment.clientNote ||
+          "";
+
+        return (
+          storedId.trim() === normalizedId
+        );
+      }
+    );
+
+    if (byBsId) {
+      return byBsId;
+    }
+  }
+
+  if (normalizedLink) {
+    return (
+      legacyPayments.find(
+        (payment) =>
+          (payment.dialogLink || "").trim() ===
+          normalizedLink
+      ) || null
+    );
+  }
+
+  return null;
+}
+
+/** @deprecated use findLegacySubscriber */
+export async function findLegacySubscriberByBsId(
+  bsId,
+  userData
+) {
+  return findLegacySubscriber({
+    bsId,
+    userData,
+  });
+}
+
 export async function createLegacyPayment({
   dialogLink,
   dealType,

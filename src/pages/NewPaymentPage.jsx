@@ -24,8 +24,8 @@ import {
 
 import {
   createPayment,
-  createLegacyPayment,
   createLegacyClientPayment,
+  findLegacySubscriber,
 } from "../services/paymentService";
 
 import {
@@ -220,6 +220,19 @@ export default function NewPaymentPage() {
   const [isLegacyClientMode, setIsLegacyClientMode] =
     useState(false);
 
+  const [
+    legacySubscriberProfile,
+    setLegacySubscriberProfile,
+  ] = useState(null);
+
+  const [legacyLookupDone, setLegacyLookupDone] =
+    useState(false);
+
+  const [
+    legacyLookupLoading,
+    setLegacyLookupLoading,
+  ] = useState(false);
+
   const actor = userData
     ? {
         ...userData,
@@ -286,6 +299,13 @@ export default function NewPaymentPage() {
       getDefaultStream(paymentDate)
     );
   }, [paymentDate, dealTypeId]);
+
+  useEffect(() => {
+    if (!isLegacy) {
+      setLegacySubscriberProfile(null);
+      setLegacyLookupDone(false);
+    }
+  }, [dealTypeId, isLegacy]);
 
   function getSourcePayload() {
     return {
@@ -629,20 +649,151 @@ export default function NewPaymentPage() {
     }
   }
 
+  function applyLegacySubscriberProfile(
+    payment
+  ) {
+    if (!payment) {
+      return;
+    }
+
+    setClientName(
+      payment.legacyClientName ||
+        payment.clientName ||
+        ""
+    );
+    setVkLink(payment.vkLink || "");
+    setCourse(payment.course || "");
+    setTariff(payment.tariff || "");
+    setFirstContact(
+      payment.firstContact ||
+        payment.firstContactDate ||
+        ""
+    );
+    setSourceId(
+      payment.sourceId
+        ? String(payment.sourceId)
+        : ""
+    );
+    setSourceName(
+      payment.sourceName ||
+        payment.source ||
+        ""
+    );
+    setClientNote(
+      payment.legacyClientBsId ||
+        payment.clientNote ||
+        ""
+    );
+  }
+
+  function resetLegacyLookup() {
+    setLegacySubscriberProfile(null);
+    setLegacyLookupDone(false);
+  }
+
+  function handleLegacyBsIdChange(value) {
+    setClientNote(value);
+    resetLegacyLookup();
+  }
+
+  function handleLegacyDialogLinkChange(
+    value
+  ) {
+    setDialogLink(value);
+    resetLegacyLookup();
+  }
+
+  async function lookupLegacySubscriber() {
+    if (!actor) {
+      return;
+    }
+
+    const bsId = clientNote.trim();
+    const link = dialogLink.trim();
+
+    if (!bsId && !link) {
+      toast.error(
+        "Введите ID из БС или ссылку на диалог"
+      );
+      return;
+    }
+
+    setLegacyLookupLoading(true);
+
+    try {
+      const found =
+        await findLegacySubscriber({
+          bsId,
+          dialogLink: link,
+          userData: actor,
+        });
+
+      setLegacySubscriberProfile(found);
+      setLegacyLookupDone(true);
+
+      if (found) {
+        applyLegacySubscriberProfile(found);
+        toast.success(
+          `Найден: ${
+            found.legacyClientName ||
+            found.clientName ||
+            "подписчик"
+          }`
+        );
+      } else {
+        setClientName("");
+        setVkLink("");
+        setCourse("");
+        setTariff("");
+        setFirstContact("");
+        setSourceId("");
+        setSourceName("");
+        toast.info(
+          "Первый раз в CRM — заполните данные клиента"
+        );
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error(
+        error.message ||
+          "Не удалось найти подписчика"
+      );
+    } finally {
+      setLegacyLookupLoading(false);
+    }
+  }
+
+  function validateLegacySubscriberShort() {
+    if (!dialogLink.trim()) {
+      return "Укажите ссылку на диалог";
+    }
+
+    const validationError =
+      validateCommonFields();
+
+    if (validationError) {
+      return validationError;
+    }
+
+    return validatePaymentSystemFields();
+  }
+
   async function addLegacyPayment() {
     if (!actor) {
       return;
     }
 
-    if (!dialogLink.trim()) {
+    if (!legacyLookupDone) {
       toast.error(
-        "Укажите ссылку на диалог"
+        "Сначала введите ID из БС и нажмите «Найти»"
       );
       return;
     }
 
     const validationError =
-      validateCommonFields();
+      legacySubscriberProfile
+        ? validateLegacySubscriberShort()
+        : validateLegacyClientFields();
 
     if (validationError) {
       toast.error(validationError);
@@ -655,28 +806,56 @@ export default function NewPaymentPage() {
       const dealTypeLabel =
         getDealTypeLabel(dealTypeId);
 
-      await createLegacyPayment({
+      const profile =
+        legacySubscriberProfile;
+
+      await createLegacyClientPayment({
         dialogLink,
+        vkLink: profile?.vkLink || vkLink,
+        legacyClientName:
+          profile?.legacyClientName ||
+          profile?.clientName ||
+          clientName,
+        legacyClientBsId: clientNote.trim(),
+        course: profile?.course || course,
+        tariff: profile?.tariff || tariff,
         dealType: dealTypeLabel,
         paymentAmount: parseMoneyNumber(
           paymentAmount
         ),
+        paymentSystem,
+        invoiceNumber,
         comment: paymentComment,
         manager,
         paymentDate,
-        ...getSourcePayload(),
+        startDate: getStartDateValue(),
+        firstContactDate:
+          profile?.firstContact ||
+          profile?.firstContactDate ||
+          firstContact,
+        sourceId:
+          profile?.sourceId ||
+          sourceId ||
+          null,
+        sourceName:
+          profile?.sourceName ||
+          profile?.source ||
+          sourceName,
+        budget: profile?.budget || 0,
         userData: actor,
       });
 
       toast.success(
-        `Legacy-оплата сохранена: ${formatMoney(
+        `Оплата сохранена: ${formatMoney(
           paymentAmount
         )}`
       );
 
       setDialogLink("");
       setPaymentComment("");
-    setClientNote("");
+      setClientNote("");
+      setLegacySubscriberProfile(null);
+      setLegacyLookupDone(false);
       resetAfterSubmit();
     } catch (error) {
       console.error(error);
@@ -1001,15 +1180,17 @@ export default function NewPaymentPage() {
       return;
     }
 
-    if (!dialogLink.trim()) {
+    if (!legacyLookupDone) {
       toast.error(
-        "Укажите ссылку на диалог"
+        "Сначала введите ID из БС и нажмите «Найти»"
       );
       return;
     }
 
     const validationError =
-      validateCommonFields();
+      legacySubscriberProfile
+        ? validateLegacySubscriberShort()
+        : validateLegacyClientFields();
 
     if (validationError) {
       toast.error(validationError);
@@ -1082,15 +1263,20 @@ export default function NewPaymentPage() {
 
         {dealTypeKnown && isLegacy && (
           <>
-            <div className="mb-4 bg-violet-500/10 border border-violet-500/30 p-4 rounded-xl text-sm text-violet-100">
-              Pilot: доплата от подписчика, которого
-              ещё нет в CRM (май 2026 и раньше).
-              Клиент не создаётся. Сумма учитывается
-              в выручке, KPI, зарплате и экспорте.
-              Не влияет на подписки, overdue и циклы.
+            <div className="mb-4 bg-violet-500/10 border border-violet-500/30 p-4 rounded-xl text-sm text-violet-100 space-y-2">
+              <p>
+                Клиент из Google Таблицы (июнь и раньше).
+                Карточки в CRM <strong>нет</strong> — поэтому
+                «Доплата Новая» его не находит.
+              </p>
+              <p>
+                Ссылка на диалог у клиента <strong>одна и та же</strong>.
+                После первого внесения повторную доплату можно
+                найти по этой ссылке или по ID из Bluesales.
+              </p>
             </div>
 
-            <FormSection title="Legacy доплата">
+            <FormSection title="1. Найти подписчика">
               <select
                 value={dealTypeId}
                 onChange={(e) =>
@@ -1113,67 +1299,21 @@ export default function NewPaymentPage() {
               </select>
 
               <input
-                placeholder="Ссылка на диалог *"
+                placeholder="Ссылка на диалог Bluesales"
                 value={dialogLink}
                 onChange={(e) =>
-                  setDialogLink(
+                  handleLegacyDialogLinkChange(
                     e.target.value
                   )
                 }
                 className={inputClass}
               />
-
-              <MoneyInput
-                placeholder="Сумма оплаты *"
-                required
-                value={paymentAmount}
-                onChange={setPaymentAmount}
-                className={inputClass}
-              />
-
-              <label className="block">
-                <span className="text-sm text-slate-400">
-                  Дата оплаты *
-                </span>
-                <input
-                  type="date"
-                  value={paymentDate}
-                  onChange={(e) =>
-                    setPaymentDate(
-                      e.target.value
-                    )
-                  }
-                  className={`${inputClass} mt-1`}
-                />
-              </label>
-
-              <select
-                value={manager}
-                onChange={(e) =>
-                  setManager(
-                    e.target.value
-                  )
-                }
-                className={inputClass}
-              >
-                <option value="">
-                  Менеджер (владелец KPI) *
-                </option>
-                {MANAGERS.map((item) => (
-                  <option
-                    key={item.id}
-                    value={item.name}
-                  >
-                    {item.name}
-                  </option>
-                ))}
-              </select>
 
               <input
-                placeholder="Комментарий (необязательно)"
-                value={paymentComment}
+                placeholder="ID клиента из Bluesales (если знаете)"
+                value={clientNote}
                 onChange={(e) =>
-                  setPaymentComment(
+                  handleLegacyBsIdChange(
                     e.target.value
                   )
                 }
@@ -1182,20 +1322,429 @@ export default function NewPaymentPage() {
 
               <button
                 type="button"
-                onClick={requestSaveLegacy}
-                disabled={submitting}
+                onClick={lookupLegacySubscriber}
+                disabled={
+                  legacyLookupLoading ||
+                  (
+                    !clientNote.trim() &&
+                    !dialogLink.trim()
+                  )
+                }
                 className="
-                  w-full bg-violet-500
-                  hover:bg-violet-600 p-4
-                  rounded-xl font-bold
+                  w-full bg-slate-800 hover:bg-slate-700
+                  border border-slate-600 p-3.5
+                  rounded-xl font-semibold
                   disabled:opacity-50
                 "
               >
-                {submitting
-                  ? "Сохранение..."
-                  : "Сохранить legacy-оплату"}
+                {legacyLookupLoading
+                  ? "Поиск..."
+                  : "Найти"}
               </button>
             </FormSection>
+
+            {legacyLookupDone &&
+              legacySubscriberProfile && (
+              <>
+                <div className="mb-4 bg-green-500/10 border border-green-500/30 p-4 rounded-xl text-sm text-green-100">
+                  Найден:{" "}
+                  <strong>
+                    {legacySubscriberProfile.legacyClientName ||
+                      legacySubscriberProfile.clientName}
+                  </strong>
+                  {legacySubscriberProfile.course && (
+                    <>
+                      {" "}
+                      · {legacySubscriberProfile.course}
+                    </>
+                  )}
+                  {legacySubscriberProfile.tariff && (
+                    <>
+                      {" "}
+                      · {legacySubscriberProfile.tariff}
+                    </>
+                  )}
+                  <div className="text-green-200/80 mt-2">
+                    Заполните сумму, дату, платёжную
+                    систему и номер счёта — ссылка уже
+                    на месте.
+                  </div>
+                </div>
+
+                <FormSection title="2. Доплата">
+                  <input
+                    placeholder="Ссылка на диалог *"
+                    value={dialogLink}
+                    onChange={(e) =>
+                      handleLegacyDialogLinkChange(
+                        e.target.value
+                      )
+                    }
+                    className={inputClass}
+                  />
+
+                  <MoneyInput
+                    placeholder="Сумма оплаты *"
+                    required
+                    value={paymentAmount}
+                    onChange={setPaymentAmount}
+                    className={inputClass}
+                  />
+
+                  <label className="block">
+                    <span className="text-sm text-slate-400">
+                      Дата оплаты *
+                    </span>
+                    <input
+                      type="date"
+                      value={paymentDate}
+                      onChange={(e) =>
+                        setPaymentDate(
+                          e.target.value
+                        )
+                      }
+                      className={`${inputClass} mt-1`}
+                    />
+                  </label>
+
+                  <select
+                    value={paymentSystem}
+                    onChange={(e) =>
+                      setPaymentSystem(
+                        e.target.value
+                      )
+                    }
+                    className={inputClass}
+                  >
+                    <option value="">
+                      Платежная система *
+                    </option>
+                    {PAYMENT_SYSTEMS.map(
+                      (system) => (
+                        <option
+                          key={system}
+                          value={system}
+                        >
+                          {system}
+                        </option>
+                      )
+                    )}
+                  </select>
+
+                  {requiresInvoice(
+                    paymentSystem
+                  ) && (
+                    <input
+                      placeholder="Номер счёта *"
+                      value={invoiceNumber}
+                      onChange={(e) =>
+                        setInvoiceNumber(
+                          e.target.value
+                        )
+                      }
+                      className={inputClass}
+                    />
+                  )}
+
+                  <select
+                    value={manager}
+                    onChange={(e) =>
+                      setManager(
+                        e.target.value
+                      )
+                    }
+                    className={inputClass}
+                  >
+                    <option value="">
+                      Менеджер (владелец KPI) *
+                    </option>
+                    {MANAGERS.map((item) => (
+                      <option
+                        key={item.id}
+                        value={item.name}
+                      >
+                        {item.name}
+                      </option>
+                    ))}
+                  </select>
+
+                  <input
+                    placeholder="Комментарий (необязательно)"
+                    value={paymentComment}
+                    onChange={(e) =>
+                      setPaymentComment(
+                        e.target.value
+                      )
+                    }
+                    className={inputClass}
+                  />
+
+                  <button
+                    type="button"
+                    onClick={requestSaveLegacy}
+                    disabled={submitting}
+                    className="
+                      w-full bg-violet-500
+                      hover:bg-violet-600 p-4
+                      rounded-xl font-bold
+                      disabled:opacity-50
+                    "
+                  >
+                    {submitting
+                      ? "Сохранение..."
+                      : "Сохранить доплату"}
+                  </button>
+                </FormSection>
+              </>
+            )}
+
+            {legacyLookupDone &&
+              !legacySubscriberProfile && (
+              <>
+                <div className="mb-4 bg-amber-500/10 border border-amber-500/30 p-4 rounded-xl text-sm text-amber-100">
+                  Первый раз в CRM — заполните карточку
+                  подписчика один раз. Следующие доплаты
+                  — только через «Найти» по тому же ID из БС.
+                </div>
+
+                <FormSection title="2. Карточка подписчика">
+                  <input
+                    placeholder="Имя клиента *"
+                    value={clientName}
+                    onChange={(e) =>
+                      setClientName(
+                        e.target.value
+                      )
+                    }
+                    className={inputClass}
+                  />
+
+                  <input
+                    placeholder="Ссылка VK *"
+                    value={vkLink}
+                    onChange={(e) =>
+                      setVkLink(
+                        e.target.value
+                      )
+                    }
+                    className={inputClass}
+                  />
+
+                  <select
+                    value={course}
+                    onChange={(e) =>
+                      setCourse(
+                        e.target.value
+                      )
+                    }
+                    className={inputClass}
+                  >
+                    <option value="">
+                      Курс *
+                    </option>
+                    {COURSES.map((item) => (
+                      <option
+                        key={item}
+                        value={item}
+                      >
+                        {item}
+                      </option>
+                    ))}
+                  </select>
+
+                  <select
+                    value={tariff}
+                    onChange={(e) =>
+                      setTariff(
+                        e.target.value
+                      )
+                    }
+                    className={inputClass}
+                  >
+                    <option value="">
+                      Тариф *
+                    </option>
+                    {TARIFFS.map((item) => (
+                      <option
+                        key={item}
+                        value={item}
+                      >
+                        {item}
+                      </option>
+                    ))}
+                  </select>
+
+                  <input
+                    placeholder="Ссылка на диалог *"
+                    value={dialogLink}
+                    onChange={(e) =>
+                      setDialogLink(
+                        e.target.value
+                      )
+                    }
+                    className={inputClass}
+                  />
+
+                  <label className="block">
+                    <span className="text-sm text-slate-400">
+                      Дата первого контакта *
+                    </span>
+                    <input
+                      type="date"
+                      value={firstContact}
+                      onChange={(e) =>
+                        setFirstContact(
+                          e.target.value
+                        )
+                      }
+                      className={`${inputClass} mt-1`}
+                    />
+                  </label>
+
+                  <label className="block">
+                    <span className="text-sm text-slate-400">
+                      Откуда (traffic) *
+                    </span>
+                    <div className="mt-1">
+                      <TrafficSourceSelect
+                        value={sourceId}
+                        sourceName={sourceName}
+                        onChange={
+                          handleSourceChange
+                        }
+                        sources={
+                          trafficSources
+                        }
+                        onCreateSource={
+                          handleCreateTrafficSource
+                        }
+                        loading={
+                          trafficSourcesLoading
+                        }
+                        hasFirestoreSources={
+                          hasFirestoreSources
+                        }
+                        required
+                      />
+                    </div>
+                  </label>
+                </FormSection>
+
+                <FormSection title="3. Оплата">
+                  <MoneyInput
+                    placeholder="Сумма оплаты *"
+                    required
+                    value={paymentAmount}
+                    onChange={setPaymentAmount}
+                    className={inputClass}
+                  />
+
+                  <label className="block">
+                    <span className="text-sm text-slate-400">
+                      Дата оплаты *
+                    </span>
+                    <input
+                      type="date"
+                      value={paymentDate}
+                      onChange={(e) =>
+                        setPaymentDate(
+                          e.target.value
+                        )
+                      }
+                      className={`${inputClass} mt-1`}
+                    />
+                  </label>
+
+                  <select
+                    value={paymentSystem}
+                    onChange={(e) =>
+                      setPaymentSystem(
+                        e.target.value
+                      )
+                    }
+                    className={inputClass}
+                  >
+                    <option value="">
+                      Платежная система *
+                    </option>
+                    {PAYMENT_SYSTEMS.map(
+                      (system) => (
+                        <option
+                          key={system}
+                          value={system}
+                        >
+                          {system}
+                        </option>
+                      )
+                    )}
+                  </select>
+
+                  {requiresInvoice(
+                    paymentSystem
+                  ) && (
+                    <input
+                      placeholder="Номер счёта *"
+                      value={invoiceNumber}
+                      onChange={(e) =>
+                        setInvoiceNumber(
+                          e.target.value
+                        )
+                      }
+                      className={inputClass}
+                    />
+                  )}
+
+                  <select
+                    value={manager}
+                    onChange={(e) =>
+                      setManager(
+                        e.target.value
+                      )
+                    }
+                    className={inputClass}
+                  >
+                    <option value="">
+                      Менеджер (владелец KPI) *
+                    </option>
+                    {MANAGERS.map((item) => (
+                      <option
+                        key={item.id}
+                        value={item.name}
+                      >
+                        {item.name}
+                      </option>
+                    ))}
+                  </select>
+
+                  <input
+                    placeholder="Комментарий (необязательно)"
+                    value={paymentComment}
+                    onChange={(e) =>
+                      setPaymentComment(
+                        e.target.value
+                      )
+                    }
+                    className={inputClass}
+                  />
+
+                  <button
+                    type="button"
+                    onClick={requestSaveLegacy}
+                    disabled={submitting}
+                    className="
+                      w-full bg-violet-500
+                      hover:bg-violet-600 p-4
+                      rounded-xl font-bold
+                      disabled:opacity-50
+                    "
+                  >
+                    {submitting
+                      ? "Сохранение..."
+                      : "Сохранить подписчика и оплату"}
+                  </button>
+                </FormSection>
+              </>
+            )}
           </>
         )}
 
@@ -1578,9 +2127,19 @@ export default function NewPaymentPage() {
                   !isLegacyClientMode && (
                     <div className="bg-amber-500/10 border border-amber-500/30 p-4 rounded-xl text-sm text-amber-100 space-y-3">
                       <p>
-                        Клиент не найден.
-                        Возможно это старый
-                        клиент до запуска CRM.
+                        Клиент не найден по ссылке на
+                        диалог.
+                      </p>
+                      <p>
+                        Если это подписчик из Google
+                        Таблицы (июнь) — выберите
+                        сделку{" "}
+                        <strong>
+                          «Июньский подписчик (из
+                          таблицы)»
+                        </strong>
+                        . Ссылка на диалог та же, но
+                        карточки клиента в CRM нет.
                       </p>
                       <button
                         type="button"
@@ -1598,7 +2157,7 @@ export default function NewPaymentPage() {
                         "
                       >
                         Продолжить как старый
-                        клиент
+                        клиент (здесь)
                       </button>
                     </div>
                   )}

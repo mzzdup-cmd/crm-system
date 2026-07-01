@@ -71,7 +71,7 @@ export const DEAL_TYPE_OPTIONS = [
   },
   {
     id: "legacy_topup",
-    label: "Доплата (старый подписчик)",
+    label: "Июньский подписчик (из таблицы)",
     flow: "legacy",
   },
 ];
