@@ -82,6 +82,26 @@ export default function PendingSalesPage() {
   const quickSaleLabel =
     getQuickSaleButtonLabel(coveringTargets);
 
+  function renderQuickSaleButton(className = "") {
+    if (!canQuickSale) {
+      return null;
+    }
+
+    return (
+      <button
+        type="button"
+        onClick={() => setModalOpen(true)}
+        className={`
+          px-4 py-2.5 rounded-xl font-bold
+          bg-cyan-500 hover:bg-cyan-400 transition-colors
+          ${className}
+        `}
+      >
+        {quickSaleLabel}
+      </button>
+    );
+  }
+
   return (
     <div className="space-y-8 animate-fade-in">
 
@@ -95,24 +115,7 @@ export default function PendingSalesPage() {
             <RealtimeIndicator connected={connected} />
           </>
         }
-        actions={
-          canQuickSale && (
-
-            <button
-              type="button"
-              onClick={() => setModalOpen(true)}
-              className="
-                px-4 py-2.5 rounded-xl font-bold
-                bg-cyan-500 hover:bg-cyan-400 transition-colors
-              "
-            >
-
-              {quickSaleLabel}
-
-            </button>
-
-          )
-        }
+        actions={renderQuickSaleButton()}
       />
 
       <section>
@@ -177,18 +180,7 @@ export default function PendingSalesPage() {
 
           </h2>
 
-          {canQuickSale && (
-            <button
-              type="button"
-              onClick={() => setModalOpen(true)}
-              className="
-                px-4 py-2.5 rounded-xl font-bold text-sm
-                bg-cyan-500 hover:bg-cyan-400 transition-colors
-              "
-            >
-              {quickSaleLabel}
-            </button>
-          )}
+          {renderQuickSaleButton("text-sm")}
 
         </div>
 
@@ -197,6 +189,7 @@ export default function PendingSalesPage() {
             icon="⚡"
             title="Нет исходящих продаж"
             description="Зафиксируйте продажу за коллегу — она получит её на подтверждение."
+            action={renderQuickSaleButton()}
           />
         ) : (
           <div className="grid gap-4">

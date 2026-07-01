@@ -494,7 +494,7 @@ export default function DashboardPage() {
 }
 
 function DashboardPageContent() {
-  const { isManager, isLeadership, displayName, managerId } =
+  const { isManager, isLeadership, displayName } =
     usePermissions();
 
   const {

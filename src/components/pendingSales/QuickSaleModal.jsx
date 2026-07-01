@@ -113,6 +113,13 @@ export default function QuickSaleModal({
   async function handleSubmit(event) {
     event.preventDefault();
 
+    if (isManager && !isLeadership && !managerId) {
+      setError(
+        "Профиль не настроен: попросите администратора указать managerId в Firebase (users → ваш UID)."
+      );
+      return;
+    }
+
     const validationError =
       validatePendingSaleInput({
         ownerManagerId,

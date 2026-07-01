@@ -8,6 +8,20 @@ import {
  * Legacy display names used before managerId normalization.
  * Maps short / inconsistent strings → stable managerId.
  */
+/** Email local-part → managerId (users/{uid} may omit managerId). */
+export const MANAGER_EMAIL_LOCAL_IDS = {
+  denis: "denis_manuilov",
+  ruslan: "ruslan_romanyuk",
+  alexander: "alexander_simanov",
+  sergey: "sergey_grebenshchikov",
+  andrey: "andrey_volkov",
+  "polina.p": "polina_penkova",
+  "polina.pl": "polina_plamadya",
+  katya: "katya_bakaeva",
+  vilu: "violeta_petrova",
+  violeta: "violeta_petrova",
+};
+
 export const LEGACY_MANAGER_ALIASES = {
   "Катя": "katya_bakaeva",
   "Руслан": "ruslan_romanyuk",
@@ -20,6 +34,16 @@ export const LEGACY_MANAGER_ALIASES = {
   "Виолетта П": "violeta_petrova",
   "Полина Пламадяла": "polina_plamadya",
 };
+
+export function resolveManagerIdFromEmail(email) {
+  if (!email || !email.includes("@")) {
+    return null;
+  }
+
+  const local = email.split("@")[0].trim().toLowerCase();
+
+  return MANAGER_EMAIL_LOCAL_IDS[local] ?? null;
+}
 
 export function resolveManagerIdFromLegacy(value) {
   if (!value) {

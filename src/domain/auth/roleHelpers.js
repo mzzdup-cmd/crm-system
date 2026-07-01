@@ -4,6 +4,7 @@ import {
 } from "../../constants/roles";
 import {
   resolveManagerIdFromLegacy,
+  resolveManagerIdFromEmail,
 } from "./managerMigration";
 import {
   getManagerNameById,
@@ -48,13 +49,22 @@ export function getCurrentManagerId(userData) {
     return userData.managerId;
   }
 
-  if (
-    userData.role === ROLES.MANAGER &&
-    userData.name
-  ) {
-    return resolveManagerIdFromLegacy(
-      userData.name
-    );
+  if (userData.role === ROLES.MANAGER) {
+    if (userData.name) {
+      const fromName = resolveManagerIdFromLegacy(
+        userData.name
+      );
+
+      if (fromName) {
+        return fromName;
+      }
+    }
+
+    if (userData.email) {
+      return resolveManagerIdFromEmail(
+        userData.email
+      );
+    }
   }
 
   return null;
@@ -76,6 +86,12 @@ export function normalizeUserRole(userData) {
     if (!managerId && name) {
       managerId =
         resolveManagerIdFromLegacy(name);
+    }
+
+    if (!managerId && userData.email) {
+      managerId = resolveManagerIdFromEmail(
+        userData.email
+      );
     }
 
     if (managerId && !name) {

@@ -132,8 +132,7 @@ export function usePendingSales() {
   }, [effectiveSchedule, managerId]);
 
   const canQuickSale =
-    Boolean(managerId) &&
-    (isLeadership || isManager);
+    isLeadership || isManager;
 
   return {
     pendingSales,
