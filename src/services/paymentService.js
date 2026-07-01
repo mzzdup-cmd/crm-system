@@ -109,24 +109,6 @@ function sortPaymentsDesc(payments) {
   );
 }
 
-function filterPaymentsForManager(
-  payments,
-  userData,
-  managerId
-) {
-  const managerName =
-    userData?.name || "";
-
-  return payments.filter(
-    (payment) =>
-      (managerId &&
-        payment.managerId ===
-          managerId) ||
-      (managerName &&
-        payment.manager === managerName)
-  );
-}
-
 async function fetchAllPaymentDocs() {
   const snapshot = await getDocs(
     collection(db, "payments")
@@ -193,13 +175,21 @@ export async function getPaymentsForUser(userData) {
       error
     );
 
-    const all = await fetchAllPaymentDocs();
+    const fallbackQuery = query(
+      collection(db, "payments"),
+      where(
+        "managerId",
+        "==",
+        managerId
+      )
+    );
+
+    const snapshot =
+      await getDocs(fallbackQuery);
 
     return sortPaymentsDesc(
-      filterPaymentsForManager(
-        all,
-        userData,
-        managerId
+      filterActivePayments(
+        snapshot.docs.map(mapPaymentDoc)
       )
     );
   }

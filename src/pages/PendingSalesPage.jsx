@@ -172,24 +172,17 @@ export default function PendingSalesPage() {
 
       <section>
 
-        <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+        <h2 className="text-xl font-bold mb-4">
 
-          <h2 className="text-xl font-bold">
+          Отправить коллеге
 
-            Отправить коллеге
-
-          </h2>
-
-          {renderQuickSaleButton("text-sm")}
-
-        </div>
+        </h2>
 
         {pendingCreated.length === 0 ? (
           <EmptyState
             icon="⚡"
             title="Нет исходящих продаж"
             description="Зафиксируйте продажу за коллегу — она получит её на подтверждение."
-            action={renderQuickSaleButton()}
           />
         ) : (
           <div className="grid gap-4">
