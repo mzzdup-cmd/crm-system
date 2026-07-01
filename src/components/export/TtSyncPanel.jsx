@@ -8,8 +8,11 @@ import {
 
 const SYNC_SLOTS = [
   "01:00",
+  "05:00",
+  "09:00",
   "13:00",
-  "20:00",
+  "17:00",
+  "21:00",
 ];
 
 export default function TtSyncPanel({

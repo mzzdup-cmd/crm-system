@@ -2,12 +2,19 @@ name: CRM → TT Sheets Sync
 
 on:
   schedule:
-    # 01:00 MSK = 22:00 UTC
+    # Every 4 hours MSK (UTC+3)
+    # 01:00 MSK = 22:00 UTC (previous day)
     - cron: "0 22 * * *"
+    # 05:00 MSK = 02:00 UTC
+    - cron: "0 2 * * *"
+    # 09:00 MSK = 06:00 UTC
+    - cron: "0 6 * * *"
     # 13:00 MSK = 10:00 UTC
     - cron: "0 10 * * *"
-    # 20:00 MSK = 17:00 UTC
-    - cron: "0 17 * * *"
+    # 17:00 MSK = 14:00 UTC
+    - cron: "0 14 * * *"
+    # 21:00 MSK = 18:00 UTC
+    - cron: "0 18 * * *"
   workflow_dispatch:
 
 jobs:
