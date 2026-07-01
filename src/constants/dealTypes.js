@@ -70,11 +70,34 @@ export const DEAL_TYPE_OPTIONS = [
     flow: "existing",
   },
   {
-    id: "legacy_topup",
-    label: "Июньский подписчик (из таблицы)",
+    id: "legacy_table",
+    label: "Клиент из таблицы (без карточки CRM)",
     flow: "legacy",
   },
 ];
+
+/** @deprecated use legacy_table */
+export const LEGACY_ENTRY_ALIASES = [
+  "legacy_topup",
+  "Июньский подписчик (из таблицы)",
+];
+
+export const LEGACY_TABLE_TT_DEAL_TYPE_IDS = [
+  "topup_new",
+  "reject_new",
+  "topup_bb",
+  "reject_bb",
+  "upsell",
+  "topup_upsell",
+  "reject_upsell",
+  "topup_mailing",
+  "reject_mailing",
+  "topup_po",
+  "refund",
+];
+
+export const DEFAULT_LEGACY_TT_DEAL_TYPE_ID =
+  "topup_new";
 
 /** @deprecated use DEAL_TYPE_OPTIONS */
 export const DEAL_TYPES = DEAL_TYPE_OPTIONS.map(
@@ -91,9 +114,28 @@ export const EXISTING_CLIENT_DEAL_TYPES =
     (item) => item.flow === "existing"
   ).map((item) => item.label);
 
+export const LEGACY_TABLE_TT_DEAL_TYPE_OPTIONS =
+  DEAL_TYPE_OPTIONS.filter((item) =>
+    LEGACY_TABLE_TT_DEAL_TYPE_IDS.includes(
+      item.id
+    )
+  );
+
 export function getDealTypeOption(value) {
   if (!value) {
     return null;
+  }
+
+  if (
+    value === "legacy_topup" ||
+    value ===
+      "Июньский подписчик (из таблицы)"
+  ) {
+    return (
+      DEAL_TYPE_OPTIONS.find(
+        (item) => item.id === "legacy_table"
+      ) || null
+    );
   }
 
   return (
@@ -148,9 +190,30 @@ export function isBbDealType(value) {
 export function isLegacyDealType(value) {
   return (
     getDealTypeOption(value)?.flow ===
-    "legacy"
+      "legacy" ||
+    value === "legacy_topup" ||
+    value ===
+      "Июньский подписчик (из таблицы)"
   );
 }
 
+export function isLegacyTableTtDealType(
+  value
+) {
+  return LEGACY_TABLE_TT_DEAL_TYPE_IDS.includes(
+    resolveDealTypeId(value)
+  );
+}
+
+export function resolveLegacyTtDealTypeId(
+  value
+) {
+  if (isLegacyTableTtDealType(value)) {
+    return resolveDealTypeId(value);
+  }
+
+  return DEFAULT_LEGACY_TT_DEAL_TYPE_ID;
+}
+
 export const LEGACY_DEAL_TYPE_ID =
-  "legacy_topup";
+  "legacy_table";

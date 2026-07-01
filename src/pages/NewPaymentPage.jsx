@@ -48,13 +48,17 @@ import {
 
 import {
   DEAL_TYPE_OPTIONS,
+  DEFAULT_LEGACY_TT_DEAL_TYPE_ID,
+  LEGACY_TABLE_TT_DEAL_TYPE_OPTIONS,
   getDealTypeLabel,
   hasDealTypeSelected,
   isNewClientDealType,
   isExistingClientDealType,
   isLegacyDealType,
+  isLegacyTableTtDealType,
   isBbDealType,
   resolveDealTypeId,
+  resolveLegacyTtDealTypeId,
 } from "../constants/dealTypes";
 
 import { COURSES } from "../constants/courses";
@@ -119,6 +123,40 @@ function VkLinkHint({ visible }) {
       Можно заполнить позже — появится
       напоминание в dashboard
     </p>
+  );
+}
+
+function LegacyTtDealTypeSelect({
+  value,
+  onChange,
+}) {
+  return (
+    <label className="block">
+      <span className="text-sm text-slate-400">
+        Тип сделки для ТТ *
+      </span>
+      <select
+        value={value}
+        onChange={(e) =>
+          onChange(e.target.value)
+        }
+        className={`${inputClass} mt-1`}
+      >
+        {LEGACY_TABLE_TT_DEAL_TYPE_OPTIONS.map(
+          (option) => (
+            <option
+              key={option.id}
+              value={option.id}
+            >
+              {option.label}
+            </option>
+          )
+        )}
+      </select>
+      <p className="text-slate-500 text-xs mt-1.5">
+        Этот тип попадёт в колонку B Google ТТ
+      </p>
+    </label>
   );
 }
 
@@ -233,6 +271,13 @@ export default function NewPaymentPage() {
     setLegacyLookupLoading,
   ] = useState(false);
 
+  const [
+    legacyTtDealTypeId,
+    setLegacyTtDealTypeId,
+  ] = useState(
+    DEFAULT_LEGACY_TT_DEAL_TYPE_ID
+  );
+
   const actor = userData
     ? {
         ...userData,
@@ -304,8 +349,34 @@ export default function NewPaymentPage() {
     if (!isLegacy) {
       setLegacySubscriberProfile(null);
       setLegacyLookupDone(false);
+      setLegacyTtDealTypeId(
+        DEFAULT_LEGACY_TT_DEAL_TYPE_ID
+      );
     }
   }, [dealTypeId, isLegacy]);
+
+  function resetLegacyEntryMode() {
+    setDealTypeId("");
+    setLegacySubscriberProfile(null);
+    setLegacyLookupDone(false);
+    setLegacyTtDealTypeId(
+      DEFAULT_LEGACY_TT_DEAL_TYPE_ID
+    );
+    setDialogLink("");
+    setClientNote("");
+  }
+
+  function validateLegacyTtDealType() {
+    if (
+      !isLegacyTableTtDealType(
+        legacyTtDealTypeId
+      )
+    ) {
+      return "Выберите тип сделки для ТТ";
+    }
+
+    return null;
+  }
 
   function getSourcePayload() {
     return {
@@ -405,6 +476,10 @@ export default function NewPaymentPage() {
       return "Выберите тариф";
     }
 
+    if (!budget) {
+      return "Укажите бюджет (сумма тарифа)";
+    }
+
     if (!firstContact) {
       return "Укажите дату первого контакта";
     }
@@ -414,6 +489,13 @@ export default function NewPaymentPage() {
 
     if (trafficError) {
       return trafficError;
+    }
+
+    const ttDealTypeError =
+      validateLegacyTtDealType();
+
+    if (ttDealTypeError) {
+      return ttDealTypeError;
     }
 
     const paymentSystemError =
@@ -684,6 +766,14 @@ export default function NewPaymentPage() {
         payment.clientNote ||
         ""
     );
+    setLegacyTtDealTypeId(
+      resolveLegacyTtDealTypeId(
+        payment.dealType
+      )
+    );
+    if (payment.budget) {
+      setBudget(String(payment.budget));
+    }
   }
 
   function resetLegacyLookup() {
@@ -745,9 +835,13 @@ export default function NewPaymentPage() {
         setVkLink("");
         setCourse("");
         setTariff("");
+        setBudget("");
         setFirstContact("");
         setSourceId("");
         setSourceName("");
+        setLegacyTtDealTypeId(
+          DEFAULT_LEGACY_TT_DEAL_TYPE_ID
+        );
         toast.info(
           "Первый раз в CRM — заполните данные клиента"
         );
@@ -770,6 +864,13 @@ export default function NewPaymentPage() {
 
     const validationError =
       validateCommonFields();
+
+    const ttDealTypeError =
+      validateLegacyTtDealType();
+
+    if (ttDealTypeError) {
+      return ttDealTypeError;
+    }
 
     if (validationError) {
       return validationError;
@@ -804,7 +905,9 @@ export default function NewPaymentPage() {
 
     try {
       const dealTypeLabel =
-        getDealTypeLabel(dealTypeId);
+        getDealTypeLabel(
+          legacyTtDealTypeId
+        );
 
       const profile =
         legacySubscriberProfile;
@@ -841,7 +944,9 @@ export default function NewPaymentPage() {
           profile?.sourceName ||
           profile?.source ||
           sourceName,
-        budget: profile?.budget || 0,
+        budget: profile
+          ? Number(profile.budget || 0)
+          : parseMoneyNumber(budget),
         userData: actor,
       });
 
@@ -1265,38 +1370,30 @@ export default function NewPaymentPage() {
           <>
             <div className="mb-4 bg-violet-500/10 border border-violet-500/30 p-4 rounded-xl text-sm text-violet-100 space-y-2">
               <p>
-                Клиент из Google Таблицы (июнь и раньше).
-                Карточки в CRM <strong>нет</strong> — поэтому
-                «Доплата Новая» его не находит.
+                Клиент из Google ТТ — карточки в CRM{" "}
+                <strong>нет</strong>. Ищем по ссылке на
+                диалог или ID из Bluesales.
               </p>
               <p>
-                Ссылка на диалог у клиента <strong>одна и та же</strong>.
-                После первого внесения повторную доплату можно
-                найти по этой ссылке или по ID из Bluesales.
+                Ссылка на диалог <strong>одна и та же</strong>.
+                После первого внесения повторные доплаты —
+                снова «Найти» по этой ссылке.
+              </p>
+              <p>
+                Тип для колонки B в Google ТТ выбирается
+                отдельно: «Доплата новая», «Доплата ББ»,
+                «Апсэйл» и т.д.
               </p>
             </div>
 
-            <FormSection title="1. Найти подписчика">
-              <select
-                value={dealTypeId}
-                onChange={(e) =>
-                  setDealTypeId(
-                    e.target.value
-                  )
-                }
-                className={inputClass}
+            <FormSection title="1. Найти клиента">
+              <button
+                type="button"
+                onClick={resetLegacyEntryMode}
+                className="text-sm text-slate-400 hover:text-slate-200 mb-2"
               >
-                {DEAL_TYPE_OPTIONS.map(
-                  (option) => (
-                    <option
-                      key={option.id}
-                      value={option.id}
-                    >
-                      {option.label}
-                    </option>
-                  )
-                )}
-              </select>
+                ← Другой тип сделки
+              </button>
 
               <input
                 placeholder="Ссылка на диалог Bluesales"
@@ -1364,14 +1461,53 @@ export default function NewPaymentPage() {
                       · {legacySubscriberProfile.tariff}
                     </>
                   )}
+                  {Number(
+                    legacySubscriberProfile.budget ||
+                      0
+                  ) > 0 && (
+                    <div className="text-green-200/80 mt-2">
+                      Бюджет:{" "}
+                      {formatMoney(
+                        legacySubscriberProfile.budget
+                      )}{" "}
+                      · в CRM внесено:{" "}
+                      {formatMoney(
+                        legacySubscriberProfile.totalPaidInCrm ||
+                          0
+                      )}
+                      {legacySubscriberProfile.remainInCrm !=
+                        null && (
+                        <>
+                          {" "}
+                          · остаток:{" "}
+                          {formatMoney(
+                            legacySubscriberProfile.remainInCrm
+                          )}
+                        </>
+                      )}
+                    </div>
+                  )}
                   <div className="text-green-200/80 mt-2">
-                    Заполните сумму, дату, платёжную
-                    систему и номер счёта — ссылка уже
-                    на месте.
+                    Подсказка типа для ТТ:{" "}
+                    <strong>
+                      {getDealTypeLabel(
+                        legacyTtDealTypeId
+                      )}
+                    </strong>
+                    {" "}
+                    — проверьте и при необходимости
+                    смените ниже.
                   </div>
                 </div>
 
-                <FormSection title="2. Доплата">
+                <FormSection title="2. Оплата">
+                  <LegacyTtDealTypeSelect
+                    value={legacyTtDealTypeId}
+                    onChange={
+                      setLegacyTtDealTypeId
+                    }
+                  />
+
                   <input
                     placeholder="Ссылка на диалог *"
                     value={dialogLink}
@@ -1502,12 +1638,12 @@ export default function NewPaymentPage() {
               !legacySubscriberProfile && (
               <>
                 <div className="mb-4 bg-amber-500/10 border border-amber-500/30 p-4 rounded-xl text-sm text-amber-100">
-                  Первый раз в CRM — заполните карточку
-                  подписчика один раз. Следующие доплаты
-                  — только через «Найти» по тому же ID из БС.
+                  Первый раз в CRM — заполните данные
+                  клиента один раз. Следующие доплаты —
+                  «Найти» по той же ссылке на диалог.
                 </div>
 
-                <FormSection title="2. Карточка подписчика">
+                <FormSection title="2. Карточка клиента">
                   <input
                     placeholder="Имя клиента *"
                     value={clientName}
@@ -1574,6 +1710,14 @@ export default function NewPaymentPage() {
                     ))}
                   </select>
 
+                  <MoneyInput
+                    placeholder="Бюджет (сумма тарифа) *"
+                    required
+                    value={budget}
+                    onChange={setBudget}
+                    className={inputClass}
+                  />
+
                   <input
                     placeholder="Ссылка на диалог *"
                     value={dialogLink}
@@ -1631,6 +1775,13 @@ export default function NewPaymentPage() {
                 </FormSection>
 
                 <FormSection title="3. Оплата">
+                  <LegacyTtDealTypeSelect
+                    value={legacyTtDealTypeId}
+                    onChange={
+                      setLegacyTtDealTypeId
+                    }
+                  />
+
                   <MoneyInput
                     placeholder="Сумма оплаты *"
                     required
@@ -2131,12 +2282,12 @@ export default function NewPaymentPage() {
                         диалог.
                       </p>
                       <p>
-                        Если это подписчик из Google
-                        Таблицы (июнь) — выберите
+                        Если это клиент из Google ТТ
+                        (июнь и раньше) — выберите
                         сделку{" "}
                         <strong>
-                          «Июньский подписчик (из
-                          таблицы)»
+                          «Клиент из таблицы (без
+                          карточки CRM)»
                         </strong>
                         . Ссылка на диалог та же, но
                         карточки клиента в CRM нет.

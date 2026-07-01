@@ -720,36 +720,65 @@ export async function findLegacySubscriber({
         Number(a.createdAt || 0)
     );
 
-  if (normalizedId) {
-    const byBsId = legacyPayments.find(
-      (payment) => {
-        const storedId =
-          payment.legacyClientBsId ||
-          payment.clientNote ||
-          "";
+  const matchesLegacyPayment = (
+    payment
+  ) => {
+    if (normalizedId) {
+      const storedId =
+        payment.legacyClientBsId ||
+        payment.clientNote ||
+        "";
 
-        return (
-          storedId.trim() === normalizedId
-        );
+      if (storedId.trim() === normalizedId) {
+        return true;
       }
-    );
-
-    if (byBsId) {
-      return byBsId;
     }
-  }
 
-  if (normalizedLink) {
-    return (
-      legacyPayments.find(
-        (payment) =>
-          (payment.dialogLink || "").trim() ===
-          normalizedLink
-      ) || null
+    if (normalizedLink) {
+      return (
+        (payment.dialogLink || "").trim() ===
+        normalizedLink
+      );
+    }
+
+    return false;
+  };
+
+  const matchingPayments =
+    legacyPayments.filter(
+      matchesLegacyPayment
     );
+
+  if (!matchingPayments.length) {
+    return null;
   }
 
-  return null;
+  const latest = matchingPayments[0];
+  const totalPaidInCrm =
+    matchingPayments.reduce(
+      (sum, payment) =>
+        sum +
+        Number(payment.amount || 0),
+      0
+    );
+  const budget = Number(
+    latest.budget || 0
+  );
+  const remainInCrm =
+    budget > 0
+      ? Math.max(
+          0,
+          budget - totalPaidInCrm
+        )
+      : null;
+
+  return {
+    ...latest,
+    totalPaidInCrm,
+    remainInCrm,
+    paymentCount:
+      matchingPayments.length,
+  };
 }
 
 /** @deprecated use findLegacySubscriber */
