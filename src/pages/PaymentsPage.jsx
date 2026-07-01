@@ -142,9 +142,15 @@ export default function PaymentsPage({
       });
 
       toast.success(
-        `Оплата обновлена: ${formatMoney(
-          paymentUpdates.amount
-        )}`
+        paymentUpdates.startDate !==
+          undefined &&
+        paymentUpdates.amount ===
+          undefined
+          ? "Дата старта сохранена"
+          : `Оплата обновлена: ${formatMoney(
+              paymentUpdates.amount ??
+                editPayment.amount
+            )}`
       );
 
       setEditPayment(null);

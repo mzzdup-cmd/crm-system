@@ -488,9 +488,18 @@ export async function updatePayment({
       );
   }
 
+  const isStartDateOnlyUpdate =
+    optionalStartDate &&
+    updates.startDate !== undefined &&
+    updates.amount === undefined &&
+    updates.paymentDate === undefined &&
+    updates.dealType === undefined &&
+    updates.paymentSystem === undefined &&
+    updates.invoiceNumber === undefined;
+
   if (shouldResyncStartDate) {
     payload.ttStartDateResyncPending = true;
-  } else {
+  } else if (!isStartDateOnlyUpdate) {
     payload.syncedToSheets = false;
   }
 

@@ -297,9 +297,7 @@ service cloud.firestore {
         && request.resource.data.paymentSystem
           == resource.data.paymentSystem
         && request.resource.data.invoiceNumber
-          == resource.data.invoiceNumber
-        && request.resource.data.syncedToSheets
-          == resource.data.syncedToSheets;
+          == resource.data.invoiceNumber;
     }
 
     match /payments/{paymentId} {
