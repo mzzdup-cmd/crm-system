@@ -21,6 +21,7 @@ import {
 import {
   canEditPayment,
   canDeletePayment,
+  canEditPaymentStartDate,
   getPaymentEditTimeLeft,
 } from "../domain/payment/paymentPermissions";
 
@@ -31,6 +32,10 @@ import {
 import {
   isLegacyPayment,
 } from "../domain/payment/legacyPayment";
+
+import {
+  isOptionalStartDateDealType,
+} from "../constants/dealTypes";
 
 import PageHeader
 from "../components/ui/PageHeader";
@@ -233,6 +238,16 @@ export default function PaymentsPage({
                   userData
                 );
 
+              const canEditStartDate =
+                canEditPaymentStartDate(
+                  payment,
+                  userData
+                );
+
+              const showEditActions =
+                editable ||
+                canEditStartDate;
+
               const deletable =
                 canDeletePayment(
                   payment,
@@ -320,7 +335,11 @@ export default function PaymentsPage({
                         {legacy
                           ? "—"
                           : payment.startDate ||
-                            "—"}
+                            (isOptionalStartDateDealType(
+                              payment.dealType
+                            )
+                              ? "не указан"
+                              : "—")}
                       </div>
                     </div>
                   </div>
@@ -331,9 +350,10 @@ export default function PaymentsPage({
                     </div>
                   )}
 
-                  {(editable || deletable) && (
+                  {(showEditActions ||
+                    deletable) && (
                     <div className="mt-4 flex flex-wrap items-center gap-3">
-                      {editable && (
+                      {showEditActions && (
                         <button
                           type="button"
                           onClick={() =>
@@ -347,7 +367,10 @@ export default function PaymentsPage({
                             text-sm font-semibold
                           "
                         >
-                          Редактировать
+                          {canEditStartDate &&
+                          !editable
+                            ? "Указать поток"
+                            : "Редактировать"}
                         </button>
                       )}
 

@@ -9,6 +9,7 @@ import {
 
 import {
   canEditPayment,
+  canEditPaymentStartDate,
 } from "../../domain/payment/paymentPermissions";
 
 import {
@@ -17,6 +18,10 @@ import {
 
 import { COURSES } from "../../constants/courses";
 import { TARIFFS } from "../../constants/tariffs";
+
+import {
+  isOptionalStartDateDealType,
+} from "../../constants/dealTypes";
 
 import {
   formatMoney,
@@ -106,6 +111,20 @@ export default function PaymentEditModal({
   const editable =
     canEditPayment(payment, userData);
 
+  const canEditStartDate =
+    canEditPaymentStartDate(
+      payment,
+      userData
+    );
+
+  const optionalStartDate =
+    isOptionalStartDateDealType(
+      payment.dealType
+    );
+
+  const formDisabled =
+    !editable && !canEditStartDate;
+
   function handleChange(field, value) {
     setForm((current) => ({
       ...current,
@@ -142,10 +161,20 @@ export default function PaymentEditModal({
     };
   }
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault();
 
-    if (!editable) {
+    if (!editable && !canEditStartDate) {
+      return;
+    }
+
+    if (canEditStartDate && !editable) {
+      await onSave({
+        paymentUpdates: {
+          startDate: form.startDate,
+        },
+        clientUpdates: {},
+      });
       return;
     }
 
@@ -154,6 +183,17 @@ export default function PaymentEditModal({
 
   async function handleConfirmSave() {
     const payload = buildPayload();
+
+    if (!editable && canEditStartDate) {
+      await onSave({
+        paymentUpdates: {
+          startDate: form.startDate,
+        },
+        clientUpdates: {},
+      });
+      setConfirmOpen(false);
+      return;
+    }
 
     await onSave(payload);
     setConfirmOpen(false);
@@ -184,12 +224,22 @@ export default function PaymentEditModal({
 
           <p className="text-slate-400 text-sm mb-6">
             {payment.clientName}
-            {!isAdmin && (
+            {!isAdmin && editable && (
               <span className="block mt-1 text-amber-400">
                 Доступно 30 минут после
                 создания
               </span>
             )}
+            {!isAdmin &&
+              canEditStartDate &&
+              !editable && (
+                <span className="block mt-1 text-cyan-400">
+                  Можно изменить только дату
+                  старта — строка в ТТ
+                  обновится при следующей
+                  выгрузке
+                </span>
+              )}
           </p>
 
           <div className="space-y-4">
@@ -199,6 +249,7 @@ export default function PaymentEditModal({
               </span>
               <MoneyInput
                 required
+                disabled={!editable}
                 value={form.amount}
                 onChange={(value) =>
                   handleChange(
@@ -322,7 +373,13 @@ export default function PaymentEditModal({
               </span>
               <input
                 type="date"
-                required
+                required={
+                  !optionalStartDate
+                }
+                disabled={
+                  !editable &&
+                  !canEditStartDate
+                }
                 value={form.startDate}
                 onChange={(e) =>
                   handleChange(
@@ -330,8 +387,14 @@ export default function PaymentEditModal({
                     e.target.value
                   )
                 }
-                className={inputClass}
+                className={`${inputClass} disabled:opacity-60`}
               />
+              {optionalStartDate && (
+                <p className="text-xs text-slate-500 mt-1">
+                  Для ББ и Рассылки можно
+                  указать позже
+                </p>
+              )}
             </label>
 
             <label className="block">
@@ -430,7 +493,9 @@ export default function PaymentEditModal({
 
             <button
               type="submit"
-              disabled={saving || !editable}
+              disabled={
+                saving || formDisabled
+              }
               className="
                 px-4 py-2 rounded-xl font-semibold
                 bg-cyan-600 hover:bg-cyan-700

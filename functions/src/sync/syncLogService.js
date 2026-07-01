@@ -54,6 +54,8 @@ async function markPaymentSynced(paymentId, meta = {}) {
         meta.updatedRange || null,
       ttUpdatedRange:
         meta.updatedRange || null,
+      ttRowNumber:
+        meta.rowNumber || null,
     });
 }
 

@@ -25,6 +25,10 @@ const LEGACY_MANAGER_ALIASES = {
   vilu_petrova: "violeta_petrova",
 };
 
+const {
+  isOptionalStartDateDeal,
+} = require("./dealTypeHelpers");
+
 function getStartDate(dateString) {
   if (!dateString) {
     return "";
@@ -148,12 +152,16 @@ function mapPaymentToTtRow({
     payment.dealType || ""
   ).startsWith("Отказ");
 
-  const startDate = isMinimalLegacy
+  const rawStartDate = isMinimalLegacy
     ? ""
     : isRejectDeal
       ? ""
-      : payment.startDate ||
-        getStartDate(payment.paymentDate);
+      : isOptionalStartDateDeal(
+            payment.dealType
+          )
+        ? payment.startDate || ""
+        : payment.startDate ||
+          getStartDate(payment.paymentDate);
 
   const budget = isMinimalLegacy
     ? ""
@@ -174,7 +182,7 @@ function mapPaymentToTtRow({
       ? ""
       : Number(payment.amount || 0),
     isRejectDeal ? "" : budget,
-    formatDateRu(startDate),
+    formatDateRu(rawStartDate),
     formatDateRu(
       payment.firstContact ||
         client.firstContact

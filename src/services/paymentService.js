@@ -35,6 +35,7 @@ import {
   canEditPayment,
   canDeletePayment,
   isPaymentDeleted,
+  canEditPaymentStartDate,
 } from "../domain/payment/paymentPermissions";
 import {
   buildCreateAudit,
@@ -47,8 +48,15 @@ import {
 import {
   isLegacyPayment,
 } from "../domain/payment/legacyPayment";
+import {
+  isOptionalStartDateDealType,
+} from "../constants/dealTypes";
 import { updateClient, getClientById } from "./clientService";
 import { maybeNotifyMissingVkLink } from "./missingVkReminderService";
+import {
+  maybeNotifyMissingStartDate,
+  resolveMissingStartDateReminder,
+} from "./missingStartDateReminderService";
 import { getManualBonusesForUser } from "./bonusService";
 import { getNightShiftsForUser } from "./shiftService";
 import {
@@ -78,6 +86,24 @@ export function normalizePaymentPayload(data) {
   const isMinimalLegacy =
     legacy && !isLegacyClient;
 
+  const optionalStartDate =
+    isOptionalStartDateDealType(
+      data.dealType
+    );
+
+  let startDate = data.startDate || "";
+
+  if (
+    !isMinimalLegacy &&
+    !optionalStartDate &&
+    !startDate &&
+    data.paymentDate
+  ) {
+    startDate = getStartDate(
+      data.paymentDate
+    );
+  }
+
   return {
     ...data,
     manager,
@@ -85,12 +111,7 @@ export function normalizePaymentPayload(data) {
     amount: Number(data.amount || 0),
     isLegacy: legacy,
     isLegacyClient,
-    startDate: isMinimalLegacy
-      ? data.startDate || ""
-      : data.startDate ||
-        (data.paymentDate
-          ? getStartDate(data.paymentDate)
-          : ""),
+    startDate,
     createdAt: data.createdAt || Date.now(),
     syncedToSheets: data.syncedToSheets ?? false,
     deletedAt: data.deletedAt ?? null,
@@ -409,6 +430,13 @@ export async function updatePayment({
     !canEditPayment(
       payment,
       userData
+    ) &&
+    !(
+      canEditPaymentStartDate(
+        payment,
+        userData
+      ) &&
+      updates.startDate !== undefined
     )
   ) {
     throw new Error(
@@ -416,19 +444,55 @@ export async function updatePayment({
     );
   }
 
+  const optionalStartDate =
+    isOptionalStartDateDealType(
+      payment.dealType
+    );
+  const hasTtRow = Boolean(
+    payment.ttRowNumber ||
+      payment.ttUpdatedRange
+  );
+  const startDateChanged =
+    updates.startDate !==
+    undefined &&
+    (updates.startDate || "") !==
+      (payment.startDate || "");
+  const shouldResyncStartDate =
+    optionalStartDate &&
+    payment.syncedToSheets === true &&
+    hasTtRow &&
+    startDateChanged;
+
   const payload = {
     ...updates,
-    amount: Number(updates.amount),
-    startDate:
-      updates.startDate ??
+    ...buildUpdateAudit(userData),
+  };
+
+  if (updates.amount !== undefined) {
+    payload.amount = Number(
+      updates.amount
+    );
+  }
+
+  if (updates.startDate !== undefined) {
+    payload.startDate =
+      updates.startDate || "";
+  } else if (
+    !optionalStartDate
+  ) {
+    payload.startDate =
       payment.startDate ??
       getStartDate(
         updates.paymentDate ||
           payment.paymentDate
-      ),
-    syncedToSheets: false,
-    ...buildUpdateAudit(userData),
-  };
+      );
+  }
+
+  if (shouldResyncStartDate) {
+    payload.ttStartDateResyncPending = true;
+  } else {
+    payload.syncedToSheets = false;
+  }
 
   if (updates.course !== undefined) {
     payload.course = updates.course;
@@ -442,6 +506,24 @@ export async function updatePayment({
     doc(db, "payments", paymentId),
     payload
   );
+
+  if (payload.startDate?.trim()) {
+    try {
+      await resolveMissingStartDateReminder(
+        {
+          ...payment,
+          ...payload,
+          id: paymentId,
+        },
+        userData
+      );
+    } catch (error) {
+      console.warn(
+        "Start date reminder resolve skipped:",
+        error
+      );
+    }
+  }
 
   const client = payment.clientId
     ? await recalculateClientAmount(
@@ -919,6 +1001,19 @@ export async function createPayment({
   } catch (error) {
     console.warn(
       "VK reminder notification skipped:",
+      error
+    );
+  }
+
+  try {
+    await maybeNotifyMissingStartDate({
+      payment: paymentPayload,
+      managerName: manager,
+      userData,
+    });
+  } catch (error) {
+    console.warn(
+      "Start date reminder skipped:",
       error
     );
   }

@@ -187,6 +187,21 @@ export function isBbDealType(value) {
   return resolveDealTypeId(value) === "bb";
 }
 
+export function isMailingDealType(value) {
+  return (
+    resolveDealTypeId(value) === "mailing"
+  );
+}
+
+/** ББ / Рассылка — дату старта можно указать позже (как VK). */
+export function isOptionalStartDateDealType(
+  value
+) {
+  const id = resolveDealTypeId(value);
+
+  return id === "bb" || id === "mailing";
+}
+
 export function isLegacyDealType(value) {
   return (
     getDealTypeOption(value)?.flow ===

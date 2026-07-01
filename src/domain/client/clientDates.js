@@ -1,4 +1,7 @@
-import { isBbDealType } from "../../constants/dealTypes";
+import {
+  isBbDealType,
+  isOptionalStartDateDealType,
+} from "../../constants/dealTypes";
 
 const SUBSCRIPTION_CYCLE_DAYS = 14;
 
@@ -131,6 +134,14 @@ export function resolvePaymentStartDate({
 }) {
   if (isBbDealType(dealTypeId)) {
     return manualStartDate || "";
+  }
+
+  if (
+    isOptionalStartDateDealType(
+      dealTypeId
+    )
+  ) {
+    return selectedStream || "";
   }
 
   return (

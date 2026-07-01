@@ -57,6 +57,7 @@ import {
   isLegacyDealType,
   isLegacyTableTtDealType,
   isBbDealType,
+  isOptionalStartDateDealType,
   isRejectDealType,
   resolveDealTypeId,
   resolveLegacyTtDealTypeId,
@@ -361,7 +362,10 @@ export default function NewPaymentPage() {
   useEffect(() => {
     if (
       !paymentDate ||
-      isBbDealType(dealTypeId)
+      isBbDealType(dealTypeId) ||
+      isOptionalStartDateDealType(
+        dealTypeId
+      )
     ) {
       return;
     }
@@ -571,13 +575,14 @@ export default function NewPaymentPage() {
       return null;
     }
 
-    if (isBbDeal && !manualStartDate) {
-      return "Укажите дату старта для ББ";
-    }
+    const optionalStartDate =
+      isOptionalStartDateDealType(
+        dealTypeId
+      );
 
     if (
       !isRejectDeal &&
-      !isBbDeal &&
+      !optionalStartDate &&
       paymentDate &&
       !getStartDateValue()
     ) {
@@ -705,6 +710,24 @@ export default function NewPaymentPage() {
 
     toast.info(
       "VK можно заполнить позже — напоминание создано"
+    );
+  }
+
+  function showStartDateSuccessHint() {
+    if (
+      !isOptionalStartDateDealType(
+        dealTypeId
+      )
+    ) {
+      return;
+    }
+
+    if (getStartDateValue()?.trim()) {
+      return;
+    }
+
+    toast.info(
+      "Дату старта можно указать позже в «Продажи → Оплаты»"
     );
   }
 
@@ -1126,6 +1149,7 @@ export default function NewPaymentPage() {
             )}`
       );
       showVkSuccessHint(foundClient);
+      showStartDateSuccessHint();
     } catch (error) {
       toast.error(
         error.message ||
@@ -1228,6 +1252,7 @@ export default function NewPaymentPage() {
             )}`
       );
       showVkSuccessHint(client);
+      showStartDateSuccessHint();
 
       setClientName("");
       setVkLink("");

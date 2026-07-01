@@ -1,3 +1,12 @@
+import {
+  getCurrentManagerId,
+  getFirestoreManagerId,
+} from "../auth/roleHelpers";
+
+import {
+  isOptionalStartDateDealType,
+} from "../../constants/dealTypes";
+
 export const MANAGER_PAYMENT_EDIT_WINDOW_MS =
   30 * 60 * 1000;
 
@@ -51,6 +60,64 @@ export function canEditPayment(
   return isWithinManagerEditWindow(
     payment,
     now
+  );
+}
+
+function paymentOwnedByManager(
+  payment,
+  userData
+) {
+  if (userData?.role !== "manager") {
+    return false;
+  }
+
+  const canonicalId =
+    getCurrentManagerId(userData);
+  const firestoreId =
+    getFirestoreManagerId(userData);
+  const managerName =
+    userData?.name || "";
+
+  return (
+    (canonicalId &&
+      payment.managerId ===
+        canonicalId) ||
+    (firestoreId &&
+      payment.managerId ===
+        firestoreId) ||
+    (managerName &&
+      payment.manager === managerName)
+  );
+}
+
+/** ББ / Рассылка — дату старта можно менять без ограничения 30 мин. */
+export function canEditPaymentStartDate(
+  payment,
+  userData
+) {
+  if (
+    !payment ||
+    !userData ||
+    isPaymentDeleted(payment)
+  ) {
+    return false;
+  }
+
+  if (userData.role === "admin") {
+    return true;
+  }
+
+  if (
+    !isOptionalStartDateDealType(
+      payment.dealType
+    )
+  ) {
+    return false;
+  }
+
+  return paymentOwnedByManager(
+    payment,
+    userData
   );
 }
 

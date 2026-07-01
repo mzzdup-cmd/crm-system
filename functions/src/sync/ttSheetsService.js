@@ -212,6 +212,58 @@ async function appendTtRow({
   };
 }
 
+async function updateTtRow({
+  spreadsheetId,
+  sheetName,
+  rowNumber,
+  row,
+}) {
+  if (!Array.isArray(row) || row.length !== 16) {
+    throw new Error(
+      `TT row must have 16 columns (A:P), got ${row?.length}`
+    );
+  }
+
+  if (!rowNumber || rowNumber < 2) {
+    throw new Error(
+      `Invalid TT row number: ${rowNumber}`
+    );
+  }
+
+  const sheets = await getSheetsClient();
+
+  const resolvedTab =
+    await resolveSheetTabName(
+      spreadsheetId,
+      sheetName
+    );
+
+  const targetRange = toSheetRange(
+    resolvedTab,
+    `A${rowNumber}:P${rowNumber}`
+  );
+
+  const response =
+    await sheets.spreadsheets.values.update({
+      spreadsheetId,
+      range: targetRange,
+      valueInputOption: "USER_ENTERED",
+      requestBody: {
+        values: [row],
+      },
+    });
+
+  return {
+    spreadsheetId,
+    sheetName: resolvedTab,
+    rowNumber,
+    updatedRange:
+      response.data.updatedRange ||
+      targetRange,
+    updatedRows: 1,
+  };
+}
+
 async function writeTtSyncMeta({
   spreadsheetId,
   metaTab = "_CRM_Sync",
@@ -279,6 +331,7 @@ function formatMsk(timestamp) {
 
 module.exports = {
   appendTtRow,
+  updateTtRow,
   writeTtSyncMeta,
   formatMsk,
   resolveSheetTabName,

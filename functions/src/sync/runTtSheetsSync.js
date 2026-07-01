@@ -17,9 +17,15 @@ const {
 
 const {
   appendTtRow,
+  updateTtRow,
   writeTtSyncMeta,
   formatMsk,
 } = require("./ttSheetsService");
+
+const {
+  canResyncStartDateInTt,
+  parseTtRowNumber,
+} = require("./dealTypeHelpers");
 
 const {
   SYNC_LOG_STATUS,
@@ -123,7 +129,123 @@ async function markPaymentSynced(
         meta.spreadsheetId || null,
       ttUpdatedRange:
         meta.updatedRange || null,
+      ttRowNumber:
+        meta.rowNumber || null,
     });
+}
+
+async function fetchStartDateResyncPayments() {
+  const snapshot = await getDb()
+    .collection("payments")
+    .where(
+      "ttStartDateResyncPending",
+      "==",
+      true
+    )
+    .get();
+
+  return snapshot.docs
+    .map((docSnap) => ({
+      id: docSnap.id,
+      ...docSnap.data(),
+    }))
+    .filter(
+      (payment) =>
+        !payment.deletedAt &&
+        canResyncStartDateInTt(
+          payment.dealType
+        )
+    );
+}
+
+async function processStartDateResyncs({
+  clientsById,
+  cycleMap,
+  summary,
+}) {
+  const payments =
+    await fetchStartDateResyncPayments();
+
+  for (const payment of payments) {
+    summary.processed += 1;
+
+    const rowNumber =
+      parseTtRowNumber(payment);
+
+    if (!rowNumber) {
+      summary.skipped += 1;
+      summary.skipReasons.missing_tt_row =
+        (summary.skipReasons
+          .missing_tt_row || 0) + 1;
+      continue;
+    }
+
+    const client =
+      clientsById[payment.clientId] || {};
+
+    const metadata = getTtRowMetadata({
+      payment,
+      client,
+      cycle: cycleMap[payment.id] || 1,
+    });
+
+    const ttConfig = getTtSheetForManager(
+      metadata.managerId
+    );
+
+    if (!ttConfig) {
+      summary.skipped += 1;
+      continue;
+    }
+
+    try {
+      const sheetsResult =
+        await updateTtRow({
+          spreadsheetId:
+            ttConfig.spreadsheetId,
+          sheetName: ttConfig.sheetName,
+          rowNumber,
+          row: metadata.row,
+        });
+
+      await getDb()
+        .collection("payments")
+        .doc(payment.id)
+        .update({
+          ttStartDateResyncPending: false,
+          ttResyncedAt: Date.now(),
+          ttUpdatedRange:
+            sheetsResult.updatedRange,
+          ttRowNumber: rowNumber,
+        });
+
+      summary.success += 1;
+
+      await getDb()
+        .collection("syncLog")
+        .add({
+          type: "tt_update",
+          paymentId: payment.id,
+          managerId: metadata.managerId,
+          spreadsheetId:
+            ttConfig.spreadsheetId,
+          sheetName: ttConfig.sheetName,
+          status: SYNC_LOG_STATUS.SUCCESS,
+          sheetsUpdatedRange:
+            sheetsResult.updatedRange,
+          createdAt: Date.now(),
+        });
+    } catch (error) {
+      summary.failed += 1;
+      summary.errors.push({
+        paymentId: payment.id,
+        managerId: metadata.managerId,
+        error:
+          error.message ||
+          String(error),
+      });
+    }
+  }
 }
 
 function sortPayments(payments) {
@@ -189,13 +311,23 @@ async function runTtSheetsSync({
         fetchAllActivePayments(),
       ]);
 
+    const resyncPayments =
+      await fetchStartDateResyncPayments();
+
     const clientsById =
-      await fetchClientsForPayments(
-        payments
-      );
+      await fetchClientsForPayments([
+        ...payments,
+        ...resyncPayments,
+      ]);
 
     const cycleMap =
       buildPaymentCycleMap(allPayments);
+
+    await processStartDateResyncs({
+      clientsById,
+      cycleMap,
+      summary,
+    });
 
     const sorted = sortPayments(payments);
     summary.pendingBefore = sorted.length;

@@ -8,6 +8,7 @@ export const NOTIFICATION_TYPES = {
   SCHEDULE_CHANGE: "schedule_change",
   PENDING_SALE: "pending_sale",
   MISSING_VK_LINK: "missing_vk_link",
+  MISSING_START_DATE: "missing_start_date",
 };
 
 export const NOTIFICATION_PRIORITY = {

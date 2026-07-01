@@ -6,6 +6,7 @@ import {
 
 import {
   isBbDealType,
+  isOptionalStartDateDealType,
   resolveDealTypeId,
 } from "../../constants/dealTypes";
 
@@ -38,6 +39,10 @@ export default function StartDateField({
   const isBb = isBbDealType(dealTypeId);
   const resolvedDealTypeId =
     resolveDealTypeId(dealTypeId);
+  const isOptionalStartDate =
+    isOptionalStartDateDealType(
+      dealTypeId
+    );
   const isReturnAfterRefusal =
     resolvedDealTypeId === "topup_po";
   const useHistoricalStreams =
@@ -48,11 +53,12 @@ export default function StartDateField({
     return (
       <label className="block">
         <span className="text-sm text-slate-400">
-          Дата старта *
+          Дата старта
+          {!isOptionalStartDate && " *"}
         </span>
         <input
           type="date"
-          required
+          required={!isOptionalStartDate}
           value={manualStartDate}
           onChange={(e) =>
             onManualStartDateChange(
@@ -62,8 +68,9 @@ export default function StartDateField({
           className={inputClass}
         />
         <p className="text-xs text-slate-500 mt-1">
-          Для ББ старт может быть любой датой,
-          не только понедельником потока
+          {isOptionalStartDate
+            ? "Можно указать позже — напоминание появится на главной (как с VK)."
+            : "Для ББ старт может быть любой датой, не только понедельником потока"}
         </p>
       </label>
     );
@@ -95,16 +102,20 @@ export default function StartDateField({
     getDefaultStream(paymentDate);
 
   const activeStream =
-    selectedStream || suggestedStream;
+    selectedStream ||
+    (isOptionalStartDate
+      ? ""
+      : suggestedStream);
 
   return (
     <label className="block">
       <span className="text-sm text-slate-400">
-        Поток *
+        Поток
+        {!isOptionalStartDate && " *"}
       </span>
 
       <select
-        required
+        required={!isOptionalStartDate}
         value={activeStream}
         onChange={(e) =>
           onSelectedStreamChange(
@@ -113,6 +124,11 @@ export default function StartDateField({
         }
         className={inputClass}
       >
+        {isOptionalStartDate && (
+          <option value="">
+            Указать позже
+          </option>
+        )}
         {streamOptions.map((streamDate) => (
           <option
             key={streamDate}
@@ -139,6 +155,12 @@ export default function StartDateField({
           {isReturnAfterRefusal
             ? "Вернулся после отказа: выберите исходный поток из Google ТТ (колонка «Когда старт»), например 06.04 — не рекомендуемый от даты оплаты."
             : "Для старого клиента из таблицы — поток из Google ТТ (колонка «Когда старт»), не от текущей даты оплаты."}
+        </p>
+      ) : isOptionalStartDate ? (
+        <p className="text-xs text-slate-500 mt-1">
+          Для рассылки дату старта часто узнают позже — можно
+          сохранить без потока и дозаполнить в «Продажи →
+          Оплаты».
         </p>
       ) : (
         <p className="text-xs text-slate-500 mt-1">
