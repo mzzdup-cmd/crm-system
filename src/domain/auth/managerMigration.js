@@ -144,6 +144,35 @@ export function managerIdsMatch(
   return left === right;
 }
 
+export function managerRequestMatchesUser(
+  request,
+  { managerId, managerName }
+) {
+  if (!request) {
+    return false;
+  }
+
+  if (
+    managerIdsMatch(
+      request.managerId,
+      managerId
+    )
+  ) {
+    return true;
+  }
+
+  if (
+    managerName &&
+    request.manager &&
+    request.manager.trim() ===
+      managerName.trim()
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
 export function needsManagerIdMigration(data) {
   return Boolean(
     data?.manager &&

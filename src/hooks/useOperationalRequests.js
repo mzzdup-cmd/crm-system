@@ -25,15 +25,16 @@ import {
 import {
   findOverlappingAbsences,
   getManagerUpcomingAbsences,
+  formatVacationRangeLabel,
 } from "../domain/schedule/timeOffDates";
 
 import {
-  managerIdsMatch,
+  managerRequestMatchesUser,
 } from "../domain/auth/managerMigration";
 
 export function useOperationalRequests() {
   const { userData } = useAuth();
-  const { isLeadership, managerId } =
+  const { isLeadership, managerId, displayName } =
     usePermissions();
 
   const [timeOffRequests, setTimeOffRequests] =
@@ -79,27 +80,25 @@ export function useOperationalRequests() {
   }, [userData]);
 
   const summary = useMemo(() => {
+    const managerName =
+      displayName || userData?.name || "";
+
+    const isOwnRequest = (item) =>
+      isLeadership ||
+      managerRequestMatchesUser(item, {
+        managerId,
+        managerName,
+      });
+
     const scopedTimeOffRequests =
       isLeadership
         ? timeOffRequests
-        : timeOffRequests.filter(
-            (item) =>
-              managerIdsMatch(
-                item.managerId,
-                managerId
-              )
-          );
+        : timeOffRequests.filter(isOwnRequest);
 
     const scopedVacationRequests =
       isLeadership
         ? vacationRequests
-        : vacationRequests.filter(
-            (item) =>
-              managerIdsMatch(
-                item.managerId,
-                managerId
-              )
-          );
+        : vacationRequests.filter(isOwnRequest);
 
     const pendingTimeOff =
       scopedTimeOffRequests.filter(
@@ -139,6 +138,7 @@ export function useOperationalRequests() {
         vacationRequests:
           scopedVacationRequests,
         managerId,
+        managerName,
       });
 
     const upcomingOffDays =
@@ -167,6 +167,9 @@ export function useOperationalRequests() {
         );
       }) || null;
 
+    const nextVacationFromList =
+      upcomingVacations[0] || null;
+
     return {
       pendingTimeOff,
       pendingVacations,
@@ -178,7 +181,20 @@ export function useOperationalRequests() {
       upcomingOffDays,
       upcomingAbsences,
       nextVacation:
-        upcomingAbsences.nextVacation,
+        upcomingAbsences.nextVacation ||
+        (nextVacationFromList
+          ? {
+              startDate:
+                nextVacationFromList.startDate,
+              endDate:
+                nextVacationFromList.endDate,
+              title: formatVacationRangeLabel(
+                nextVacationFromList.startDate,
+                nextVacationFromList.endDate
+              ),
+              subtitle: "отпуск",
+            }
+          : null),
       overlappingAbsences,
       activeVacation,
     };
@@ -186,6 +202,8 @@ export function useOperationalRequests() {
     timeOffRequests,
     vacationRequests,
     managerId,
+    displayName,
+    userData?.name,
     isLeadership,
   ]);
 

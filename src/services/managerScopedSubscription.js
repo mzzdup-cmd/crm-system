@@ -10,8 +10,48 @@ import { db } from "./firebase";
 
 import {
   isLeadership,
-  getManagerIdsForScopedQuery,
+  getManagerScopeKeys,
 } from "../domain/auth/roleHelpers";
+
+function buildScopedQueries({
+  collectionName,
+  managerIds,
+  managerNames,
+}) {
+  const queries = [];
+
+  managerIds.forEach((managerId) => {
+    queries.push({
+      key: `id:${managerId}`,
+      query: query(
+        collection(db, collectionName),
+        where(
+          "managerId",
+          "==",
+          managerId
+        ),
+        orderBy("createdAt", "desc")
+      ),
+    });
+  });
+
+  managerNames.forEach((managerName) => {
+    queries.push({
+      key: `name:${managerName}`,
+      query: query(
+        collection(db, collectionName),
+        where(
+          "manager",
+          "==",
+          managerName
+        ),
+        orderBy("createdAt", "desc")
+      ),
+    });
+  });
+
+  return queries;
+}
 
 export function subscribeManagerScopedCollection({
   collectionName,
@@ -48,10 +88,17 @@ export function subscribeManagerScopedCollection({
     );
   }
 
-  const managerIds =
-    getManagerIdsForScopedQuery(userData);
+  const { managerIds, managerNames } =
+    getManagerScopeKeys(userData);
 
-  if (!managerIds.length) {
+  const scopedQueries =
+    buildScopedQueries({
+      collectionName,
+      managerIds,
+      managerNames,
+    });
+
+  if (!scopedQueries.length) {
     callback([]);
     return () => {};
   }
@@ -86,38 +133,24 @@ export function subscribeManagerScopedCollection({
     emit();
   };
 
-  const unsubs = managerIds.map(
-    (managerId) => {
-      const requestsQuery = query(
-        collection(db, collectionName),
-        where(
-          "managerId",
-          "==",
-          managerId
-        ),
-        orderBy("createdAt", "desc")
-      );
-
-      return onSnapshot(
+  const unsubs = scopedQueries.map(
+    ({ key, query: requestsQuery }) =>
+      onSnapshot(
         requestsQuery,
         (snapshot) => {
           syncQueryResults(
-            managerId,
+            key,
             snapshot.docs.map(mapDoc)
           );
         },
         (error) => {
           console.error(
-            `[${logLabel}] subscription failed for ${managerId}:`,
+            `[${logLabel}] subscription failed for ${key}:`,
             error
           );
-          syncQueryResults(
-            managerId,
-            []
-          );
+          syncQueryResults(key, []);
         }
-      );
-    }
+      )
   );
 
   return () => {

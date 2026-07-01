@@ -94,20 +94,49 @@ export function getFirestoreManagerId(userData) {
 export function getManagerIdsForScopedQuery(
   userData
 ) {
-  const firestoreId =
-    userData?.firestoreManagerId ||
-    userData?.managerId ||
+  const rawId =
+    userData?.firestoreManagerId ??
     null;
-  const canonicalId =
+  const resolvedId =
     getCurrentManagerId(userData);
 
   return [
     ...new Set(
-      [firestoreId, canonicalId].filter(
-        Boolean
-      )
+      [rawId, resolvedId].filter(Boolean)
     ),
   ];
+}
+
+export function getManagerNamesForScopedQuery(
+  userData
+) {
+  const names = new Set();
+
+  if (userData?.name?.trim()) {
+    names.add(userData.name.trim());
+  }
+
+  const managerId =
+    getCurrentManagerId(userData);
+  const managerName =
+    getManagerNameById(managerId);
+
+  if (managerName) {
+    names.add(managerName);
+  }
+
+  return [...names];
+}
+
+export function getManagerScopeKeys(userData) {
+  return {
+    managerIds:
+      getManagerIdsForScopedQuery(userData),
+    managerNames:
+      getManagerNamesForScopedQuery(
+        userData
+      ),
+  };
 }
 
 export function normalizeUserRole(userData) {

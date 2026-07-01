@@ -1,5 +1,6 @@
 import {
   managerIdsMatch,
+  managerRequestMatchesUser,
 } from "../auth/managerMigration";
 
 export function enumerateDateRange(
@@ -141,6 +142,7 @@ export function getManagerUpcomingAbsences({
   timeOffRequests = [],
   vacationRequests = [],
   managerId,
+  managerName = "",
   fromDate,
   dayOffLimit = 6,
 }) {
@@ -148,14 +150,17 @@ export function getManagerUpcomingAbsences({
     fromDate ||
     new Date().toISOString().split("T")[0];
 
+  const matchesManager = (request) =>
+    managerRequestMatchesUser(request, {
+      managerId,
+      managerName,
+    });
+
   const dayOffs = timeOffRequests
     .filter(
       (request) =>
         request.status === "approved" &&
-        managerIdsMatch(
-          request.managerId,
-          managerId
-        ) &&
+        matchesManager(request) &&
         request.date >= today
     )
     .sort((a, b) =>
@@ -174,10 +179,7 @@ export function getManagerUpcomingAbsences({
     .filter(
       (request) =>
         request.status === "approved" &&
-        managerIdsMatch(
-          request.managerId,
-          managerId
-        ) &&
+        matchesManager(request) &&
         request.endDate >= today
     )
     .sort((a, b) =>

@@ -25,6 +25,7 @@ import {
 
 import {
   REQUEST_STATUS,
+  normalizeRequestStatus,
 } from "../constants/timeOff";
 
 import {
@@ -52,6 +53,9 @@ function mapRequestDoc(snapshot) {
     id: snapshot.id,
     ...data,
     ...normalized,
+    status: normalizeRequestStatus(
+      data.status
+    ),
   };
 }
 
