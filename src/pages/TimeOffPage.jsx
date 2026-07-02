@@ -93,8 +93,14 @@ export default function TimeOffPage({
     useState(false);
 
   const actor = userData
-    ? { ...userData, uid: user?.uid }
+    ? {
+        ...userData,
+        uid: user?.uid || userData.uid,
+      }
     : null;
+
+  const createdByUid =
+    user?.uid || actor?.uid || null;
 
   const vacationDays =
     vacationStart &&
@@ -120,6 +126,7 @@ export default function TimeOffPage({
         date: offDate,
         comment: offComment,
         userData: actor,
+        createdByUid,
       });
 
       toast.success(
@@ -152,6 +159,7 @@ export default function TimeOffPage({
         endDate: vacationEnd,
         comment: vacationComment,
         userData: actor,
+        createdByUid,
       });
 
       toast.success(

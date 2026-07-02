@@ -46,7 +46,7 @@ export default function QuickSaleModal({
   schedule,
   coveringTargets = [],
 }) {
-  const { userData, managerId, isLeadership, isManager } =
+  const { userData, managerId, firestoreManagerId, isLeadership, isManager } =
     usePermissions();
 
   const toast = useToast();
@@ -113,7 +113,7 @@ export default function QuickSaleModal({
   async function handleSubmit(event) {
     event.preventDefault();
 
-    if (isManager && !isLeadership && !managerId) {
+    if (isManager && !isLeadership && !firestoreManagerId) {
       setError(
         "Профиль не настроен: попросите администратора указать managerId в Firebase (users → ваш UID)."
       );
@@ -151,7 +151,8 @@ export default function QuickSaleModal({
 
     try {
       await createPendingSale({
-        createdByManagerId: managerId,
+        createdByManagerId:
+          firestoreManagerId || managerId,
         ownerManagerId,
         dialogLink,
         amount,

@@ -1,7 +1,7 @@
 const admin = require("firebase-admin");
 
 const {
-  getTtRowMetadata,
+  getTtRowMetadataWithVk,
 } = require("./ttRowMapper");
 
 const {
@@ -122,11 +122,12 @@ async function syncPaymentToSheets(paymentId, paymentData) {
       paymentId
     );
 
-    const metadata = getTtRowMetadata({
-      payment,
-      client,
-      cycle,
-    });
+    const metadata =
+      await getTtRowMetadataWithVk({
+        payment,
+        client,
+        cycle,
+      });
 
     const ttConfig = getTtSheetForManager(
       metadata.managerId

@@ -1,3 +1,7 @@
+import {
+  isBbBookingClient,
+} from "./bbBookingLogic";
+
 export const SUBSCRIPTION_OUTCOMES = {
   ACTIVE: "active",
   COMPLETED: "completed",
@@ -91,9 +95,19 @@ export function buildSubscriptionOutcomeUpdate(
   return {};
 }
 
-export function categorizeSubscriptions(clients) {
+export function categorizeSubscriptions(
+  clients,
+  payments = []
+) {
   const enriched = clients
     .filter(hadSubscriptionPlan)
+    .filter(
+      (client) =>
+        !isBbBookingClient(
+          client,
+          payments
+        )
+    )
     .map((client) => ({
       ...client,
       subscriptionCategory:

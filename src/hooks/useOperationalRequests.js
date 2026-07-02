@@ -56,12 +56,33 @@ export function useOperationalRequests() {
 
     setLoading(true);
 
+    let pending = 2;
+    let cancelled = false;
+
+    const timeoutId = window.setTimeout(
+      () => {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      },
+      10000
+    );
+
+    function markReady() {
+      pending -= 1;
+
+      if (pending <= 0 && !cancelled) {
+        window.clearTimeout(timeoutId);
+        setLoading(false);
+      }
+    }
+
     const unsubTimeOff =
       subscribeTimeOffRequests(
         userData,
         (items) => {
           setTimeOffRequests(items);
-          setLoading(false);
+          markReady();
         }
       );
 
@@ -70,10 +91,13 @@ export function useOperationalRequests() {
         userData,
         (items) => {
           setVacationRequests(items);
+          markReady();
         }
       );
 
     return () => {
+      cancelled = true;
+      window.clearTimeout(timeoutId);
       unsubTimeOff();
       unsubVacation();
     };

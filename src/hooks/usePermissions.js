@@ -7,6 +7,7 @@ import {
   isRop,
   isLeadership,
   getCurrentManagerId,
+  getFirestoreManagerId,
   getRoleLabel,
 } from "../domain/auth/roleHelpers";
 
@@ -34,6 +35,8 @@ export function usePermissions() {
   const manager = isManager(userData);
   const managerId =
     getCurrentManagerId(userData);
+  const firestoreManagerId =
+    getFirestoreManagerId(userData);
 
   const displayName =
     userData?.name ||
@@ -47,6 +50,7 @@ export function usePermissions() {
     roleLabel: getRoleLabel(userData),
     displayName,
     managerId,
+    firestoreManagerId,
     isAdmin: admin,
     isRop: rop,
     isLeadership: leadership,

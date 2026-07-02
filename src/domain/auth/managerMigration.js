@@ -18,8 +18,10 @@ export const MANAGER_EMAIL_LOCAL_IDS = {
   "polina.p": "polina_penkova",
   "polina.pl": "polina_plamadya",
   katya: "katya_bakaeva",
-  vilu: "violeta_petrova",
-  violeta: "violeta_petrova",
+  vilu: "vilu_petrova",
+  vilu_petrova: "vilu_petrova",
+  violeta: "vilu_petrova",
+  violeta_petrova: "vilu_petrova",
 };
 
 export const LEGACY_MANAGER_ALIASES = {
@@ -35,15 +37,15 @@ export const LEGACY_MANAGER_ALIASES = {
   "Полина Пламадяла": "polina_plamadya",
   /** Typos in Firestore users docs */
   polina_plamadyala: "polina_plamadya",
-  vilu_petrova: "violeta_petrova",
+  vilu_petrova: "vilu_petrova",
   denis: "denis_manuilov",
   ruslan: "ruslan_romanyuk",
   alexander: "alexander_simanov",
   sergey: "sergey_grebenshchikov",
   andrey: "andrey_volkov",
   katya: "katya_bakaeva",
-  vilu: "violeta_petrova",
-  violeta: "violeta_petrova",
+  vilu: "vilu_petrova",
+  violeta: "vilu_petrova",
 };
 
 export function resolveManagerIdFromEmail(email) {
@@ -132,6 +134,41 @@ export function normalizeManagerFields(data = {}) {
     managerId: null,
     manager: "",
   };
+}
+
+export function expandManagerIdAliases(
+  managerId
+) {
+  if (!managerId) {
+    return [];
+  }
+
+  const resolved =
+    resolveManagerIdFromLegacy(managerId) ||
+    managerId;
+
+  const aliases = new Set([
+    managerId,
+    resolved,
+  ]);
+
+  if (
+    aliases.has("vilu_petrova") ||
+    aliases.has("violeta_petrova")
+  ) {
+    aliases.add("vilu_petrova");
+    aliases.add("violeta_petrova");
+  }
+
+  if (
+    aliases.has("polina_plamadya") ||
+    aliases.has("polina_plamadyala")
+  ) {
+    aliases.add("polina_plamadya");
+    aliases.add("polina_plamadyala");
+  }
+
+  return [...aliases];
 }
 
 export function managerIdsMatch(

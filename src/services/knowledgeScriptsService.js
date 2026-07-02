@@ -17,20 +17,50 @@ import {
 
 import {
   isLeadership,
-  getCurrentManagerId,
+  resolveOwnershipManagerFieldsForWrite,
+  getManagerIdsForScopedQuery,
 } from "../domain/auth/roleHelpers";
 
 import {
-  buildCreateAudit,
+  buildWriteAuditFields,
   buildUpdateAudit,
   buildDeleteAudit,
 } from "../domain/audit/auditFields";
 
-import {
-  getManagerNameById,
-} from "../constants/managers";
+import { auth } from "./firebase";
 
 const COLLECTION = "knowledgeScripts";
+
+function scriptOwnedByUser(script, userData) {
+  if (!script?.managerId || !userData) {
+    return false;
+  }
+
+  const allowedIds =
+    getManagerIdsForScopedQuery(userData);
+
+  return allowedIds.includes(
+    script.managerId
+  );
+}
+
+export function canEditScript(
+  script,
+  userData
+) {
+  if (!script || !userData) {
+    return false;
+  }
+
+  if (isLeadership(userData)) {
+    return true;
+  }
+
+  return scriptOwnedByUser(
+    script,
+    userData
+  );
+}
 
 function mapDoc(snapshot) {
   const data = snapshot.data();
@@ -81,49 +111,59 @@ export function subscribeKnowledgeScripts(
   );
 }
 
-export function canEditScript(
-  script,
-  userData
-) {
-  if (!script || !userData) {
-    return false;
-  }
-
-  if (isLeadership(userData)) {
-    return true;
-  }
-
-  const managerId =
-    getCurrentManagerId(userData);
-
-  return (
-    managerId &&
-    script.managerId === managerId
-  );
-}
-
 export async function createKnowledgeScript(
   data,
-  userData
+  userData,
+  createdByUid = null
 ) {
-  const managerId =
-    getCurrentManagerId(userData);
+  const { managerId, manager } =
+    resolveOwnershipManagerFieldsForWrite(
+      userData,
+      data.manager || ""
+    );
 
-  if (!managerId && !isLeadership(userData)) {
+  const resolvedManagerId =
+    isLeadership(userData)
+      ? data.managerId || managerId
+      : managerId;
+
+  const resolvedManager =
+    isLeadership(userData)
+      ? data.manager ||
+        manager ||
+        userData?.name?.trim() ||
+        ""
+      : manager ||
+        userData?.name?.trim() ||
+        "";
+
+  if (
+    !resolvedManagerId &&
+    !isLeadership(userData)
+  ) {
     throw new Error("Нет прав");
+  }
+
+  if (
+    !isLeadership(userData) &&
+    (!resolvedManagerId || !resolvedManager)
+  ) {
+    throw new Error(
+      "Не удалось определить менеджера. Обновите страницу."
+    );
   }
 
   const payload = {
     ...normalizePayload(data),
-    managerId:
-      data.managerId || managerId,
-    manager:
-      data.manager ||
-      userData.name ||
-      getManagerNameById(managerId),
+    managerId: resolvedManagerId,
+    manager: resolvedManager,
     createdAt: Date.now(),
     deletedAt: null,
-    ...buildCreateAudit(userData),
+    ...buildWriteAuditFields(
+      userData,
+      createdByUid ||
+        auth.currentUser?.uid
+    ),
   };
 
   const docRef = await addDoc(
@@ -186,12 +226,12 @@ export async function getKnowledgeScriptsForUser(
     return items;
   }
 
-  const managerId =
-    getCurrentManagerId(userData);
+  const allowedIds =
+    getManagerIdsForScopedQuery(userData);
 
   return items.filter(
     (item) =>
       !item.managerId ||
-      item.managerId === managerId
+      allowedIds.includes(item.managerId)
   );
 }

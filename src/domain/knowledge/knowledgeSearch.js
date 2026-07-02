@@ -4,6 +4,31 @@ export function normalizeSearchText(value) {
     .toLowerCase();
 }
 
+function stripMarkdown(value) {
+  return String(value || "")
+    .replace(/```[\s\S]*?```/g, " ")
+    .replace(/`[^`]*`/g, " ")
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, " ")
+    .replace(/\[([^\]]*)\]\([^)]*\)/g, " $1 ")
+    .replace(/[#*_~>-]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function buildSearchHaystack(item) {
+  return [
+    item.title,
+    stripMarkdown(item.content),
+    item.category,
+    item.manager,
+    ...(item.tags || []),
+    ...(item.links || []),
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+}
+
 export function itemMatchesSearch(
   item,
   queryText
@@ -15,18 +40,16 @@ export function itemMatchesSearch(
     return true;
   }
 
-  const haystack = [
-    item.title,
-    item.content,
-    item.category,
-    ...(item.tags || []),
-    ...(item.links || []),
-  ]
-    .filter(Boolean)
-    .join(" ")
-    .toLowerCase();
+  const haystack =
+    buildSearchHaystack(item);
 
-  return haystack.includes(query);
+  const tokens = query
+    .split(/\s+/)
+    .filter(Boolean);
+
+  return tokens.every((token) =>
+    haystack.includes(token)
+  );
 }
 
 export function itemMatchesTags(

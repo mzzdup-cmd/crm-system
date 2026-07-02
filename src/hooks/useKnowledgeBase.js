@@ -57,8 +57,18 @@ export function useKnowledgeBase() {
   const [selectedTags, setSelectedTags] = useState([]);
 
   const actor = userData
-    ? { ...userData, uid: user?.uid }
+    ? {
+        ...userData,
+        uid: user?.uid || userData.uid,
+        email:
+          user?.email ||
+          userData.email ||
+          null,
+      }
     : null;
+
+  const createdByUid =
+    user?.uid || actor?.uid || null;
 
   useEffect(() => {
     if (!userData) {
@@ -209,7 +219,8 @@ export function useKnowledgeBase() {
       } else {
         await createKnowledgeScript(
           data,
-          actor
+          actor,
+          createdByUid
         );
       }
 

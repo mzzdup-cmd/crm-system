@@ -9,6 +9,7 @@ export const NOTIFICATION_TYPES = {
   PENDING_SALE: "pending_sale",
   MISSING_VK_LINK: "missing_vk_link",
   MISSING_START_DATE: "missing_start_date",
+  CURATOR_START: "curator_start",
 };
 
 export const NOTIFICATION_PRIORITY = {

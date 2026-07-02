@@ -2,6 +2,7 @@ import {
   ROLES,
   ROLE_LABELS,
 } from "../../constants/roles";
+import { auth } from "../../services/firebase.js";
 import {
   resolveManagerIdFromLegacy,
   resolveManagerIdFromEmail,
@@ -11,7 +12,11 @@ import {
   getManagerById,
 } from "../../constants/managers";
 import {
+  getFirestoreManagerIdByEmail,
+} from "../../constants/firestoreManagerIds";
+import {
   normalizeManagerFields,
+  expandManagerIdAliases,
 } from "./managerMigration";
 
 export function isAdmin(userData) {
@@ -23,7 +28,23 @@ export function isRop(userData) {
 }
 
 export function isManager(userData) {
-  return userData?.role === ROLES.MANAGER;
+  if (userData?.role === ROLES.MANAGER) {
+    return true;
+  }
+
+  if (
+    isLeadership(userData) ||
+    userData?.role === ROLES.ADMIN ||
+    userData?.role === ROLES.ROP
+  ) {
+    return false;
+  }
+
+  return Boolean(
+    getFirestoreManagerId(userData) ||
+    userData?.managerId ||
+    userData?.firestoreManagerId
+  );
 }
 
 export function isLeadership(userData) {
@@ -42,6 +63,153 @@ export function getRoleLabel(userData) {
     ROLE_LABELS[userData.role] ||
     userData.role
   );
+}
+
+function canonicalManagerId(managerId) {
+  switch (managerId) {
+    case "polina_plamadyala":
+      return "polina_plamadya";
+    case "vilu_petrova":
+      return "violeta_petrova";
+    case "denis":
+      return "denis_manuilov";
+    case "ruslan":
+      return "ruslan_romanyuk";
+    case "alexander":
+      return "alexander_simanov";
+    case "sergey":
+      return "sergey_grebenshchikov";
+    case "andrey":
+      return "andrey_volkov";
+    case "katya":
+      return "katya_bakaeva";
+    case "vilu":
+    case "violeta":
+      return "violeta_petrova";
+    case "Денис М":
+      return "denis_manuilov";
+    default:
+      return managerId;
+  }
+}
+
+function resolveManagerIdFromDisplayName(name) {
+  switch (name) {
+    case "Катя":
+    case "Катя Бакаева":
+      return "katya_bakaeva";
+    case "Руслан":
+    case "Руслан Романюк":
+    case "Руслан Р":
+      return "ruslan_romanyuk";
+    case "Полина":
+    case "Полина Пенькова":
+      return "polina_penkova";
+    case "Полина Пламадяла":
+      return "polina_plamadya";
+    case "Сергей Гребенщиков":
+    case "Сергей Г":
+      return "sergey_grebenshchikov";
+    case "Денис Мануйлов":
+    case "Денис М":
+      return "denis_manuilov";
+    case "Андрей Волков":
+    case "Андрей В":
+      return "andrey_volkov";
+    case "Александр Симанов":
+    case "Александр С":
+      return "alexander_simanov";
+    case "Виолетта Петрова":
+    case "Виолетта П":
+      return "violeta_petrova";
+    default:
+      return null;
+  }
+}
+
+function managerIdFromAuthEmail(authEmail) {
+  if (!authEmail) {
+    return null;
+  }
+
+  const local = authEmail
+    .toLowerCase()
+    .split("@")[0];
+
+  switch (local) {
+    case "katya":
+    case "katya_bakaeva":
+      return "katya_bakaeva";
+    case "denis":
+    case "denis_manuilov":
+      return "denis_manuilov";
+    case "ruslan":
+    case "ruslan_romanyuk":
+      return "ruslan_romanyuk";
+    case "alexander":
+    case "alexander_simanov":
+      return "alexander_simanov";
+    case "sergey":
+    case "sergey_grebenshchikov":
+      return "sergey_grebenshchikov";
+    case "andrey":
+    case "andrey_volkov":
+      return "andrey_volkov";
+    case "polina.p":
+    case "polina_penkova":
+      return "polina_penkova";
+    case "polina.pl":
+    case "polina_plamadya":
+      return "polina_plamadya";
+    case "vilu":
+    case "vilu_petrova":
+    case "violeta":
+    case "violeta_petrova":
+      return "vilu_petrova";
+    default:
+      return null;
+  }
+}
+
+/** Same priority as firestore.rules effectiveOwnerManagerId(). */
+function getEffectiveOwnerManagerId(userData) {
+  if (!userData) {
+    return null;
+  }
+
+  const authEmail =
+    auth.currentUser?.email ??
+    userData.email ??
+    null;
+
+  const fromEmail =
+    managerIdFromAuthEmail(authEmail);
+
+  if (fromEmail != null) {
+    return fromEmail;
+  }
+
+  const fromName =
+    resolveManagerIdFromDisplayName(
+      userData.name
+    );
+
+  if (fromName != null) {
+    return fromName;
+  }
+
+  const rawManagerId =
+    userData.firestoreManagerId ??
+    userData.managerId;
+
+  if (
+    rawManagerId != null &&
+    rawManagerId !== ""
+  ) {
+    return canonicalManagerId(rawManagerId);
+  }
+
+  return null;
 }
 
 /** Canonical manager id for app logic (aliases resolved). */
@@ -111,21 +279,37 @@ export function getFirestoreManagerId(userData) {
     return userData.firestoreManagerId;
   }
 
-  return getCurrentManagerId(userData);
+  const fromEmail =
+    getFirestoreManagerIdByEmail(
+      userData.email
+    );
+
+  if (fromEmail) {
+    return fromEmail;
+  }
+
+  if (userData.managerId) {
+    return userData.managerId;
+  }
+
+  return null;
 }
 
 export function getManagerIdsForScopedQuery(
   userData
 ) {
-  const rawId =
-    userData?.firestoreManagerId ??
-    null;
+  const firestoreId =
+    getFirestoreManagerId(userData);
   const resolvedId =
     getCurrentManagerId(userData);
 
   return [
     ...new Set(
-      [rawId, resolvedId].filter(Boolean)
+      [firestoreId, resolvedId]
+        .flatMap((id) =>
+          expandManagerIdAliases(id)
+        )
+        .filter(Boolean)
     ),
   ];
 }
@@ -221,7 +405,40 @@ export function normalizeUserRole(userData) {
   };
 }
 
-/** Manager id + display name for Firestore writes (managers always own their rows). */
+/** managerId as stored in users/{uid} — matches firestore ownerManagerId() rules. */
+export function resolveOwnershipManagerFieldsForWrite(
+  userData,
+  selectedManager = ""
+) {
+  if (isLeadership(userData)) {
+    return normalizeManagerFields({
+      manager: selectedManager,
+    });
+  }
+
+  const managerId =
+    getFirestoreManagerId(userData);
+
+  if (managerId) {
+    const canonicalId =
+      getCurrentManagerId(userData);
+
+    return {
+      managerId,
+      manager:
+        userData?.name?.trim() ||
+        getManagerNameById(canonicalId || managerId) ||
+        selectedManager?.trim() ||
+        "",
+    };
+  }
+
+  return normalizeManagerFields({
+    manager: selectedManager,
+  });
+}
+
+/** Canonical manager id for client/payment create rules. */
 export function resolveManagerFieldsForWrite(
   userData,
   selectedManager = ""
@@ -232,15 +449,29 @@ export function resolveManagerFieldsForWrite(
     });
   }
 
+  const ownership =
+    resolveOwnershipManagerFieldsForWrite(
+      userData,
+      selectedManager
+    );
+
+  if (
+    ownership.managerId &&
+    ownership.manager
+  ) {
+    return ownership;
+  }
+
   const fromProfile =
+    getEffectiveOwnerManagerId(userData) ??
     getCurrentManagerId(userData);
 
   if (fromProfile) {
     return {
       managerId: fromProfile,
       manager:
-        getManagerNameById(fromProfile) ||
         userData?.name?.trim() ||
+        getManagerNameById(fromProfile) ||
         selectedManager?.trim() ||
         "",
     };

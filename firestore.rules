@@ -20,8 +20,15 @@ service cloud.firestore {
         );
     }
 
+    function isAdmin() {
+      return hasUserProfile()
+        && userDoc().keys().hasAny(['role'])
+        && userDoc().role == 'admin';
+    }
+
     function isRop() {
       return hasUserProfile()
+        && userDoc().keys().hasAny(['role'])
         && userDoc().role == 'rop';
     }
 
@@ -29,13 +36,9 @@ service cloud.firestore {
       return isAdmin() || isRop();
     }
 
-    function isAdmin() {
-      return hasUserProfile()
-        && userDoc().role == 'admin';
-    }
-
     function isManager() {
       return hasUserProfile()
+        && userDoc().keys().hasAny(['role'])
         && userDoc().role == 'manager';
     }
 
@@ -79,27 +82,9 @@ service cloud.firestore {
     }
 
     function managerIdFromOwnerName() {
-      return ownerManagerName() == 'Денис Мануйлов'
-        ? 'denis_manuilov'
-        : ownerManagerName() == 'Денис М'
-          ? 'denis_manuilov'
-          : ownerManagerName() == 'Катя Бакаева'
-            ? 'katya_bakaeva'
-            : ownerManagerName() == 'Руслан Романюк'
-              ? 'ruslan_romanyuk'
-              : ownerManagerName() == 'Александр Симанов'
-                ? 'alexander_simanov'
-                : ownerManagerName() == 'Сергей Гребенщиков'
-                  ? 'sergey_grebenshchikov'
-                  : ownerManagerName() == 'Андрей Волков'
-                    ? 'andrey_volkov'
-                    : ownerManagerName() == 'Полина Пенькова'
-                      ? 'polina_penkova'
-                      : ownerManagerName() == 'Полина Пламадяла'
-                        ? 'polina_plamadya'
-                        : ownerManagerName() == 'Виолетта Петрова'
-                          ? 'violeta_petrova'
-                          : null;
+      return resolveManagerIdFromDisplayName(
+        ownerManagerName()
+      );
     }
 
     function authEmailLocalPart() {
@@ -110,26 +95,38 @@ service cloud.firestore {
 
     function managerIdFromAuthEmail() {
       return authEmailLocalPart() == 'katya'
+        || authEmailLocalPart() == 'katya_bakaeva'
         ? 'katya_bakaeva'
         : authEmailLocalPart() == 'denis'
+          || authEmailLocalPart() == 'denis_manuilov'
           ? 'denis_manuilov'
           : authEmailLocalPart() == 'ruslan'
+            || authEmailLocalPart() == 'ruslan_romanyuk'
             ? 'ruslan_romanyuk'
             : authEmailLocalPart() == 'alexander'
+              || authEmailLocalPart() == 'alexander_simanov'
               ? 'alexander_simanov'
               : authEmailLocalPart() == 'sergey'
+                || authEmailLocalPart()
+                  == 'sergey_grebenshchikov'
                 ? 'sergey_grebenshchikov'
                 : authEmailLocalPart() == 'andrey'
+                  || authEmailLocalPart() == 'andrey_volkov'
                   ? 'andrey_volkov'
                   : authEmailLocalPart() == 'polina.p'
+                    || authEmailLocalPart() == 'polina_penkova'
                     ? 'polina_penkova'
                     : authEmailLocalPart() == 'polina.pl'
+                      || authEmailLocalPart()
+                        == 'polina_plamadya'
                       ? 'polina_plamadya'
                       : authEmailLocalPart() == 'vilu'
+                        || authEmailLocalPart() == 'vilu_petrova'
+                        || authEmailLocalPart() == 'violeta'
+                        || authEmailLocalPart()
+                          == 'violeta_petrova'
                         ? 'violeta_petrova'
-                        : authEmailLocalPart() == 'violeta'
-                          ? 'violeta_petrova'
-                          : null;
+                        : null;
     }
 
     function effectiveOwnerManagerId() {
@@ -163,8 +160,10 @@ service cloud.firestore {
       return isLeadership()
         || (
           isSignedIn()
+          && hasUserProfile()
           && isOwnAuditCreate()
           && hasManagerAttribution(data)
+          && ownsManagerRecord(data)
         );
     }
 
@@ -180,14 +179,38 @@ service cloud.firestore {
         )
         || (
           ownsManagerRecord(existing)
-          && incoming.managerId == existing.managerId
-          && incoming.manager == existing.manager
+          && optionalFieldEquals(
+            incoming.managerId,
+            existing.managerId
+          )
+          && optionalFieldEquals(
+            incoming.manager,
+            existing.manager
+          )
         )
         || (
           existing.managerId == null
           && isLegacyOwner(existing.manager)
           && incoming.manager == existing.manager
         );
+    }
+
+    function clientManagerFieldsUnchanged() {
+      return optionalFieldEquals(
+        request.resource.data.managerId,
+        resource.data.managerId
+      )
+        && optionalFieldEquals(
+          request.resource.data.manager,
+          resource.data.manager
+        );
+    }
+
+    function managerCanUpdateOwnedClient() {
+      return isOperationalUser()
+        && isActiveRecord(resource.data)
+        && ownsManagerRecord(resource.data)
+        && clientManagerFieldsUnchanged();
     }
 
     function managerIdsMatch(leftId, rightId) {
@@ -210,8 +233,85 @@ service cloud.firestore {
         && ownerManagerName() == managerName;
     }
 
+    function resolveManagerIdFromDisplayName(name) {
+      return name == 'Катя'
+        || name == 'Катя Бакаева'
+        ? 'katya_bakaeva'
+        : name == 'Руслан'
+          || name == 'Руслан Романюк'
+          || name == 'Руслан Р'
+          ? 'ruslan_romanyuk'
+          : name == 'Полина'
+            || name == 'Полина Пенькова'
+            ? 'polina_penkova'
+            : name == 'Полина Пламадяла'
+              ? 'polina_plamadya'
+              : name == 'Сергей Гребенщиков'
+                || name == 'Сергей Г'
+                ? 'sergey_grebenshchikov'
+                : name == 'Денис Мануйлов'
+                  || name == 'Денис М'
+                  ? 'denis_manuilov'
+                  : name == 'Андрей Волков'
+                    || name == 'Андрей В'
+                    ? 'andrey_volkov'
+                    : name == 'Александр Симанов'
+                      || name == 'Александр С'
+                      ? 'alexander_simanov'
+                      : name == 'Виолетта Петрова'
+                        || name == 'Виолетта П'
+                        ? 'violeta_petrova'
+                        : null;
+    }
+
+    function resolveManagerKey(value) {
+      return value == null
+        || value == ''
+        ? null
+        : resolveManagerIdFromDisplayName(
+            value
+          ) != null
+          ? resolveManagerIdFromDisplayName(
+              value
+            )
+          : canonicalManagerId(value);
+    }
+
+    function resolvedDataManagerId(data) {
+      return data.managerId != null
+        && data.managerId != ''
+        ? canonicalManagerId(
+            data.managerId
+          )
+        : (
+          data.manager != null
+          && data.manager != ''
+            ? resolveManagerKey(
+                data.manager
+              )
+            : null
+        );
+    }
+
+    function ownsRecordByManagerFields(data) {
+      return isLeadership()
+        || (
+          effectiveOwnerManagerId() != null
+          && resolvedDataManagerId(data) != null
+          && resolvedDataManagerId(data)
+            == effectiveOwnerManagerId()
+        )
+        || (
+          ownerManagerName() != null
+          && data.manager != null
+          && data.manager != ''
+          && data.manager == ownerManagerName()
+        );
+    }
+
     function ownsManagerRecord(data) {
-      return isOwnerByManagerId(data.managerId)
+      return ownsRecordByManagerFields(data)
+        || isOwnerByManagerId(data.managerId)
         || isLegacyOwner(data.manager);
     }
 
@@ -224,6 +324,26 @@ service cloud.firestore {
         );
     }
 
+    function isSelfUserBootstrapCreate() {
+      return isSignedIn()
+        && request.auth.uid == uid
+        && request.resource.data.email
+          == request.auth.token.email
+        && request.resource.data.role
+          in ['manager', 'admin', 'rop']
+        && request.resource.data.name is string
+        && request.resource.data.updatedAt is int;
+    }
+
+    function isSelfUserProfileTouch() {
+      return isSignedIn()
+        && request.auth.uid == uid
+        && request.resource.data.role
+          == resource.data.role
+        && request.resource.data.email
+          == resource.data.email;
+    }
+
     match /users/{uid} {
       allow read: if isSignedIn()
         && (
@@ -232,7 +352,13 @@ service cloud.firestore {
           || resource.data.role in ['manager', 'admin', 'rop']
         );
 
-      allow create, update, delete: if isAdmin();
+      allow create: if isAdmin()
+        || isSelfUserBootstrapCreate();
+
+      allow update: if isAdmin()
+        || isSelfUserProfileTouch();
+
+      allow delete: if isAdmin();
     }
 
     match /clients/{clientId} {
@@ -243,9 +369,12 @@ service cloud.firestore {
         && canCreateManagerData(request.resource.data);
 
       allow update: if isSignedIn()
-        && canUpdateManagerData(
-          resource.data,
-          request.resource.data
+        && (
+          canUpdateManagerData(
+            resource.data,
+            request.resource.data
+          )
+          || managerCanUpdateOwnedClient()
         );
 
       allow delete: if isAdmin();
@@ -262,42 +391,190 @@ service cloud.firestore {
         && ownsManagerRecord(resource.data)
         && isRecentPayment()
         && resource.data.deletedAt == null
-        && request.resource.data.managerId
-          == resource.data.managerId
+        && managerIdsMatch(
+          request.resource.data.managerId,
+          resource.data.managerId
+        )
         && request.resource.data.clientId
           == resource.data.clientId
         && request.resource.data.deletedAt == null;
     }
 
+    function clientOwnershipForPayment(data) {
+      return data.clientId != null
+        && data.clientId != ''
+        && exists(
+          /databases/$(database)/documents/clients/$(data.clientId)
+        )
+        && ownsManagerRecord(
+          get(
+            /databases/$(database)/documents/clients/$(data.clientId)
+          ).data
+        );
+    }
+
+    function canAccessPaymentInRules(data) {
+      return isLeadership()
+        || (
+          isOperationalUser()
+          && (
+            ownsManagerRecord(data)
+            || clientOwnershipForPayment(data)
+          )
+        );
+    }
+
+    function isStartDatePatchUpdate() {
+      return request.resource.data
+        .diff(resource.data)
+        .affectedKeys()
+        .hasOnly([
+          'startDate',
+          'updatedAt',
+          'updatedByUid',
+          'managerId',
+          'manager',
+          'ttStartDateResyncPending',
+        ]);
+    }
+
+    function resolveDealTypeId(value) {
+      return value == 'ББ'
+        || value == 'bb'
+        || value == 'BB'
+        || (
+          value is string
+          && value.lower() == 'бб'
+        )
+        ? 'bb'
+        : value == 'Рассылка'
+          || value == 'mailing'
+          || (
+            value is string
+            && value.lower() == 'рассылка'
+          )
+          ? 'mailing'
+          : value;
+    }
+
     function isOptionalStartDateDealType(
       dealType
     ) {
-      return dealType == 'ББ'
-        || dealType == 'Рассылка';
+      return resolveDealTypeId(dealType) == 'bb'
+        || resolveDealTypeId(dealType)
+          == 'mailing';
     }
 
-    function managerCanUpdateBbMailingStartDate() {
-      return isOperationalUser()
-        && ownsManagerRecord(resource.data)
-        && resource.data.deletedAt == null
-        && request.resource.data.deletedAt == null
-        && isOptionalStartDateDealType(
-          resource.data.dealType
-        )
-        && request.resource.data.dealType
+    function ownsPaymentRecord(data) {
+      return ownsManagerRecord(data)
+        || (
+          data.clientId != null
+          && data.clientId != ''
+          && exists(
+            /databases/$(database)/documents/clients/$(data.clientId)
+          )
+          && ownsManagerRecord(
+            get(
+              /databases/$(database)/documents/clients/$(data.clientId)
+            ).data
+          )
+        );
+    }
+
+    function isStaffMember() {
+      return hasUserProfile()
+        && !isLeadership()
+        && effectiveOwnerManagerId() != null;
+    }
+
+    function optionalFieldEquals(
+      left,
+      right
+    ) {
+      return left == right
+        || (
+          (left == null || left == '')
+          && (right == null || right == '')
+        );
+    }
+
+    function paymentManagerIdUnchanged() {
+      return managerIdsMatch(
+        request.resource.data.managerId,
+        resource.data.managerId
+      )
+        || optionalFieldEquals(
+          request.resource.data.managerId,
+          resource.data.managerId
+        );
+    }
+
+    function paymentCoreFieldsUnchanged() {
+      return request.resource.data.dealType
           == resource.data.dealType
-        && request.resource.data.managerId
-          == resource.data.managerId
-        && request.resource.data.clientId
-          == resource.data.clientId
+        && paymentManagerIdUnchanged()
+        && optionalFieldEquals(
+          request.resource.data.clientId,
+          resource.data.clientId
+        )
         && request.resource.data.amount
           == resource.data.amount
-        && request.resource.data.paymentDate
-          == resource.data.paymentDate
-        && request.resource.data.paymentSystem
-          == resource.data.paymentSystem
-        && request.resource.data.invoiceNumber
-          == resource.data.invoiceNumber;
+        && optionalFieldEquals(
+          request.resource.data.paymentDate,
+          resource.data.paymentDate
+        )
+        && optionalFieldEquals(
+          request.resource.data.paymentSystem,
+          resource.data.paymentSystem
+        )
+        && optionalFieldEquals(
+          request.resource.data.invoiceNumber,
+          resource.data.invoiceNumber
+        );
+    }
+
+    function isActiveRecord(data) {
+      return !(data.deletedAt is int)
+        && !(data.deletedAt is timestamp);
+    }
+
+    function paymentHasOptionalStartDate(
+      data
+    ) {
+      return isOptionalStartDateDealType(
+        data.dealType
+      )
+        || (
+          data.keys().hasAny(['dealTypeId'])
+          && isOptionalStartDateDealType(
+            data.dealTypeId
+          )
+        );
+    }
+
+    function isSchoolStaff() {
+      return isSignedIn()
+        && hasUserProfile()
+        && (
+          !userDoc().keys().hasAny(['role'])
+          || (
+            userDoc().role != 'admin'
+            && userDoc().role != 'rop'
+          )
+        );
+    }
+
+    function managerCanUpdateOptionalStartDate() {
+      return isSchoolStaff();
+    }
+
+    // Cheap path: no get() calls — avoids rule evaluation limits.
+    function canPatchOptionalStartDate() {
+      return isSignedIn()
+        && isStartDatePatchUpdate()
+        && paymentHasOptionalStartDate(
+          resource.data
+        );
     }
 
     match /payments/{paymentId} {
@@ -308,9 +585,10 @@ service cloud.firestore {
 
       allow update: if isSignedIn()
         && (
-          isLeadership()
+          canPatchOptionalStartDate()
+          || isLeadership()
           || managerCanEditPayment()
-          || managerCanUpdateBbMailingStartDate()
+          || managerCanUpdateOptionalStartDate()
         );
 
       allow delete: if false;
@@ -402,8 +680,15 @@ service cloud.firestore {
         && (
           isLeadership()
           || (
-            request.resource.data.createdByManagerId == ownerManagerId()
-            && request.resource.data.ownerManagerId != ownerManagerId()
+            isStaffMember()
+            && request.resource.data.createdByManagerId
+              != null
+            && managerIdsMatch(
+              request.resource.data.createdByManagerId,
+              effectiveOwnerManagerId()
+            )
+            && request.resource.data.ownerManagerId
+              != request.resource.data.createdByManagerId
             && request.resource.data.status == 'pending'
           )
         );
@@ -422,13 +707,24 @@ service cloud.firestore {
       allow delete: if isLeadership();
     }
 
+    function canCreateOwnManagerRequest() {
+      return isSignedIn()
+        && hasUserProfile()
+        && request.resource.data.status == 'pending'
+        && hasManagerAttribution(
+          request.resource.data
+        )
+        && (
+          isLeadership()
+          || ownsManagerRecord(
+            request.resource.data
+          )
+        );
+    }
+
     function isOwnTimeOffRequest(data) {
       return canReadManagerData(data)
-        || (
-          isManager()
-          && data.manager != null
-          && ownerManagerName() == data.manager
-        );
+        || ownsManagerRecord(data);
     }
 
     match /timeOffRequests/{requestId} {
@@ -438,10 +734,7 @@ service cloud.firestore {
           || isOwnTimeOffRequest(resource.data)
         );
 
-      allow create: if isSignedIn()
-        && isManager()
-        && request.resource.data.managerId == ownerManagerId()
-        && request.resource.data.status == 'pending';
+      allow create: if canCreateOwnManagerRequest();
 
       allow update: if isLeadership();
 
@@ -455,10 +748,7 @@ service cloud.firestore {
           || isOwnTimeOffRequest(resource.data)
         );
 
-      allow create: if isSignedIn()
-        && isManager()
-        && request.resource.data.managerId == ownerManagerId()
-        && request.resource.data.status == 'pending';
+      allow create: if canCreateOwnManagerRequest();
 
       allow update: if isLeadership();
 
@@ -483,32 +773,43 @@ service cloud.firestore {
       allow create, update, delete: if isLeadership();
     }
 
-    function isOwnKnowledgeScript(data) {
-      return isLeadership()
-        || isOwnerByManagerId(data.managerId);
+    function canCreateOwnKnowledgeScript() {
+      return isSignedIn()
+        && hasUserProfile()
+        && hasManagerAttribution(
+          request.resource.data
+        )
+        && (
+          isLeadership()
+          || ownsManagerRecord(
+            request.resource.data
+          )
+        );
+    }
+
+    function canUpdateOwnKnowledgeScript() {
+      return isSignedIn()
+        && (
+          isLeadership()
+          || (
+            hasUserProfile()
+            && ownsManagerRecord(
+              resource.data
+            )
+            && managerIdsMatch(
+              request.resource.data.managerId,
+              resource.data.managerId
+            )
+          )
+        );
     }
 
     match /knowledgeScripts/{itemId} {
       allow read: if isSignedIn();
 
-      allow create: if isSignedIn()
-        && (
-          isLeadership()
-          || (
-            isManager()
-            && request.resource.data.managerId == ownerManagerId()
-          )
-        );
+      allow create: if canCreateOwnKnowledgeScript();
 
-      allow update: if isSignedIn()
-        && (
-          isLeadership()
-          || (
-            isManager()
-            && resource.data.managerId == ownerManagerId()
-            && request.resource.data.managerId == resource.data.managerId
-          )
-        );
+      allow update: if canUpdateOwnKnowledgeScript();
 
       allow delete: if isLeadership();
     }

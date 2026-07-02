@@ -161,7 +161,13 @@ export async function resolveMissingStartDateReminder(
       resolveNotificationByDedupKey(
         userId,
         dedupKey
-      )
+      ).catch((error) => {
+        console.warn(
+          "Start date reminder resolve skipped:",
+          userId,
+          error
+        );
+      })
     )
   );
 }

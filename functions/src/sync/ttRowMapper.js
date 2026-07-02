@@ -230,9 +230,68 @@ function getTtRowMetadata({
   };
 }
 
+async function getTtRowMetadataWithVk({
+  payment,
+  client,
+  cycle,
+}) {
+  const {
+    resolveVkLink,
+  } = require("../vk/vkLinkResolver");
+
+  const rawVk =
+    payment.vkLink ||
+    client?.vkLink ||
+    "";
+
+  let vkLink = rawVk;
+
+  if (rawVk) {
+    try {
+      const resolved =
+        await resolveVkLink(rawVk);
+
+      vkLink =
+        resolved.normalized || rawVk;
+    } catch (error) {
+      console.warn(
+        "VK resolve failed for TT:",
+        rawVk,
+        error.message
+      );
+    }
+  }
+
+  const enrichedPayment =
+    vkLink &&
+    vkLink !== payment.vkLink
+      ? {
+          ...payment,
+          vkLink,
+        }
+      : payment;
+
+  const enrichedClient =
+    vkLink &&
+    client &&
+    vkLink !== client.vkLink
+      ? {
+          ...client,
+          vkLink,
+        }
+      : client;
+
+  return getTtRowMetadata({
+    payment: enrichedPayment,
+    client: enrichedClient,
+    cycle,
+  });
+}
+
 module.exports = {
   mapPaymentToTtRow,
   getTtRowMetadata,
+  getTtRowMetadataWithVk,
   resolveManagerId,
   formatDateRu,
 };

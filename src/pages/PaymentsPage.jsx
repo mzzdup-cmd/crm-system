@@ -14,6 +14,7 @@ from "../hooks/usePermissions";
 
 import {
   getPaymentsForUser,
+  updatePaymentStartDate,
   updatePaymentWithClient,
   deletePayment,
 } from "../services/paymentService";
@@ -134,18 +135,30 @@ export default function PaymentsPage({
     setSaving(true);
 
     try {
-      await updatePaymentWithClient({
-        paymentId: editPayment.id,
-        paymentUpdates,
-        clientUpdates,
-        userData: actor,
-      });
-
-      toast.success(
+      const startDateOnly =
         paymentUpdates.startDate !==
           undefined &&
         paymentUpdates.amount ===
-          undefined
+          undefined;
+
+      if (startDateOnly) {
+        await updatePaymentStartDate({
+          paymentId: editPayment.id,
+          startDate:
+            paymentUpdates.startDate,
+          userData: actor,
+        });
+      } else {
+        await updatePaymentWithClient({
+          paymentId: editPayment.id,
+          paymentUpdates,
+          clientUpdates,
+          userData: actor,
+        });
+      }
+
+      toast.success(
+        startDateOnly
           ? "Дата старта сохранена"
           : `Оплата обновлена: ${formatMoney(
               paymentUpdates.amount ??
@@ -157,9 +170,12 @@ export default function PaymentsPage({
       reload();
     } catch (saveError) {
       console.error(saveError);
+      const code = saveError?.code || "";
       toast.error(
-        saveError.message ||
-          "Не удалось сохранить"
+        code === "permission-denied"
+          ? "Не удалось сохранить дату старта. Попробуйте ещё раз через минуту."
+          : saveError.message ||
+              "Не удалось сохранить"
       );
     } finally {
       setSaving(false);

@@ -162,7 +162,7 @@ export default function KnowledgeBasePage() {
       <div className="flex flex-col sm:flex-row gap-3">
         <input
           type="search"
-          placeholder="Поиск..."
+          placeholder="Поиск по названию и тексту..."
           value={search}
           onChange={(e) =>
             setSearch(e.target.value)
@@ -366,8 +366,12 @@ function EditorModal({
           />
         )}
 
+        <p className="text-sm text-slate-400">
+          Текст обработки (можно использовать
+          **жирный**, списки - пункт)
+        </p>
         <textarea
-          placeholder="Markdown: **жирный**, - списки, [ссылка](url)"
+          placeholder="Введите текст обработки..."
           value={data.content}
           onChange={(e) =>
             update(

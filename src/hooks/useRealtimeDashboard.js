@@ -19,6 +19,10 @@ import {
 } from "../domain/client/subscriptionOutcome";
 
 import {
+  buildBbBookingItems,
+} from "../domain/client/bbBookingLogic";
+
+import {
   isOverdue,
   getRemain,
 } from "../domain/client/clientStatus";
@@ -45,10 +49,10 @@ import {
   syncManagerShiftNotifications,
 } from "../services/reminderSyncService";
 
+
 import {
-  syncMissingVkResolutionForUser,
-  syncMissingVkRemindersForUser,
-} from "../services/missingVkReminderService";
+  syncCuratorStartRemindersForUser,
+} from "../services/curatorStartReminderService";
 
 import {
   buildOperationalSummary,
@@ -76,17 +80,30 @@ export function useDashboardRealtime() {
 
   useEffect(() => {
     if (!userData) {
+      setInitialLoading(false);
+      setConnected(false);
       return undefined;
     }
 
+    setInitialLoading(true);
     setConnected(true);
-    let pending = 3;
+    let pending = 4;
     let cancelled = false;
+
+    const timeoutId = window.setTimeout(
+      () => {
+        if (!cancelled) {
+          setInitialLoading(false);
+        }
+      },
+      10000
+    );
 
     function markReady() {
       pending -= 1;
 
       if (pending <= 0 && !cancelled) {
+        window.clearTimeout(timeoutId);
         setInitialLoading(false);
       }
     }
@@ -128,16 +145,14 @@ export function useDashboardRealtime() {
         }
       );
 
-    let unsubSync = () => {};
-
     return () => {
       cancelled = true;
+      window.clearTimeout(timeoutId);
       setConnected(false);
       unsubClients();
       unsubPayments();
       unsubSchedule();
       unsubTraffic();
-      unsubSync();
     };
   }, [userData, today]);
 
@@ -148,25 +163,7 @@ export function useDashboardRealtime() {
 
     syncClientReminders(userData, clients);
 
-    syncMissingVkResolutionForUser(
-      userData.uid,
-      clients
-    ).catch((error) => {
-      console.error(
-        "Missing VK resolution sync failed:",
-        error
-      );
-    });
-
-    syncMissingVkRemindersForUser(
-      userData,
-      clients
-    ).catch((error) => {
-      console.error(
-        "Missing VK reminder sync failed:",
-        error
-      );
-    });
+    // Missing VK reminder sync disabled.
 
     if (isManager && schedule) {
       syncManagerShiftNotifications({
@@ -178,6 +175,26 @@ export function useDashboardRealtime() {
       });
     }
   }, [userData, clients, schedule, isManager, today]);
+
+  useEffect(() => {
+    if (
+      !userData?.uid ||
+      !payments.length
+    ) {
+      return;
+    }
+
+    syncCuratorStartRemindersForUser(
+      userData,
+      payments,
+      clients
+    ).catch((error) => {
+      console.error(
+        "Curator start reminder sync failed:",
+        error
+      );
+    });
+  }, [userData, payments, clients]);
 
   const summary = useMemo(() => {
     const effectiveSchedule =
@@ -270,6 +287,7 @@ export function useSubscriptionsRealtime() {
   const { userData } = useAuth();
 
   const [clients, setClients] = useState([]);
+  const [payments, setPayments] = useState([]);
   const [initialLoading, setInitialLoading] =
     useState(true);
 
@@ -282,13 +300,22 @@ export function useSubscriptionsRealtime() {
     }
 
     setConnected(true);
+    let pending = 2;
 
-    const unsubscribe =
+    function markReady() {
+      pending -= 1;
+
+      if (pending <= 0) {
+        setInitialLoading(false);
+      }
+    }
+
+    const unsubClients =
       subscribeClientsForUser(
         userData,
         (items) => {
           setClients(items);
-          setInitialLoading(false);
+          markReady();
           syncClientReminders(
             userData,
             items
@@ -296,15 +323,27 @@ export function useSubscriptionsRealtime() {
         }
       );
 
+    const unsubPayments =
+      subscribeOperationalPayments(
+        userData,
+        OPERATIONAL_PAYMENTS_LIMIT,
+        (items) => {
+          setPayments(items);
+          markReady();
+        }
+      );
+
     return () => {
       setConnected(false);
-      unsubscribe();
+      unsubClients();
+      unsubPayments();
     };
   }, [userData]);
 
   const subscriptionGroups = useMemo(() => {
     const groups = categorizeSubscriptions(
-      clients
+      clients,
+      payments
     );
 
     const enrich = (items) =>
@@ -319,7 +358,7 @@ export function useSubscriptionsRealtime() {
       completed: enrich(groups.completed),
       churned: enrich(groups.churned),
     };
-  }, [clients]);
+  }, [clients, payments]);
 
   return {
     subscriptions: subscriptionGroups.active,
@@ -337,6 +376,75 @@ export function useSubscriptionsRealtime() {
       churned:
         subscriptionGroups.churned.length,
     },
+    initialLoading,
+    connected,
+  };
+}
+
+export function useBookingsRealtime() {
+  const { userData } = useAuth();
+
+  const [clients, setClients] = useState([]);
+  const [payments, setPayments] = useState([]);
+  const [initialLoading, setInitialLoading] =
+    useState(true);
+
+  const [connected, setConnected] =
+    useState(false);
+
+  useEffect(() => {
+    if (!userData) {
+      return undefined;
+    }
+
+    setConnected(true);
+    let pending = 2;
+
+    function markReady() {
+      pending -= 1;
+
+      if (pending <= 0) {
+        setInitialLoading(false);
+      }
+    }
+
+    const unsubClients =
+      subscribeClientsForUser(
+        userData,
+        (items) => {
+          setClients(items);
+          markReady();
+        }
+      );
+
+    const unsubPayments =
+      subscribeOperationalPayments(
+        userData,
+        OPERATIONAL_PAYMENTS_LIMIT,
+        (items) => {
+          setPayments(items);
+          markReady();
+        }
+      );
+
+    return () => {
+      setConnected(false);
+      unsubClients();
+      unsubPayments();
+    };
+  }, [userData]);
+
+  const bookings = useMemo(
+    () =>
+      buildBbBookingItems(
+        clients,
+        payments
+      ),
+    [clients, payments]
+  );
+
+  return {
+    bookings,
     initialLoading,
     connected,
   };

@@ -7,7 +7,7 @@ const {
 } = require("./syncExportBuilder");
 
 const {
-  getTtRowMetadata,
+  getTtRowMetadataWithVk,
 } = require("./ttRowMapper");
 
 const {
@@ -183,11 +183,12 @@ async function processStartDateResyncs({
     const client =
       clientsById[payment.clientId] || {};
 
-    const metadata = getTtRowMetadata({
-      payment,
-      client,
-      cycle: cycleMap[payment.id] || 1,
-    });
+    const metadata =
+      await getTtRowMetadataWithVk({
+        payment,
+        client,
+        cycle: cycleMap[payment.id] || 1,
+      });
 
     const ttConfig = getTtSheetForManager(
       metadata.managerId
@@ -338,11 +339,12 @@ async function runTtSheetsSync({
       const client =
         clientsById[payment.clientId] || {};
 
-      const metadata = getTtRowMetadata({
-        payment,
-        client,
-        cycle: cycleMap[payment.id] || 1,
-      });
+      const metadata =
+        await getTtRowMetadataWithVk({
+          payment,
+          client,
+          cycle: cycleMap[payment.id] || 1,
+        });
 
       const ttConfig = getTtSheetForManager(
         metadata.managerId

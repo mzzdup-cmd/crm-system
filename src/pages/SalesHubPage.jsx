@@ -20,6 +20,9 @@ from "./DealsPage";
 import SubscriptionsPage
 from "./SubscriptionsPage";
 
+import BookingsPage
+from "./BookingsPage";
+
 const TABS = [
   {
     id: "history",
@@ -36,6 +39,10 @@ const TABS = [
   {
     id: "subscriptions",
     label: "Подписки",
+  },
+  {
+    id: "bookings",
+    label: "Бронь",
   },
 ];
 
@@ -59,7 +66,7 @@ export default function SalesHubPage() {
     <div className="space-y-6 animate-fade-in">
       <PageHeader
         title="Продажи"
-        subtitle="История оплат, клиенты, сделки и подписки"
+        subtitle="История оплат, клиенты, сделки, подписки и бронь"
       />
 
       <PageTabs
@@ -82,6 +89,10 @@ export default function SalesHubPage() {
 
       {activeTab === "subscriptions" && (
         <SubscriptionsPage embedded />
+      )}
+
+      {activeTab === "bookings" && (
+        <BookingsPage embedded />
       )}
     </div>
   );

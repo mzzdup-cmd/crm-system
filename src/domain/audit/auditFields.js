@@ -1,8 +1,16 @@
-export function buildCreateAudit(userData) {
+import { resolveAuditUser } from "./resolveAuditUser.js";
+
+export function buildCreateAudit(
+  userData,
+  preferredUid = null
+) {
   const now = Date.now();
+  const resolved = resolveAuditUser(
+    userData || {}
+  );
   const uid =
-    userData?.uid ||
-    userData?.id ||
+    preferredUid ||
+    resolved.uid ||
     null;
 
   if (!uid) {
@@ -18,6 +26,25 @@ export function buildCreateAudit(userData) {
     updatedAt: now,
     updatedByUid: uid,
   };
+}
+
+/** Guaranteed audit fields for Firestore create rules. */
+export function buildWriteAuditFields(
+  userData,
+  preferredUid = null
+) {
+  const fields = buildCreateAudit(
+    userData,
+    preferredUid
+  );
+
+  if (!fields.createdByUid) {
+    throw new Error(
+      "Не удалось определить пользователя. Войдите заново."
+    );
+  }
+
+  return fields;
 }
 
 export function buildUpdateAudit(userData) {

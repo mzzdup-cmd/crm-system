@@ -16,7 +16,7 @@ import { db } from "./firebase";
 
 import {
   isLeadership,
-  getCurrentManagerId,
+  getManagerIdsForScopedQuery,
 } from "../domain/auth/roleHelpers";
 
 import {
@@ -218,74 +218,91 @@ export function subscribePendingSalesForUser(
     );
   }
 
-  const managerId =
-    getCurrentManagerId(userData);
+  const managerIds =
+    getManagerIdsForScopedQuery(userData);
 
-  if (!managerId) {
+  if (!managerIds.length) {
     callback([]);
     return () => {};
   }
 
-  let incoming = [];
-  let created = [];
+  const itemsById = new Map();
+  const queryResults = new Map();
 
-  function emitMerged() {
-    const map = new Map();
+  const emitMerged = () => {
+    callback(
+      [...itemsById.values()].sort(
+        (a, b) => b.createdAt - a.createdAt
+      )
+    );
+  };
 
-    [...incoming, ...created].forEach((item) => {
-      map.set(item.id, item);
+  const syncQueryResults = (
+    queryKey,
+    docs
+  ) => {
+    queryResults.set(queryKey, docs);
+    itemsById.clear();
+
+    queryResults.forEach((queryDocs) => {
+      queryDocs.forEach((item) => {
+        itemsById.set(item.id, item);
+      });
     });
 
-    const merged = [...map.values()].sort(
-      (a, b) => b.createdAt - a.createdAt
+    emitMerged();
+  };
+
+  const unsubs = [];
+
+  managerIds.forEach((managerId) => {
+    unsubs.push(
+      subscribeQuery(
+        query(
+          collection(db, "pendingSales"),
+          where(
+            "ownerManagerId",
+            "==",
+            managerId
+          ),
+          orderBy("createdAt", "desc"),
+          limit(50)
+        ),
+        (items) => {
+          syncQueryResults(
+            `incoming:${managerId}`,
+            items
+          );
+        },
+        `incoming:${managerId}`
+      )
     );
 
-    callback(merged);
-  }
-
-  const incomingQuery = query(
-    collection(db, "pendingSales"),
-    where(
-      "ownerManagerId",
-      "==",
-      managerId
-    ),
-    orderBy("createdAt", "desc"),
-    limit(50)
-  );
-
-  const createdQuery = query(
-    collection(db, "pendingSales"),
-    where(
-      "createdByManagerId",
-      "==",
-      managerId
-    ),
-    orderBy("createdAt", "desc"),
-    limit(50)
-  );
-
-  const unsubIncoming = subscribeQuery(
-    incomingQuery,
-    (items) => {
-      incoming = items;
-      emitMerged();
-    },
-    "incoming"
-  );
-
-  const unsubCreated = subscribeQuery(
-    createdQuery,
-    (items) => {
-      created = items;
-      emitMerged();
-    },
-    "created"
-  );
+    unsubs.push(
+      subscribeQuery(
+        query(
+          collection(db, "pendingSales"),
+          where(
+            "createdByManagerId",
+            "==",
+            managerId
+          ),
+          orderBy("createdAt", "desc"),
+          limit(50)
+        ),
+        (items) => {
+          syncQueryResults(
+            `created:${managerId}`,
+            items
+          );
+        },
+        `created:${managerId}`
+      )
+    );
+  });
 
   return () => {
-    unsubIncoming();
-    unsubCreated();
+    unsubs.forEach((unsub) => unsub());
   };
 }
 

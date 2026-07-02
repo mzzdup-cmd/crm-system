@@ -15,6 +15,24 @@ export function canManageTeam(userData) {
   return isLeadership(userData);
 }
 
+function managerIdsMatch(
+  leftId,
+  rightId
+) {
+  if (!leftId || !rightId) {
+    return false;
+  }
+
+  const left =
+    resolveManagerIdFromLegacy(leftId) ||
+    leftId;
+  const right =
+    resolveManagerIdFromLegacy(rightId) ||
+    rightId;
+
+  return left === right;
+}
+
 export function canAccessByManagerId(
   userData,
   managerId,
@@ -35,8 +53,9 @@ export function canAccessByManagerId(
     currentManagerId &&
     managerId
   ) {
-    return (
-      currentManagerId === managerId
+    return managerIdsMatch(
+      currentManagerId,
+      managerId
     );
   }
 

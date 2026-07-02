@@ -1,7 +1,11 @@
 import {
   isLeadership,
-  getCurrentManagerId,
+  getFirestoreManagerId,
 } from "../auth/roleHelpers";
+
+import {
+  managerIdsMatch,
+} from "../auth/managerMigration";
 
 import {
   getManagerShiftInfo,
@@ -45,13 +49,13 @@ export function canCreatePendingSale(
   }
 
   const creatorId =
-    getCurrentManagerId(userData);
+    getFirestoreManagerId(userData);
 
   if (!creatorId) {
     return false;
   }
 
-  if (creatorId === ownerManagerId) {
+  if (managerIdsMatch(creatorId, ownerManagerId)) {
     return false;
   }
 
@@ -61,7 +65,10 @@ export function canCreatePendingSale(
 
   return (
     !!creatorId &&
-    creatorId !== ownerManagerId
+    !managerIdsMatch(
+      creatorId,
+      ownerManagerId
+    )
   );
 }
 
@@ -111,11 +118,14 @@ export function canConfirmPendingSale(
   }
 
   const managerId =
-    getCurrentManagerId(userData);
+    getFirestoreManagerId(userData);
 
   return (
     managerId &&
-    pendingSale.ownerManagerId === managerId
+    managerIdsMatch(
+      pendingSale.ownerManagerId,
+      managerId
+    )
   );
 }
 

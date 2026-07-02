@@ -2,6 +2,8 @@ import { Link } from "react-router-dom";
 
 import {
   useState,
+  useMemo,
+  useEffect,
 } from "react";
 
 import LoadingState
@@ -36,8 +38,11 @@ import {
   getQuickSaleButtonLabel,
 } from "../domain/pendingSales/pendingSalesLogic";
 
-import { countClientsMissingVk }
+import { countClientsMissingVk, syncMissingVkRemindersForUser, syncMissingVkResolutionForUser }
 from "../services/missingVkReminderService";
+
+import { useAuth }
+from "../context/AuthContext";
 
 import { usePermissions }
 from "../hooks/usePermissions";
@@ -57,6 +62,15 @@ import {
   SHIFT_START,
   SHIFT_END,
 } from "../constants/schedule";
+
+import {
+  getCuratorStartsTodayItems,
+  getPlannedTopupsSummary,
+} from "../domain/dashboard/dayPlanInsights";
+
+import {
+  buildBbBookingItems,
+} from "../domain/client/bbBookingLogic";
 
 import PageErrorBoundary
 from "../components/ui/PageErrorBoundary";
@@ -439,6 +453,7 @@ export default function DashboardPage() {
 }
 
 function DashboardPageContent() {
+  const { userData } = useAuth();
   const { isManager, isLeadership, displayName } =
     usePermissions();
 
@@ -468,14 +483,60 @@ function DashboardPageContent() {
   const missingVkCount =
     countClientsMissingVk(clients);
 
+  useEffect(() => {
+    if (!userData?.uid || !clients.length) {
+      return;
+    }
+
+    syncMissingVkRemindersForUser(
+      userData,
+      clients
+    ).catch((error) => {
+      console.warn(
+        "Missing VK sync skipped:",
+        error
+      );
+    });
+
+    syncMissingVkResolutionForUser(
+      userData.uid,
+      clients
+    ).catch((error) => {
+      console.warn(
+        "Missing VK resolve skipped:",
+        error
+      );
+    });
+  }, [userData, clients]);
+
+  const [quickSaleOpen, setQuickSaleOpen] =
+    useState(false);
+
+  const curatorStartsToday = useMemo(
+    () =>
+      getCuratorStartsTodayItems({
+        payments,
+        clients,
+        today,
+      }),
+    [payments, clients, today]
+  );
+
+  const plannedTopups = useMemo(
+    () =>
+      getPlannedTopupsSummary(
+        clients,
+        payments,
+        today
+      ),
+    [clients, payments, today]
+  );
+
   const todayPaymentsCount =
     payments.filter(
       (payment) =>
         payment.paymentDate === today
     ).length;
-
-  const [quickSaleOpen, setQuickSaleOpen] =
-    useState(false);
 
   if (initialLoading) {
     return (
@@ -700,6 +761,59 @@ function DashboardPageContent() {
 
               <Link to="/payments">
                 <StatCard
+                  label="Старт сегодня"
+                  hint="отправить ссылку на лида куратору"
+                  value={
+                    curatorStartsToday.length
+                  }
+                  color="text-purple-400"
+                  className="h-full hover:bg-slate-800 transition-colors"
+                />
+              </Link>
+
+              <Link to="/subscriptions">
+                <StatCard
+                  label={
+                    plannedTopups.monthLabel
+                      ? `План доплат · ${plannedTopups.monthLabel}`
+                      : "План доплат"
+                  }
+                  hint="остаток в текущем месяце"
+                  value={formatMoney(
+                    plannedTopups.monthRemain
+                  )}
+                  color="text-cyan-300"
+                  className="h-full hover:bg-slate-800 transition-colors"
+                />
+              </Link>
+
+              <Link to="/subscriptions">
+                <StatCard
+                  label="Всего доплат"
+                  hint="остаток на всё время"
+                  value={formatMoney(
+                    plannedTopups.totalRemain
+                  )}
+                  color="text-cyan-400"
+                  className="h-full hover:bg-slate-800 transition-colors"
+                />
+              </Link>
+
+              <Link to="/payments?tab=bookings">
+                <StatCard
+                  label="Бронь ББ"
+                  hint="до доплаты ББ"
+                  value={
+                    plannedTopups.bookingsCount ??
+                    "—"
+                  }
+                  color="text-amber-300"
+                  className="h-full hover:bg-slate-800 transition-colors"
+                />
+              </Link>
+
+              <Link to="/payments">
+                <StatCard
                   label="Сегодняшние оплаты"
                   value={todayPaymentsCount}
                   color="text-green-400"
@@ -708,6 +822,65 @@ function DashboardPageContent() {
               </Link>
 
             </div>
+
+            {curatorStartsToday.length > 0 && (
+              <div className="bg-slate-800/60 p-4 rounded-xl">
+                <div className="text-purple-300 font-bold mb-3">
+                  Старт сегодня ({today})
+                </div>
+                <div className="space-y-3">
+                  {curatorStartsToday
+                    .slice(0, 8)
+                    .map((item) => (
+                      <div
+                        key={item.id}
+                        className="text-sm space-y-1"
+                      >
+                        <div className="font-semibold">
+                          {item.clientName}
+                          {item.course
+                            ? ` · ${item.course}`
+                            : ""}
+                        </div>
+                        <div className="flex flex-wrap gap-x-3 gap-y-1 text-slate-400">
+                          {item.dialogLink && (
+                            <a
+                              href={
+                                item.dialogLink
+                              }
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-cyan-400 hover:underline"
+                            >
+                              Диалог
+                            </a>
+                          )}
+                          {item.vkLink && (
+                            <a
+                              href={
+                                item.vkLink
+                              }
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-cyan-400 hover:underline"
+                            >
+                              VK
+                            </a>
+                          )}
+                          {item.clientId && (
+                            <Link
+                              to={`/client/${item.clientId}`}
+                              className="text-purple-300 hover:underline"
+                            >
+                              Отправить куратору →
+                            </Link>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            )}
 
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
 

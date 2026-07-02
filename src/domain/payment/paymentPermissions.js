@@ -1,7 +1,6 @@
 import {
-  getCurrentManagerId,
-  getFirestoreManagerId,
-} from "../auth/roleHelpers";
+  canAccessPayment,
+} from "../auth/permissionHelpers";
 
 import {
   isOptionalStartDateDealType,
@@ -9,6 +8,52 @@ import {
 
 export const MANAGER_PAYMENT_EDIT_WINDOW_MS =
   30 * 60 * 1000;
+
+/** Start date on payment does not affect client.amount — skip client recalc. */
+export function shouldSkipClientRecalcForPaymentUpdates(
+  updates = {}
+) {
+  return (
+    updates.startDate !== undefined &&
+    updates.amount === undefined
+  );
+}
+
+/** Only startDate changes for ББ / Рассылка (no client amount recalc). */
+export function isStartDateOnlyPaymentUpdates(
+  updates,
+  payment
+) {
+  if (
+    !shouldSkipClientRecalcForPaymentUpdates(
+      updates
+    )
+  ) {
+    return false;
+  }
+
+  const optionalStartDate =
+    isOptionalStartDateDealType(
+      payment?.dealType
+    ) ||
+    isOptionalStartDateDealType(
+      payment?.dealTypeId
+    );
+
+  if (!optionalStartDate) {
+    return false;
+  }
+
+  return (
+    updates.paymentDate === undefined &&
+    updates.dealType === undefined &&
+    updates.paymentSystem === undefined &&
+    updates.invoiceNumber === undefined &&
+    updates.course === undefined &&
+    updates.tariff === undefined &&
+    updates.comment === undefined
+  );
+}
 
 export function isPaymentDeleted(payment) {
   return Boolean(payment?.deletedAt);
@@ -48,11 +93,11 @@ export function canEditPayment(
     return false;
   }
 
-  const managerId = userData.managerId;
-
   if (
-    !managerId ||
-    payment.managerId !== managerId
+    !canAccessPayment(
+      userData,
+      payment
+    )
   ) {
     return false;
   }
@@ -60,33 +105,6 @@ export function canEditPayment(
   return isWithinManagerEditWindow(
     payment,
     now
-  );
-}
-
-function paymentOwnedByManager(
-  payment,
-  userData
-) {
-  if (userData?.role !== "manager") {
-    return false;
-  }
-
-  const canonicalId =
-    getCurrentManagerId(userData);
-  const firestoreId =
-    getFirestoreManagerId(userData);
-  const managerName =
-    userData?.name || "";
-
-  return (
-    (canonicalId &&
-      payment.managerId ===
-        canonicalId) ||
-    (firestoreId &&
-      payment.managerId ===
-        firestoreId) ||
-    (managerName &&
-      payment.manager === managerName)
   );
 }
 
@@ -110,14 +128,17 @@ export function canEditPaymentStartDate(
   if (
     !isOptionalStartDateDealType(
       payment.dealType
+    ) &&
+    !isOptionalStartDateDealType(
+      payment.dealTypeId
     )
   ) {
     return false;
   }
 
-  return paymentOwnedByManager(
-    payment,
-    userData
+  return canAccessPayment(
+    userData,
+    payment
   );
 }
 

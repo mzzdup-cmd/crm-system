@@ -59,17 +59,32 @@ export function usePendingSales() {
     }
 
     setConnected(true);
+    let cancelled = false;
+
+    const timeoutId = window.setTimeout(
+      () => {
+        if (!cancelled) {
+          setInitialLoading(false);
+        }
+      },
+      10000
+    );
 
     const unsubscribe =
       subscribePendingSalesForUser(
         userData,
         (items) => {
           setPendingSales(items);
-          setInitialLoading(false);
+          if (!cancelled) {
+            window.clearTimeout(timeoutId);
+            setInitialLoading(false);
+          }
         }
       );
 
     return () => {
+      cancelled = true;
+      window.clearTimeout(timeoutId);
       setConnected(false);
       unsubscribe();
     };

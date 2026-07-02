@@ -11,6 +11,8 @@ import {
   getUsersByManagerIds,
 } from "./userService";
 
+import { auth } from "./firebase";
+
 import {
   getManagerIdByName,
 } from "../constants/managers";
@@ -85,13 +87,14 @@ export async function maybeNotifyMissingVkLink({
     return null;
   }
 
-  const users =
-    await getUsersByManagerIds([
-      managerId,
-    ]);
-
   const userId =
-    userData?.uid || users[0]?.uid;
+    auth.currentUser?.uid ||
+    userData?.uid ||
+    (
+      await getUsersByManagerIds([
+        managerId,
+      ])
+    )[0]?.uid;
 
   if (!userId) {
     return null;
@@ -157,7 +160,9 @@ export async function syncMissingVkRemindersForUser(
   await Promise.all(
     clientsMissingVk.map((client) =>
       notifyMissingVkLink({
-        userId: userData.uid,
+        userId:
+          auth.currentUser?.uid ||
+          userData.uid,
         client,
         managerId: client.managerId,
       }).catch((error) => {

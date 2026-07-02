@@ -191,6 +191,16 @@ function AppRoutes() {
           />
 
           <Route
+            path="/bookings"
+            element={
+              <Navigate
+                to="/payments?tab=bookings"
+                replace
+              />
+            }
+          />
+
+          <Route
             path="/salary"
             element={
               <LazyPage>

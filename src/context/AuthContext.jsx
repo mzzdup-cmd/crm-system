@@ -10,8 +10,10 @@ import {
   onAuthStateChanged,
 } from "firebase/auth";
 
-import { getUserData }
-from "../services/userService";
+import {
+  getUserData,
+  ensureUserProfile,
+} from "../services/userService";
 
 const AuthContext =
   createContext();
@@ -42,22 +44,33 @@ export function AuthProvider({
 
           setUser(currentUser);
 
-          if (currentUser) {
+          try {
+            if (currentUser) {
+              let data =
+                await getUserData(
+                  currentUser.uid
+                );
 
-            const data =
-              await getUserData(
-                currentUser.uid
-              );
+              if (!data) {
+                data =
+                  await ensureUserProfile(
+                    currentUser
+                  );
+              }
 
-            setUserData(data);
-
-          } else {
-
+              setUserData(data);
+            } else {
+              setUserData(null);
+            }
+          } catch (error) {
+            console.error(
+              "Failed to load user profile:",
+              error
+            );
             setUserData(null);
-
+          } finally {
+            setLoading(false);
           }
-
-          setLoading(false);
 
         }
 

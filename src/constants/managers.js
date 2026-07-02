@@ -15,6 +15,13 @@ export const MANAGER_NAMES = MANAGERS.map(
 );
 
 export function getManagerById(id) {
+  if (id === "vilu_petrova") {
+    return {
+      id: "vilu_petrova",
+      name: "Виолетта Петрова",
+    };
+  }
+
   return MANAGERS.find(
     (manager) => manager.id === id
   );

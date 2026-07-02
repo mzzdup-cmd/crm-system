@@ -34,6 +34,12 @@ from "../ui/MoneyInput";
 import ConfirmModal
 from "../ui/ConfirmModal";
 
+import { VkLinkInput }
+from "../vk/VkLinkInput";
+
+import CuratorStartDateField
+from "./CuratorStartDateField";
+
 const inputClass =
   "mt-1 w-full bg-slate-800 p-3.5 rounded-xl";
 
@@ -70,6 +76,8 @@ export default function PaymentEditModal({
         payment.paymentDate ?? "",
       startDate:
         payment.startDate ?? "",
+      curatorStartDate:
+        payment.curatorStartDate ?? "",
       course: payment.course ?? "",
       tariff: payment.tariff ?? "",
       budget: "",
@@ -122,9 +130,6 @@ export default function PaymentEditModal({
       payment.dealType
     );
 
-  const formDisabled =
-    !editable && !canEditStartDate;
-
   function handleChange(field, value) {
     setForm((current) => ({
       ...current,
@@ -147,6 +152,8 @@ export default function PaymentEditModal({
         paymentDate:
           form.paymentDate,
         startDate: form.startDate,
+        curatorStartDate:
+          form.curatorStartDate,
         course: form.course,
         tariff: form.tariff,
       },
@@ -266,6 +273,7 @@ export default function PaymentEditModal({
                 Бюджет клиента
               </span>
               <MoneyInput
+                disabled={!editable}
                 value={form.budget}
                 onChange={(value) =>
                   handleChange(
@@ -283,6 +291,7 @@ export default function PaymentEditModal({
               </span>
               <select
                 value={form.course}
+                disabled={!editable}
                 onChange={(e) =>
                   handleChange(
                     "course",
@@ -311,6 +320,7 @@ export default function PaymentEditModal({
               </span>
               <select
                 value={form.tariff}
+                disabled={!editable}
                 onChange={(e) =>
                   handleChange(
                     "tariff",
@@ -337,12 +347,13 @@ export default function PaymentEditModal({
               <span className="text-sm text-slate-400">
                 VK ссылка
               </span>
-              <input
+              <VkLinkInput
                 value={form.vkLink}
-                onChange={(e) =>
+                disabled={!editable}
+                onChange={(value) =>
                   handleChange(
                     "vkLink",
-                    e.target.value
+                    value
                   )
                 }
                 className={inputClass}
@@ -356,6 +367,7 @@ export default function PaymentEditModal({
               <input
                 type="date"
                 required
+                disabled={!editable}
                 value={form.paymentDate}
                 onChange={(e) =>
                   handleChange(
@@ -397,12 +409,24 @@ export default function PaymentEditModal({
               )}
             </label>
 
+            <CuratorStartDateField
+              value={form.curatorStartDate}
+              onChange={(value) =>
+                handleChange(
+                  "curatorStartDate",
+                  value
+                )
+              }
+              inputClass={inputClass}
+            />
+
             <label className="block">
               <span className="text-sm text-slate-400">
                 Тип сделки
               </span>
               <input
                 required
+                disabled={!editable}
                 value={form.dealType}
                 onChange={(e) =>
                   handleChange(
@@ -420,6 +444,7 @@ export default function PaymentEditModal({
               </span>
               <select
                 value={form.paymentSystem}
+                disabled={!editable}
                 onChange={(e) =>
                   handleChange(
                     "paymentSystem",
@@ -449,6 +474,7 @@ export default function PaymentEditModal({
                 Номер счёта
               </span>
               <input
+                disabled={!editable}
                 value={form.invoiceNumber}
                 onChange={(e) =>
                   handleChange(
@@ -465,6 +491,7 @@ export default function PaymentEditModal({
                 Комментарий
               </span>
               <textarea
+                disabled={!editable}
                 value={form.comment}
                 onChange={(e) =>
                   handleChange(
@@ -494,7 +521,9 @@ export default function PaymentEditModal({
             <button
               type="submit"
               disabled={
-                saving || formDisabled
+                saving ||
+                (!editable &&
+                  !canEditStartDate)
               }
               className="
                 px-4 py-2 rounded-xl font-semibold

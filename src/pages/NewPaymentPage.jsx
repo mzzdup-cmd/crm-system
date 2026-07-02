@@ -61,7 +61,12 @@ import {
   isRejectDealType,
   resolveDealTypeId,
   resolveLegacyTtDealTypeId,
+  showCuratorStartDateField,
 } from "../constants/dealTypes";
+
+import {
+  BB_BOOKING_STAGE,
+} from "../domain/client/bbBookingLogic";
 
 import { COURSES } from "../constants/courses";
 import { TARIFFS } from "../constants/tariffs";
@@ -94,14 +99,24 @@ from "../components/ui/MoneyInput";
 import StartDateField
 from "../components/payments/StartDateField";
 
+import CuratorStartDateField
+from "../components/payments/CuratorStartDateField";
+
 import TrafficSourceSelect
 from "../components/traffic/TrafficSourceSelect";
+
+import { VkLinkInput }
+from "../components/vk/VkLinkInput";
 
 import { useTrafficSources }
 from "../hooks/useTrafficSources";
 
 import { usePermissions }
 from "../hooks/usePermissions";
+
+import {
+  maybeNotifyMissingVkLink,
+} from "../services/missingVkReminderService";
 
 import {
   addTrafficSource,
@@ -114,6 +129,27 @@ import {
 
 const inputClass =
   "w-full bg-slate-800 p-3.5 rounded-xl";
+
+function FieldLabel({
+  children,
+  done = false,
+}) {
+  return (
+    <div className="flex items-center justify-between gap-2 mb-1">
+      <span className="text-sm text-slate-400">
+        {children}
+      </span>
+      {done ? (
+        <span
+          className="text-green-400 text-sm font-bold shrink-0"
+          aria-label="Заполнено"
+        >
+          ✓
+        </span>
+      ) : null}
+    </div>
+  );
+}
 
 function VkLinkHint({ visible }) {
   if (!visible) {
@@ -227,6 +263,9 @@ export default function NewPaymentPage() {
   const [manualStartDate, setManualStartDate] =
     useState("");
 
+  const [curatorStartDate, setCuratorStartDate] =
+    useState("");
+
   const [selectedStream, setSelectedStream] =
     useState("");
 
@@ -283,9 +322,16 @@ export default function NewPaymentPage() {
   const actor = userData
     ? {
         ...userData,
-        uid: user?.uid,
+        uid: user?.uid || userData.uid,
+        email:
+          user?.email ||
+          userData.email ||
+          null,
       }
     : null;
+
+  const createdByUid =
+    user?.uid || actor?.uid || null;
 
   const isNewClient =
     isNewClientDealType(dealTypeId);
@@ -301,6 +347,19 @@ export default function NewPaymentPage() {
 
   const isBbDeal =
     isBbDealType(dealTypeId);
+
+  const curatorDealTypeId =
+    isLegacy &&
+    isLegacyTableTtDealType(
+      legacyTtDealTypeId
+    )
+      ? legacyTtDealTypeId
+      : dealTypeId;
+
+  const showCuratorStartDate =
+    showCuratorStartDateField(
+      curatorDealTypeId
+    );
 
   const activeDealTypeLabel =
     getDealTypeLabel(
@@ -699,6 +758,7 @@ export default function NewPaymentPage() {
     setClientNote("");
     setPaymentDate("");
     setManualStartDate("");
+    setCuratorStartDate("");
     setSelectedStream("");
     setIsLegacyClientMode(false);
   }
@@ -770,10 +830,12 @@ export default function NewPaymentPage() {
         startDate: isRejectDeal
           ? ""
           : getStartDateValue(),
+        curatorStartDate,
         firstContactDate: firstContact,
         budget: 0,
         ...getSourcePayload(),
         userData: actor,
+        createdByUid,
       });
 
       toast.success(
@@ -893,6 +955,7 @@ export default function NewPaymentPage() {
           bsId,
           dialogLink: link,
           userData: actor,
+        createdByUid,
         });
 
       setLegacySubscriberProfile(found);
@@ -1010,6 +1073,7 @@ export default function NewPaymentPage() {
         startDate: isRejectDeal
           ? ""
           : getStartDateValue(),
+        curatorStartDate,
         firstContactDate:
           profile?.firstContact ||
           profile?.firstContactDate ||
@@ -1026,6 +1090,7 @@ export default function NewPaymentPage() {
           ? Number(profile.budget || 0)
           : parseMoneyNumber(budget),
         userData: actor,
+        createdByUid,
       });
 
       toast.success(
@@ -1096,8 +1161,10 @@ export default function NewPaymentPage() {
         startDate: isRejectDeal
           ? ""
           : getStartDateValue(),
+        curatorStartDate,
         ...getSourcePayload(),
         userData: actor,
+        createdByUid,
       });
 
       if (pendingSaleId) {
@@ -1224,11 +1291,15 @@ export default function NewPaymentPage() {
         dealType: dealTypeLabel,
         paymentDate,
         startDate,
+        subscriptionStage: isBbDeal
+          ? BB_BOOKING_STAGE
+          : null,
         ...getSourcePayload(),
         userData: actor,
+        createdByUid,
       });
 
-      await createPayment({
+      const paymentResult = await createPayment({
         client,
         dealType: dealTypeLabel,
         paymentAmount:
@@ -1240,9 +1311,25 @@ export default function NewPaymentPage() {
         manager,
         paymentDate,
         startDate,
+        curatorStartDate,
         ...getSourcePayload(),
         userData: actor,
+        createdByUid,
       });
+
+      try {
+        await maybeNotifyMissingVkLink({
+          client,
+          payment: paymentResult?.payment,
+          managerName: manager,
+          userData: actor,
+        });
+      } catch (error) {
+        console.warn(
+          "Missing VK reminder skipped:",
+          error
+        );
+      }
 
       toast.success(
         isRejectDeal
@@ -1746,14 +1833,10 @@ export default function NewPaymentPage() {
                     className={inputClass}
                   />
 
-                  <input
+                  <VkLinkInput
                     placeholder="Ссылка VK *"
                     value={vkLink}
-                    onChange={(e) =>
-                      setVkLink(
-                        e.target.value
-                      )
-                    }
+                    onChange={setVkLink}
                     className={inputClass}
                   />
 
@@ -2080,16 +2163,25 @@ export default function NewPaymentPage() {
             </FormSection>
 
             <FormSection title="Клиент">
-              <input
-                placeholder="Ссылка на диалог *"
-                value={dialogLink}
-                onChange={(e) =>
-                  setDialogLink(
-                    e.target.value
-                  )
-                }
-                className={inputClass}
-              />
+              <label className="block">
+                <FieldLabel
+                  done={Boolean(
+                    dialogLink.trim()
+                  )}
+                >
+                  Ссылка на диалог *
+                </FieldLabel>
+                <input
+                  placeholder="https://..."
+                  value={dialogLink}
+                  onChange={(e) =>
+                    setDialogLink(
+                      e.target.value
+                    )
+                  }
+                  className={inputClass}
+                />
+              </label>
 
               <input
                 placeholder="Имя клиента"
@@ -2102,13 +2194,12 @@ export default function NewPaymentPage() {
                 className={inputClass}
               />
 
-              <input
+              <VkLinkInput
                 placeholder="Ссылка VK"
                 value={vkLink}
-                onChange={(e) =>
-                  setVkLink(e.target.value)
-                }
+                onChange={setVkLink}
                 className={inputClass}
+                showHint={false}
               />
 
               <VkLinkHint
@@ -2185,6 +2276,16 @@ export default function NewPaymentPage() {
                   setManualStartDate
                 }
               />
+
+              {showCuratorStartDate && (
+                <CuratorStartDateField
+                  value={curatorStartDate}
+                  onChange={
+                    setCuratorStartDate
+                  }
+                  inputClass={inputClass}
+                />
+              )}
             </FormSection>
 
             <FormSection title="Источник">
@@ -2303,6 +2404,9 @@ export default function NewPaymentPage() {
           isExistingClient && (
             <>
               <FormSection title="Сделка">
+                <FieldLabel done={dealTypeKnown}>
+                  Тип сделки *
+                </FieldLabel>
                 <select
                   value={dealTypeId}
                   onChange={(e) => {
@@ -2328,16 +2432,25 @@ export default function NewPaymentPage() {
               </FormSection>
 
               <FormSection title="Клиент">
-                <input
-                  placeholder="Ссылка на диалог *"
-                  value={dialogLink}
-                  onChange={(e) =>
-                    findClient(
-                      e.target.value
-                    )
-                  }
-                  className={inputClass}
-                />
+                <label className="block">
+                  <FieldLabel
+                    done={Boolean(
+                      dialogLink.trim()
+                    )}
+                  >
+                    Ссылка на диалог *
+                  </FieldLabel>
+                  <input
+                    placeholder="https://..."
+                    value={dialogLink}
+                    onChange={(e) =>
+                      findClient(
+                        e.target.value
+                      )
+                    }
+                    className={inputClass}
+                  />
+                </label>
 
                 {foundClient && (
                   <div className="bg-slate-800/60 p-4 rounded-xl text-sm space-y-2">
@@ -2435,14 +2548,10 @@ export default function NewPaymentPage() {
                       className={inputClass}
                     />
 
-                    <input
+                    <VkLinkInput
                       placeholder="Ссылка VK *"
                       value={vkLink}
-                      onChange={(e) =>
-                        setVkLink(
-                          e.target.value
-                        )
-                      }
+                      onChange={setVkLink}
                       className={inputClass}
                     />
 
@@ -2509,28 +2618,41 @@ export default function NewPaymentPage() {
                 <>
                   {!isRejectDeal && (
                     <FormSection title="Сделка">
-                      <MoneyInput
-                        placeholder={
-                          dealTypeId ===
+                      <label className="block">
+                        <FieldLabel
+                          done={
+                            parseMoneyNumber(
+                              paymentAmount
+                            ) > 0
+                          }
+                        >
+                          {dealTypeId ===
                           "refund"
                             ? "Сумма возврата *"
-                            : "Сумма оплаты *"
-                        }
-                        required
-                        value={paymentAmount}
-                        onChange={
-                          setPaymentAmount
-                        }
-                        className={inputClass}
-                      />
+                            : "Сумма оплаты *"}
+                        </FieldLabel>
+                        <MoneyInput
+                          placeholder=""
+                          required
+                          value={paymentAmount}
+                          onChange={
+                            setPaymentAmount
+                          }
+                          className={inputClass}
+                        />
+                      </label>
                     </FormSection>
                   )}
 
                   <FormSection title="Даты">
                     <label className="block">
-                      <span className="text-sm text-slate-400">
+                      <FieldLabel
+                        done={Boolean(
+                          paymentDate
+                        )}
+                      >
                         Дата оплаты *
-                      </span>
+                      </FieldLabel>
                       <input
                         type="date"
                         value={paymentDate}
@@ -2539,7 +2661,7 @@ export default function NewPaymentPage() {
                             e.target.value
                           )
                         }
-                        className={`${inputClass} mt-1`}
+                        className={inputClass}
                       />
                     </label>
 
@@ -2586,6 +2708,20 @@ export default function NewPaymentPage() {
                         }
                       />
                     )}
+
+                    {showCuratorStartDate && (
+                      <CuratorStartDateField
+                        value={
+                          curatorStartDate
+                        }
+                        onChange={
+                          setCuratorStartDate
+                        }
+                        inputClass={
+                          inputClass
+                        }
+                      />
+                    )}
                   </FormSection>
 
                   {isLegacyClientMode && (
@@ -2626,29 +2762,38 @@ export default function NewPaymentPage() {
                   )}
 
                   <FormSection title="Дополнительно">
-                    <select
-                      value={paymentSystem}
-                      onChange={(e) =>
-                        setPaymentSystem(
-                          e.target.value
-                        )
-                      }
-                      className={inputClass}
-                    >
-                      <option value="">
+                    <label className="block">
+                      <FieldLabel
+                        done={Boolean(
+                          paymentSystem
+                        )}
+                      >
                         Платежная система *
-                      </option>
-                      {PAYMENT_SYSTEMS.map(
-                        (system) => (
-                          <option
-                            key={system}
-                            value={system}
-                          >
-                            {system}
-                          </option>
-                        )
-                      )}
-                    </select>
+                      </FieldLabel>
+                      <select
+                        value={paymentSystem}
+                        onChange={(e) =>
+                          setPaymentSystem(
+                            e.target.value
+                          )
+                        }
+                        className={inputClass}
+                      >
+                        <option value="">
+                          Выберите систему
+                        </option>
+                        {PAYMENT_SYSTEMS.map(
+                          (system) => (
+                            <option
+                              key={system}
+                              value={system}
+                            >
+                              {system}
+                            </option>
+                          )
+                        )}
+                      </select>
+                    </label>
 
                     {requiresInvoice(
                       paymentSystem
@@ -2732,6 +2877,9 @@ export default function NewPaymentPage() {
 
         {!dealTypeId && (
           <FormSection title="Сделка">
+            <FieldLabel done={false}>
+              Тип сделки *
+            </FieldLabel>
             <select
               value={dealTypeId}
               onChange={(e) =>

@@ -1,6 +1,7 @@
 import {
   doc,
   getDoc,
+  setDoc,
   collection,
   getDocs,
   query,
@@ -11,6 +12,12 @@ import { db } from "./firebase";
 import {
   normalizeUserRole,
 } from "../domain/auth/roleHelpers";
+import {
+  expandManagerIdAliases,
+} from "../domain/auth/managerMigration";
+import {
+  getProvisionProfileForEmail,
+} from "../constants/provisionProfiles";
 
 export function normalizeUserData(
   uid,
@@ -21,8 +28,8 @@ export function normalizeUserData(
   }
 
   return normalizeUserRole({
-    uid,
     ...data,
+    uid,
   });
 }
 
@@ -49,6 +56,55 @@ export async function getUserData(uid) {
   }
 
   return null;
+}
+
+/**
+ * Create users/{uid} on first login when Auth exists but Firestore profile is missing.
+ */
+export async function ensureUserProfile(
+  authUser
+) {
+  if (!authUser?.uid || !authUser?.email) {
+    return null;
+  }
+
+  const existing = await getUserData(
+    authUser.uid
+  );
+
+  if (existing) {
+    return existing;
+  }
+
+  const template =
+    getProvisionProfileForEmail(
+      authUser.email
+    );
+
+  if (!template) {
+    console.warn(
+      "[userService] no provision profile for email:",
+      authUser.email
+    );
+    return null;
+  }
+
+  const profile = {
+    email: authUser.email,
+    ...template,
+    updatedAt: Date.now(),
+  };
+
+  await setDoc(
+    doc(db, "users", authUser.uid),
+    profile,
+    { merge: true }
+  );
+
+  return normalizeUserData(
+    authUser.uid,
+    profile
+  );
 }
 
 export async function getUsersByRole(role) {
@@ -80,7 +136,13 @@ export async function getUsersByManagerIds(
     return [];
   }
 
-  const uniqueIds = [...new Set(managerIds)];
+  const uniqueIds = [
+    ...new Set(
+      managerIds.flatMap((managerId) =>
+        expandManagerIdAliases(managerId)
+      )
+    ),
+  ];
   const results = [];
 
   for (const managerId of uniqueIds) {

@@ -51,6 +51,9 @@ import {
 import LoadingState
 from "../components/LoadingState";
 
+import { VkLinkInput }
+from "../components/vk/VkLinkInput";
+
 
 export default function ClientDetailsPage() {
 
@@ -392,19 +395,17 @@ export default function ClientDetailsPage() {
                 закроется автоматически
               </p>
               <div className="flex flex-col sm:flex-row gap-3">
-                <input
-                  value={vkDraft}
-                  onChange={(e) =>
-                    setVkDraft(
-                      e.target.value
-                    )
-                  }
-                  placeholder="https://vk.com/..."
-                  className="
-                    flex-1 bg-slate-800
-                    p-3 rounded-xl
-                  "
-                />
+                <div className="flex-1">
+                  <VkLinkInput
+                    value={vkDraft}
+                    onChange={setVkDraft}
+                    placeholder="https://vk.com/..."
+                    className="
+                      w-full bg-slate-800
+                      p-3 rounded-xl
+                    "
+                  />
+                </div>
                 <button
                   type="button"
                   onClick={saveVkLink}

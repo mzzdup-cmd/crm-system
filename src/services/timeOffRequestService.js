@@ -14,23 +14,20 @@ import {
 
 import {
   isLeadership,
-  getCurrentManagerId,
-  getFirestoreManagerId,
+  resolveOwnershipManagerFieldsForWrite,
 } from "../domain/auth/roleHelpers";
 
 import {
-  buildCreateAudit,
+  buildWriteAuditFields,
   buildUpdateAudit,
 } from "../domain/audit/auditFields";
+
+import { auth } from "./firebase";
 
 import {
   REQUEST_STATUS,
   normalizeRequestStatus,
 } from "../constants/timeOff";
-
-import {
-  getManagerNameById,
-} from "../constants/managers";
 
 import {
   applyApprovedDayOff,
@@ -72,10 +69,12 @@ export async function createTimeOffRequest({
   date,
   comment = "",
   userData,
+  createdByUid = null,
 }) {
-  const managerId =
-    getFirestoreManagerId(userData) ||
-    getCurrentManagerId(userData);
+  const { managerId, manager } =
+    resolveOwnershipManagerFieldsForWrite(
+      userData
+    );
 
   if (!managerId) {
     throw new Error(
@@ -85,17 +84,18 @@ export async function createTimeOffRequest({
 
   const payload = {
     managerId,
-    manager:
-      userData.name ||
-      getManagerNameById(managerId),
+    manager,
     date,
     comment: comment.trim(),
     status: REQUEST_STATUS.PENDING,
     reviewComment: "",
     reviewedBy: null,
     reviewedAt: null,
-    createdAt: Date.now(),
-    ...buildCreateAudit(userData),
+    ...buildWriteAuditFields(
+      userData,
+      createdByUid ||
+        auth.currentUser?.uid
+    ),
   };
 
   const docRef = await addDoc(

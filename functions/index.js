@@ -143,3 +143,15 @@ exports.triggerTtSheetsSync = onCall(
     });
   }
 );
+
+
+const {
+  updatePaymentStartDateHandler,
+} = require("./src/payments/updatePaymentStartDateHandler");
+
+exports.updatePaymentStartDate = onCall(
+  {
+    region: "europe-west1",
+  },
+  updatePaymentStartDateHandler
+);

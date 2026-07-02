@@ -9,7 +9,7 @@ import {
   where,
 } from "firebase/firestore";
 
-import { db } from "./firebase";
+import { auth, db } from "./firebase";
 import {
   getManagerByName,
   getManagerById,
@@ -23,7 +23,7 @@ import {
   resolveManagerFieldsForWrite,
 } from "../domain/auth/roleHelpers";
 import {
-  buildCreateAudit,
+  buildWriteAuditFields,
 } from "../domain/audit/auditFields";
 import {
   canAccessClient,
@@ -166,7 +166,11 @@ export async function findClientByDialogLink(
 }
 
 export async function addClient(formData) {
-  const { userData, ...rest } = formData;
+  const {
+    userData,
+    createdByUid,
+    ...rest
+  } = formData;
 
   const managerFields =
     userData
@@ -179,6 +183,11 @@ export async function addClient(formData) {
   const payload = normalizeClientPayload({
     ...rest,
     ...managerFields,
+    ...(rest.vkLink !== undefined
+      ? {
+          vkLink: rest.vkLink,
+        }
+      : {}),
   });
 
   const nextPaymentDate = resolveNextPaymentDate({
@@ -187,16 +196,21 @@ export async function addClient(formData) {
     paymentDate: payload.paymentDate,
   });
 
+  const authUid =
+    auth.currentUser?.uid ?? null;
+  const auditFields = userData
+    ? buildWriteAuditFields(
+        userData,
+        createdByUid || authUid
+      )
+    : {};
+
   const docRef = await addDoc(
     collection(db, "clients"),
     {
       ...payload,
       nextPaymentDate,
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-      ...(userData
-        ? buildCreateAudit(userData)
-        : {}),
+      ...auditFields,
     }
   );
 
@@ -232,6 +246,10 @@ export async function updateClient(id, data) {
 
   if ("budget" in data) {
     payload.budget = Number(data.budget || 0);
+  }
+
+  if ("vkLink" in data) {
+    payload.vkLink = data.vkLink;
   }
 
   await updateDoc(ref, payload);

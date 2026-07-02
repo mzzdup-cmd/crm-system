@@ -36,12 +36,18 @@ import {
   canDeletePayment,
   isPaymentDeleted,
   canEditPaymentStartDate,
+  isStartDateOnlyPaymentUpdates,
+  shouldSkipClientRecalcForPaymentUpdates,
 } from "../domain/payment/paymentPermissions";
 import {
-  buildCreateAudit,
+  buildWriteAuditFields,
   buildUpdateAudit,
   buildDeleteAudit,
 } from "../domain/audit/auditFields";
+import { auth } from "./firebase";
+import {
+  resolveAuditUser,
+} from "../domain/audit/resolveAuditUser";
 import {
   resolveManagerFromLegacy,
 } from "../domain/auth/managerMigration";
@@ -50,13 +56,19 @@ import {
 } from "../domain/payment/legacyPayment";
 import {
   isOptionalStartDateDealType,
+  isTopupBbDealType,
 } from "../constants/dealTypes";
+import {
+  BB_BOOKING_STAGE,
+} from "../domain/client/bbBookingLogic";
 import { updateClient, getClientById } from "./clientService";
-import { maybeNotifyMissingVkLink } from "./missingVkReminderService";
 import {
   maybeNotifyMissingStartDate,
   resolveMissingStartDateReminder,
 } from "./missingStartDateReminderService";
+import {
+  maybeNotifyCuratorStart,
+} from "./curatorStartReminderService";
 import { getManualBonusesForUser } from "./bonusService";
 import { getNightShiftsForUser } from "./shiftService";
 import {
@@ -74,6 +86,20 @@ function mapPaymentDoc(snapshot) {
     id: snapshot.id,
     ...normalized,
   };
+}
+
+function resolvePaymentManagerFields(
+  userData,
+  manager
+) {
+  if (userData) {
+    return resolveManagerFieldsForWrite(
+      userData,
+      manager
+    );
+  }
+
+  return resolveManagerFromLegacy(manager);
 }
 
 export function normalizePaymentPayload(data) {
@@ -112,6 +138,8 @@ export function normalizePaymentPayload(data) {
     isLegacy: legacy,
     isLegacyClient,
     startDate,
+    curatorStartDate:
+      data.curatorStartDate || "",
     createdAt: data.createdAt || Date.now(),
     syncedToSheets: data.syncedToSheets ?? false,
     deletedAt: data.deletedAt ?? null,
@@ -412,6 +440,125 @@ export async function recalculateClientAmount(
   };
 }
 
+/** Указать поток для ББ / Рассылка — без пересчёта клиента и лишних полей. */
+export async function updatePaymentStartDate({
+  paymentId,
+  startDate,
+  userData,
+}) {
+  const payment =
+    await getPaymentById(paymentId);
+
+  if (!payment) {
+    throw new Error(
+      "Оплата не найдена"
+    );
+  }
+
+  if (
+    !canEditPaymentStartDate(
+      payment,
+      userData
+    )
+  ) {
+    throw new Error(
+      "Нет прав на редактирование"
+    );
+  }
+
+  const optionalStartDate =
+    isOptionalStartDateDealType(
+      payment.dealType
+    ) ||
+    isOptionalStartDateDealType(
+      payment.dealTypeId
+    );
+
+  if (!optionalStartDate) {
+    throw new Error(
+      "Дата старта доступна только для ББ и Рассылки"
+    );
+  }
+
+  const hasTtRow = Boolean(
+    payment.ttRowNumber ||
+      payment.ttUpdatedRange
+  );
+  const startDateChanged =
+    (startDate || "") !==
+    (payment.startDate || "");
+  const shouldResyncStartDate =
+    payment.syncedToSheets === true &&
+    hasTtRow &&
+    startDateChanged;
+
+  const managerFields =
+    resolveManagerFieldsForWrite(
+      userData
+    );
+
+  const payload = {
+    startDate: startDate || "",
+    ...buildUpdateAudit(
+      resolveAuditUser(userData)
+    ),
+  };
+
+  if (managerFields.managerId) {
+    payload.managerId =
+      managerFields.managerId;
+    payload.manager =
+      managerFields.manager;
+  }
+
+  if (shouldResyncStartDate) {
+    payload.ttStartDateResyncPending = true;
+  }
+
+  try {
+    await updateDoc(
+      doc(db, "payments", paymentId),
+      payload
+    );
+  } catch (error) {
+    console.error(
+      "[paymentService] updatePaymentStartDate failed:",
+      {
+        paymentId,
+        dealType: payment.dealType,
+        dealTypeId: payment.dealTypeId,
+        managerId: payment.managerId,
+        manager: payment.manager,
+        payload,
+        code: error?.code,
+      }
+    );
+    throw error;
+  }
+
+  try {
+    await resolveMissingStartDateReminder(
+      {
+        ...payment,
+        ...payload,
+        id: paymentId,
+      },
+      userData
+    );
+  } catch (error) {
+    console.warn(
+      "Start date reminder resolve skipped:",
+      error
+    );
+  }
+
+  return {
+    id: paymentId,
+    ...payment,
+    ...payload,
+  };
+}
+
 export async function updatePayment({
   paymentId,
   updates,
@@ -465,7 +612,9 @@ export async function updatePayment({
 
   const payload = {
     ...updates,
-    ...buildUpdateAudit(userData),
+    ...buildUpdateAudit(
+      resolveAuditUser(userData)
+    ),
   };
 
   if (updates.amount !== undefined) {
@@ -488,14 +637,18 @@ export async function updatePayment({
       );
   }
 
+  if (
+    updates.curatorStartDate !== undefined
+  ) {
+    payload.curatorStartDate =
+      updates.curatorStartDate || "";
+  }
+
   const isStartDateOnlyUpdate =
-    optionalStartDate &&
-    updates.startDate !== undefined &&
-    updates.amount === undefined &&
-    updates.paymentDate === undefined &&
-    updates.dealType === undefined &&
-    updates.paymentSystem === undefined &&
-    updates.invoiceNumber === undefined;
+    isStartDateOnlyPaymentUpdates(
+      updates,
+      payment
+    );
 
   if (shouldResyncStartDate) {
     payload.ttStartDateResyncPending = true;
@@ -511,10 +664,45 @@ export async function updatePayment({
     payload.tariff = updates.tariff;
   }
 
-  await updateDoc(
-    doc(db, "payments", paymentId),
-    payload
-  );
+  if (
+    isStartDateOnlyUpdate &&
+    userData
+  ) {
+    const managerFields =
+      resolveManagerFieldsForWrite(
+        userData
+      );
+
+    if (managerFields.managerId) {
+      payload.managerId =
+        managerFields.managerId;
+      payload.manager =
+        managerFields.manager;
+    }
+  }
+
+  try {
+    await updateDoc(
+      doc(db, "payments", paymentId),
+      payload
+    );
+  } catch (error) {
+    if (error?.code === "permission-denied") {
+      console.error(
+        "[paymentService] startDate update denied:",
+        {
+          paymentId,
+          dealType: payment.dealType,
+          managerId: payment.managerId,
+          manager: payment.manager,
+          clientId: payment.clientId,
+          payloadKeys: Object.keys(payload),
+        }
+      );
+    }
+
+    throw error;
+  }
 
   if (payload.startDate?.trim()) {
     try {
@@ -534,11 +722,15 @@ export async function updatePayment({
     }
   }
 
-  const client = payment.clientId
-    ? await recalculateClientAmount(
-        payment.clientId
-      )
-    : null;
+  const client =
+    payment.clientId &&
+    !shouldSkipClientRecalcForPaymentUpdates(
+      updates
+    )
+      ? await recalculateClientAmount(
+          payment.clientId
+        )
+      : null;
 
   return {
     id: paymentId,
@@ -580,11 +772,18 @@ export async function updatePaymentWithClient({
     );
   }
 
-  const client = payment.clientId
-    ? await recalculateClientAmount(
-        payment.clientId
-      )
-    : null;
+  const startDateOnlyUpdate =
+    shouldSkipClientRecalcForPaymentUpdates(
+      paymentUpdates
+    );
+
+  const client =
+    payment.clientId &&
+    !startDateOnlyUpdate
+      ? await recalculateClientAmount(
+          payment.clientId
+        )
+      : null;
 
   return {
     ...result,
@@ -647,9 +846,11 @@ export async function addPaymentRecord({
   manager,
   paymentDate,
   startDate,
+  curatorStartDate = "",
   sourceId = null,
   sourceName = "",
   userData,
+  createdByUid = null,
 }) {
   const managerFields = userData
     ? resolveManagerFieldsForWrite(
@@ -689,11 +890,16 @@ export async function addPaymentRecord({
     managerId: managerFields.managerId,
     paymentDate,
     startDate,
+    curatorStartDate,
     sourceId: resolvedSourceId,
     sourceName: resolvedSourceName,
     syncedToSheets: false,
     ...(userData
-      ? buildCreateAudit(userData)
+      ? buildWriteAuditFields(
+          userData,
+          createdByUid ||
+            auth.currentUser?.uid
+        )
       : {}),
   });
 
@@ -760,14 +966,19 @@ export async function createLegacyClientPayment({
   manager,
   paymentDate,
   startDate,
+  curatorStartDate = "",
   firstContactDate,
   sourceId = null,
   sourceName = "",
   budget = 0,
   userData,
+  createdByUid = null,
 }) {
   const managerFields =
-    resolveManagerFromLegacy(manager);
+    resolvePaymentManagerFields(
+      userData,
+      manager
+    );
 
   const paymentPayload = normalizePaymentPayload({
     clientId: null,
@@ -782,7 +993,7 @@ export async function createLegacyClientPayment({
     isLegacy: true,
     isLegacyClient: true,
     dialogLink: dialogLink.trim(),
-    vkLink: vkLink.trim(),
+    vkLink,
     amount: paymentAmount,
     paymentSystem,
     invoiceNumber,
@@ -793,12 +1004,17 @@ export async function createLegacyClientPayment({
     managerId: managerFields.managerId,
     paymentDate,
     startDate,
+    curatorStartDate,
     sourceId,
     sourceName,
     budget: Number(budget || 0),
     syncedToSheets: false,
     ...(userData
-      ? buildCreateAudit(userData)
+      ? buildWriteAuditFields(
+          userData,
+          createdByUid ||
+            auth.currentUser?.uid
+        )
       : {}),
   });
 
@@ -807,10 +1023,26 @@ export async function createLegacyClientPayment({
     paymentPayload
   );
 
-  return {
+  const savedPayment = {
     id: docRef.id,
     ...paymentPayload,
   };
+
+  try {
+    await maybeNotifyCuratorStart({
+      payment: savedPayment,
+      managerName:
+        managerFields.manager,
+      userData,
+    });
+  } catch (error) {
+    console.warn(
+      "Curator start reminder skipped:",
+      error
+    );
+  }
+
+  return savedPayment;
 }
 
 export async function findLegacySubscriber({
@@ -924,9 +1156,13 @@ export async function createLegacyPayment({
   sourceId = null,
   sourceName = "",
   userData,
+  createdByUid = null,
 }) {
   const managerFields =
-    resolveManagerFromLegacy(manager);
+    resolvePaymentManagerFields(
+      userData,
+      manager
+    );
 
   const paymentPayload = normalizePaymentPayload({
     clientId: null,
@@ -948,7 +1184,11 @@ export async function createLegacyPayment({
     sourceName,
     syncedToSheets: false,
     ...(userData
-      ? buildCreateAudit(userData)
+      ? buildWriteAuditFields(
+          userData,
+          createdByUid ||
+            auth.currentUser?.uid
+        )
       : {}),
   });
 
@@ -974,9 +1214,11 @@ export async function createPayment({
   manager,
   paymentDate,
   startDate,
+  curatorStartDate = "",
   sourceId = null,
   sourceName = "",
   userData,
+  createdByUid = null,
 }) {
   const paymentPayload = await addPaymentRecord({
     client,
@@ -989,30 +1231,35 @@ export async function createPayment({
     manager,
     paymentDate,
     startDate,
+    curatorStartDate,
     sourceId,
     sourceName,
     userData,
+    createdByUid,
   });
 
-  const updatedClient =   await applyPaymentToClient({
-    client,
-    paymentAmount,
-    paymentDate,
-  });
-
-  try {
-    await maybeNotifyMissingVkLink({
+  let updatedClient =
+    await applyPaymentToClient({
       client,
-      payment: paymentPayload,
-      managerName: manager,
-      userData,
+      paymentAmount,
+      paymentDate,
     });
-  } catch (error) {
-    console.warn(
-      "VK reminder notification skipped:",
-      error
-    );
+
+  if (
+    isTopupBbDealType(dealType) &&
+    client.subscriptionStage ===
+      BB_BOOKING_STAGE
+  ) {
+    await updateClient(client.id, {
+      subscriptionStage: "converted",
+    });
+
+    updatedClient = {
+      ...updatedClient,
+      subscriptionStage: "converted",
+    };
   }
+
 
   try {
     await maybeNotifyMissingStartDate({
@@ -1023,6 +1270,20 @@ export async function createPayment({
   } catch (error) {
     console.warn(
       "Start date reminder skipped:",
+      error
+    );
+  }
+
+  try {
+    await maybeNotifyCuratorStart({
+      payment: paymentPayload,
+      client,
+      managerName: manager,
+      userData,
+    });
+  } catch (error) {
+    console.warn(
+      "Curator start reminder skipped:",
       error
     );
   }

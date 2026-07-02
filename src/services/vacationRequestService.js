@@ -13,15 +13,16 @@ import {
 } from "../domain/auth/managerMigration";
 
 import {
-  getCurrentManagerId,
-  getFirestoreManagerId,
   isLeadership,
+  resolveOwnershipManagerFieldsForWrite,
 } from "../domain/auth/roleHelpers";
 
 import {
-  buildCreateAudit,
+  buildWriteAuditFields,
   buildUpdateAudit,
 } from "../domain/audit/auditFields";
+
+import { auth } from "./firebase";
 
 import {
   REQUEST_STATUS,
@@ -77,10 +78,12 @@ export async function createVacationRequest({
   endDate,
   comment = "",
   userData,
+  createdByUid = null,
 }) {
-  const managerId =
-    getFirestoreManagerId(userData) ||
-    getCurrentManagerId(userData);
+  const { managerId, manager } =
+    resolveOwnershipManagerFieldsForWrite(
+      userData
+    );
 
   if (!managerId) {
     throw new Error(
@@ -101,9 +104,7 @@ export async function createVacationRequest({
 
   const payload = {
     managerId,
-    manager:
-      userData.name ||
-      getManagerNameById(managerId),
+    manager,
     startDate,
     endDate,
     daysCount,
@@ -112,8 +113,11 @@ export async function createVacationRequest({
     reviewComment: "",
     reviewedBy: null,
     reviewedAt: null,
-    createdAt: Date.now(),
-    ...buildCreateAudit(userData),
+    ...buildWriteAuditFields(
+      userData,
+      createdByUid ||
+        auth.currentUser?.uid
+    ),
   };
 
   const docRef = await addDoc(

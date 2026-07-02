@@ -187,6 +187,12 @@ export function isBbDealType(value) {
   return resolveDealTypeId(value) === "bb";
 }
 
+export function isTopupBbDealType(value) {
+  return (
+    resolveDealTypeId(value) === "topup_bb"
+  );
+}
+
 export function isMailingDealType(value) {
   return (
     resolveDealTypeId(value) === "mailing"
@@ -240,6 +246,42 @@ export function isRejectDealType(value) {
     typeof label === "string" &&
     label.startsWith("Отказ")
   );
+}
+
+export function isTopupDealType(value) {
+  const id = resolveDealTypeId(value);
+
+  return (
+    typeof id === "string" &&
+    id.startsWith("topup_")
+  );
+}
+
+export function isRefundDealType(value) {
+  return (
+    resolveDealTypeId(value) === "refund"
+  );
+}
+
+/** «Фактический старт (для куратора)» — только для новых стартов, не доплаты/отказы/возвраты. */
+export function showCuratorStartDateField(
+  value
+) {
+  const id = resolveDealTypeId(value);
+
+  if (!id) {
+    return true;
+  }
+
+  if (
+    isRejectDealType(id) ||
+    isTopupDealType(id) ||
+    isRefundDealType(id)
+  ) {
+    return false;
+  }
+
+  return true;
 }
 
 export function resolveLegacyTtDealTypeId(

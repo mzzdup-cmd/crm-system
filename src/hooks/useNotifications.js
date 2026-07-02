@@ -15,18 +15,17 @@ import {
 } from "../services/notificationService";
 
 import {
-  getClientsForUser,
-} from "../services/clientService";
-
-import {
-  syncMissingVkResolutionForUser,
-  syncMissingVkRemindersForUser,
-  mergeMissingVkReminders,
-} from "../services/missingVkReminderService";
+  subscribeClientsForUser,
+} from "../services/realtimeService";
 
 import {
   NOTIFICATION_TYPES,
 } from "../constants/notifications";
+
+import {
+  mergeMissingVkReminders,
+  countActiveMissingVkReminders,
+} from "../services/missingVkReminderService";
 
 export function useNotifications() {
   const { userData } = useAuth();
@@ -43,7 +42,6 @@ export function useNotifications() {
   useEffect(() => {
     if (!userData?.uid) {
       setNotifications([]);
-      setClients([]);
       return undefined;
     }
 
@@ -52,37 +50,25 @@ export function useNotifications() {
     const unsubscribe =
       subscribeToNotifications(
         userData.uid,
-        (items) => {
-          setNotifications(items);
-        }
+        setNotifications
       );
-
-    getClientsForUser(userData)
-      .then((items) => {
-        setClients(items);
-
-        return Promise.all([
-          syncMissingVkResolutionForUser(
-            userData.uid,
-            items
-          ),
-          syncMissingVkRemindersForUser(
-            userData,
-            items
-          ),
-        ]);
-      })
-      .catch((error) => {
-        console.error(
-          "Missing VK sync failed:",
-          error
-        );
-      });
 
     return () => {
       setConnected(false);
       unsubscribe();
     };
+  }, [userData]);
+
+  useEffect(() => {
+    if (!userData) {
+      setClients([]);
+      return undefined;
+    }
+
+    return subscribeClientsForUser(
+      userData,
+      setClients
+    );
   }, [userData]);
 
   const missingVkReminders = useMemo(
@@ -94,18 +80,33 @@ export function useNotifications() {
     [notifications, clients]
   );
 
-  const unreadCount = useMemo(
-    () =>
+  const unreadCount = useMemo(() => {
+    const standardUnread =
       countUnreadNotifications(
-        notifications
-      ) +
+        notifications.filter(
+          (item) =>
+            item.type !==
+            NOTIFICATION_TYPES.MISSING_VK_LINK
+        )
+      );
+
+    const vkUnread =
       missingVkReminders.filter(
-        (item) => item.data?.fromClient
-      ).length,
-    [notifications, missingVkReminders]
-  );
+        (item) => !item.read
+      ).length;
+
+    return standardUnread + vkUnread;
+  }, [notifications, missingVkReminders]);
 
   async function markRead(id) {
+    if (
+      String(id).startsWith(
+        "missing_vk_client_"
+      )
+    ) {
+      return;
+    }
+
     await markNotificationRead(id);
 
     setNotifications((current) =>
@@ -141,6 +142,14 @@ export function useNotifications() {
   }
 
   async function markResolved(id) {
+    if (
+      String(id).startsWith(
+        "missing_vk_client_"
+      )
+    ) {
+      return;
+    }
+
     await markNotificationResolved(id);
 
     setNotifications((current) =>
@@ -168,3 +177,5 @@ export function useNotifications() {
     markAllRead,
   };
 }
+
+export { countActiveMissingVkReminders };

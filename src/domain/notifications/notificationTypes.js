@@ -58,6 +58,18 @@ export const NOTIFICATION_TYPE_CONFIG = {
     priority: NOTIFICATION_PRIORITY.MEDIUM,
     color: "text-amber-400",
   },
+  [NOTIFICATION_TYPES.MISSING_START_DATE]: {
+    label: "Указать поток",
+    icon: "📆",
+    priority: NOTIFICATION_PRIORITY.MEDIUM,
+    color: "text-amber-400",
+  },
+  [NOTIFICATION_TYPES.CURATOR_START]: {
+    label: "Куратору",
+    icon: "📤",
+    priority: NOTIFICATION_PRIORITY.HIGH,
+    color: "text-purple-400",
+  },
 };
 
 export function getNotificationConfig(type) {
