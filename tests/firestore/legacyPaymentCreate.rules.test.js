@@ -191,4 +191,77 @@ describe("payments create — legacy old client", () => {
       )
     );
   });
+
+  it("PASS: Polina Penkova legacy subscriber payment (addLegacyPayment path)", async () => {
+    const UID = "polina-uid";
+    const EMAIL = "polina.p@crm-school.ru";
+
+    await seedUser(UID, {
+      managerId: "polina_penkova",
+      name: "Полина Пенькова",
+      email: EMAIL,
+    });
+
+    const now = Date.now();
+
+    await assertSucceeds(
+      addDoc(
+        collection(
+          authed(UID, EMAIL).firestore(),
+          "payments"
+        ),
+        {
+          clientId: null,
+          clientName: "Тест",
+          dealType: "Доплата",
+          amount: 5000,
+          manager: "Полина Пенькова",
+          managerId: "polina_penkova",
+          paymentSystem: "Prodamus",
+          syncedToSheets: false,
+          createdAt: now,
+          updatedAt: now,
+          createdByUid: UID,
+          updatedByUid: UID,
+        }
+      )
+    );
+  });
+
+  it("FAIL: wrong managerId and manager name vs auth email polina.p", async () => {
+    const UID = "polina-stale-uid";
+    const EMAIL = "polina.p@crm-school.ru";
+
+    await seedUser(UID, {
+      role: "manager",
+      managerId: "polina_plamadya",
+      name: "Полина Пенькова",
+    });
+
+    const now = Date.now();
+
+    await assertFails(
+      addDoc(
+        collection(
+          authed(UID, EMAIL).firestore(),
+          "payments"
+        ),
+        {
+          clientId: null,
+          clientName: "Тест",
+          dealType: "Доплата ББ",
+          amount: 5000,
+          manager: "Полина Пламадяла",
+          managerId: "polina_plamadya",
+          paymentSystem: "Prodamus",
+          invoiceNumber: "46286185",
+          syncedToSheets: false,
+          createdAt: now,
+          updatedAt: now,
+          createdByUid: UID,
+          updatedByUid: UID,
+        }
+      )
+    );
+  });
 });

@@ -200,25 +200,60 @@ describe("clients create — addPaymentForNewClient path", () => {
     );
   });
 
-  it("FAIL: managerIdsMatch — stale users.managerId vs auth email", async () => {
+  it("PASS: Polina Penkova new subscriber path (stale profile managerId ignored)", async () => {
+    const UID = "polina-client-uid";
+    const EMAIL = "polina.p@crm-school.ru";
+
+    await seedUser(UID, {
+      role: "manager",
+      managerId: "polina_plamadya",
+      name: "Полина Пенькова",
+      email: EMAIL,
+    });
+
+    const payload = {
+      name: "Test Client",
+      dialogLink: "https://example.com/dialog",
+      course: "Course A",
+      tariff: "Tariff 1",
+      budget: 10000,
+      amount: 0,
+      manager: "Полина Пенькова",
+      managerId: "polina_penkova",
+      dealType: "Доплата ББ",
+      paymentDate: "2026-07-01",
+      nextPaymentDate: null,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      createdByUid: UID,
+      updatedByUid: UID,
+    };
+
+    await assertSucceeds(
+      tryCreateClient(
+        authed(UID, EMAIL),
+        payload
+      )
+    );
+  });
+
+  it("FAIL: ownsManagerRecord — wrong managerId in payload vs auth email", async () => {
     await seedUser(UID, {
       ...USER_PROFILE,
       managerId: "ruslan_romanyuk",
     });
 
-    const actor = {
-      uid: UID,
-      ...USER_PROFILE,
+    const payload = {
+      ...buildClientWritePayload({
+        actor: {
+          uid: UID,
+          ...USER_PROFILE,
+          managerId: "ruslan_romanyuk",
+        },
+      }),
       managerId: "ruslan_romanyuk",
+      manager: "Руслан Романюк",
     };
-
-    const payload =
-      buildClientWritePayload({ actor });
-
-    assert.equal(
-      payload.managerId,
-      "ruslan_romanyuk"
-    );
 
     await assertFails(
       tryCreateClient(

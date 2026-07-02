@@ -129,19 +129,34 @@ service cloud.firestore {
                         : null;
     }
 
+    function ownerManagerIdFromProfile() {
+      let rawManagerId =
+        ownerManagerId();
+
+      return rawManagerId != null
+        && rawManagerId != ''
+        ? canonicalManagerId(
+            rawManagerId
+          )
+        : null;
+    }
+
+    function ownerManagerIdFromNameOrProfile() {
+      let fromOwnerName =
+        managerIdFromOwnerName();
+
+      return fromOwnerName != null
+        ? fromOwnerName
+        : ownerManagerIdFromProfile();
+    }
+
     function effectiveOwnerManagerId() {
-      return managerIdFromAuthEmail() != null
-        ? managerIdFromAuthEmail()
-        : managerIdFromOwnerName() != null
-          ? managerIdFromOwnerName()
-          : (
-            ownerManagerId() != null
-            && ownerManagerId() != ''
-              ? canonicalManagerId(
-                  ownerManagerId()
-                )
-              : null
-          );
+      let fromAuth =
+        managerIdFromAuthEmail();
+
+      return fromAuth != null
+        ? fromAuth
+        : ownerManagerIdFromNameOrProfile();
     }
 
     function isOwnAuditCreate() {
@@ -265,15 +280,14 @@ service cloud.firestore {
     }
 
     function resolveManagerKey(value) {
+      let fromName =
+        resolveManagerIdFromDisplayName(value);
+
       return value == null
         || value == ''
         ? null
-        : resolveManagerIdFromDisplayName(
-            value
-          ) != null
-          ? resolveManagerIdFromDisplayName(
-              value
-            )
+        : fromName != null
+          ? fromName
           : canonicalManagerId(value);
     }
 
@@ -293,26 +307,26 @@ service cloud.firestore {
         );
     }
 
-    function ownsRecordByManagerFields(data) {
+    function ownsManagerRecord(data) {
+      let ownerId =
+        effectiveOwnerManagerId();
+      let dataId =
+        resolvedDataManagerId(data);
+      let ownerName =
+        ownerManagerName();
+
       return isLeadership()
         || (
-          effectiveOwnerManagerId() != null
-          && resolvedDataManagerId(data) != null
-          && resolvedDataManagerId(data)
-            == effectiveOwnerManagerId()
+          ownerId != null
+          && dataId != null
+          && dataId == ownerId
         )
         || (
-          ownerManagerName() != null
+          ownerName != null
           && data.manager != null
           && data.manager != ''
-          && data.manager == ownerManagerName()
+          && data.manager == ownerName
         );
-    }
-
-    function ownsManagerRecord(data) {
-      return ownsRecordByManagerFields(data)
-        || isOwnerByManagerId(data.managerId)
-        || isLegacyOwner(data.manager);
     }
 
     function canReadManagerData(data) {

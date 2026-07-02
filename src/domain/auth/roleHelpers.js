@@ -172,7 +172,7 @@ function managerIdFromAuthEmail(authEmail) {
 }
 
 /** Same priority as firestore.rules effectiveOwnerManagerId(). */
-function getEffectiveOwnerManagerId(userData) {
+export function getEffectiveOwnerManagerId(userData) {
   if (!userData) {
     return null;
   }
@@ -405,7 +405,7 @@ export function normalizeUserRole(userData) {
   };
 }
 
-/** managerId as stored in users/{uid} — matches firestore ownerManagerId() rules. */
+/** managerId for Firestore writes — matches rules effectiveOwnerManagerId(). */
 export function resolveOwnershipManagerFieldsForWrite(
   userData,
   selectedManager = ""
@@ -417,17 +417,15 @@ export function resolveOwnershipManagerFieldsForWrite(
   }
 
   const managerId =
-    getFirestoreManagerId(userData);
+    getEffectiveOwnerManagerId(userData) ??
+    getCurrentManagerId(userData);
 
   if (managerId) {
-    const canonicalId =
-      getCurrentManagerId(userData);
-
     return {
       managerId,
       manager:
+        getManagerNameById(managerId) ||
         userData?.name?.trim() ||
-        getManagerNameById(canonicalId || managerId) ||
         selectedManager?.trim() ||
         "",
     };
@@ -443,43 +441,10 @@ export function resolveManagerFieldsForWrite(
   userData,
   selectedManager = ""
 ) {
-  if (isLeadership(userData)) {
-    return normalizeManagerFields({
-      manager: selectedManager,
-    });
-  }
-
-  const ownership =
-    resolveOwnershipManagerFieldsForWrite(
-      userData,
-      selectedManager
-    );
-
-  if (
-    ownership.managerId &&
-    ownership.manager
-  ) {
-    return ownership;
-  }
-
-  const fromProfile =
-    getEffectiveOwnerManagerId(userData) ??
-    getCurrentManagerId(userData);
-
-  if (fromProfile) {
-    return {
-      managerId: fromProfile,
-      manager:
-        userData?.name?.trim() ||
-        getManagerNameById(fromProfile) ||
-        selectedManager?.trim() ||
-        "",
-    };
-  }
-
-  return normalizeManagerFields({
-    manager: selectedManager,
-  });
+  return resolveOwnershipManagerFieldsForWrite(
+    userData,
+    selectedManager
+  );
 }
 
 function isValidRoleValue(role) {

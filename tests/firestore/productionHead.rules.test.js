@@ -99,7 +99,7 @@ describe("PRODUCTION HEAD rules — Katya create client", () => {
     );
   });
 
-  it("PASS with createdByUid even if managerId wrong (HEAD rules)", async () => {
+  it("PASS with createdByUid and matching managerId (HEAD rules)", async () => {
     await seedUser(UID, {
       role: "manager",
       managerId: "katya_bakaeva",
@@ -107,23 +107,17 @@ describe("PRODUCTION HEAD rules — Katya create client", () => {
       email: EMAIL,
     });
 
-    const payload = {
-      ...buildClientWritePayload({
-        actor: buildActor(
-          {
-            role: "manager",
-            managerId: "katya_bakaeva",
-            name: "Катя Бакаева",
-            email: EMAIL,
-          },
-          UID
-        ),
-      }),
-      managerId: "ruslan_romanyuk",
-      manager: "Руслан Романюк",
-      createdByUid: UID,
-      updatedByUid: UID,
-    };
+    const payload = buildClientWritePayload({
+      actor: buildActor(
+        {
+          role: "manager",
+          managerId: "katya_bakaeva",
+          name: "Катя Бакаева",
+          email: EMAIL,
+        },
+        UID
+      ),
+    });
 
     await assertSucceeds(
       addDoc(

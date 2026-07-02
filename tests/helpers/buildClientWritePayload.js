@@ -176,6 +176,71 @@ function normalizeManagerFields(data = {}) {
   };
 }
 
+function managerIdFromAuthEmail(email) {
+  if (!email || !email.includes("@")) {
+    return null;
+  }
+
+  const local = email
+    .split("@")[0]
+    .trim()
+    .toLowerCase();
+
+  return MANAGER_EMAIL_LOCAL_IDS[local] ?? null;
+}
+
+function resolveManagerIdFromDisplayName(name) {
+  switch (name) {
+    case "Катя":
+    case "Катя Бакаева":
+      return "katya_bakaeva";
+    case "Руслан":
+    case "Руслан Романюк":
+    case "Руслан Р":
+      return "ruslan_romanyuk";
+    case "Полина":
+    case "Полина Пенькова":
+      return "polina_penkova";
+    case "Полина Пламадяла":
+      return "polina_plamadya";
+    default:
+      return resolveManagerIdFromLegacy(name);
+  }
+}
+
+function getEffectiveOwnerManagerId(userData) {
+  if (!userData) {
+    return null;
+  }
+
+  const fromEmail = managerIdFromAuthEmail(
+    userData.email
+  );
+
+  if (fromEmail) {
+    return fromEmail;
+  }
+
+  const fromName =
+    resolveManagerIdFromDisplayName(
+      userData.name
+    );
+
+  if (fromName) {
+    return fromName;
+  }
+
+  if (userData.managerId) {
+    return (
+      resolveManagerIdFromLegacy(
+        userData.managerId
+      ) || userData.managerId
+    );
+  }
+
+  return null;
+}
+
 function resolveManagerFieldsForWrite(
   userData,
   selectedManager = ""
@@ -186,14 +251,14 @@ function resolveManagerFieldsForWrite(
     });
   }
 
-  const fromProfile =
-    getCurrentManagerId(userData);
+  const managerId =
+    getEffectiveOwnerManagerId(userData);
 
-  if (fromProfile) {
+  if (managerId) {
     return {
-      managerId: fromProfile,
+      managerId,
       manager:
-        getManagerNameById(fromProfile) ||
+        getManagerNameById(managerId) ||
         userData?.name?.trim() ||
         selectedManager?.trim() ||
         "",
