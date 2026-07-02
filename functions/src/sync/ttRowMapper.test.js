@@ -32,6 +32,23 @@ test("topup rows omit budget column in TT export", () => {
   assert.equal(row[5], "");
 });
 
+test("reject rows keep start date but omit amount and budget", () => {
+  const row = mapPaymentToTtRow({
+    payment: {
+      ...basePayment,
+      dealType: "Отказ Новая",
+      amount: 0,
+      startDate: "2026-06-29",
+    },
+    client: clientWithBudget,
+    cycle: 2,
+  });
+
+  assert.equal(row[4], "");
+  assert.equal(row[5], "");
+  assert.equal(row[6], "29.06.2026");
+});
+
 test("new deal rows keep client budget in TT export", () => {
   const row = mapPaymentToTtRow({
     payment: {

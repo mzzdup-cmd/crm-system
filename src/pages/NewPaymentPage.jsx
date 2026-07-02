@@ -518,7 +518,7 @@ export default function NewPaymentPage() {
 
   function getStartDateValue() {
     return resolvePaymentStartDate({
-      dealTypeId,
+      dealTypeId: streamDealTypeId,
       paymentDate,
       selectedStream,
       manualStartDate,
@@ -636,11 +636,10 @@ export default function NewPaymentPage() {
 
     const optionalStartDate =
       isOptionalStartDateDealType(
-        dealTypeId
+        streamDealTypeId
       );
 
     if (
-      !isRejectDeal &&
       !optionalStartDate &&
       paymentDate &&
       !getStartDateValue()
@@ -827,9 +826,7 @@ export default function NewPaymentPage() {
         comment: paymentComment,
         manager,
         paymentDate,
-        startDate: isRejectDeal
-          ? ""
-          : getStartDateValue(),
+        startDate: getStartDateValue(),
         curatorStartDate,
         firstContactDate: firstContact,
         budget: 0,
@@ -1070,9 +1067,7 @@ export default function NewPaymentPage() {
         comment: paymentComment,
         manager,
         paymentDate,
-        startDate: isRejectDeal
-          ? ""
-          : getStartDateValue(),
+        startDate: getStartDateValue(),
         curatorStartDate,
         firstContactDate:
           profile?.firstContact ||
@@ -1158,9 +1153,7 @@ export default function NewPaymentPage() {
         clientNote: clientNote.trim(),
         manager,
         paymentDate,
-        startDate: isRejectDeal
-          ? ""
-          : getStartDateValue(),
+        startDate: getStartDateValue(),
         curatorStartDate,
         ...getSourcePayload(),
         userData: actor,
@@ -1719,7 +1712,29 @@ export default function NewPaymentPage() {
                       }
                       className={`${inputClass} mt-1`}
                     />
-                  </label>
+                    </label>
+
+                    <StartDateField
+                      dealTypeId={
+                        streamDealTypeId
+                      }
+                      paymentDate={
+                        paymentDate
+                      }
+                      isLegacyClientMode
+                      selectedStream={
+                        selectedStream
+                      }
+                      onSelectedStreamChange={
+                        setSelectedStream
+                      }
+                      manualStartDate={
+                        manualStartDate
+                      }
+                      onManualStartDateChange={
+                        setManualStartDate
+                      }
+                    />
 
                   <select
                     value={paymentSystem}
@@ -1987,6 +2002,22 @@ export default function NewPaymentPage() {
                       className={`${inputClass} mt-1`}
                     />
                   </label>
+
+                  <StartDateField
+                    dealTypeId={streamDealTypeId}
+                    paymentDate={paymentDate}
+                    isLegacyClientMode
+                    selectedStream={selectedStream}
+                    onSelectedStreamChange={
+                      setSelectedStream
+                    }
+                    manualStartDate={
+                      manualStartDate
+                    }
+                    onManualStartDateChange={
+                      setManualStartDate
+                    }
+                  />
 
                   <select
                     value={paymentSystem}
@@ -2683,31 +2714,29 @@ export default function NewPaymentPage() {
                       </label>
                     )}
 
-                    {!isRejectDeal && (
-                      <StartDateField
-                        dealTypeId={
-                          streamDealTypeId
-                        }
-                        paymentDate={
-                          paymentDate
-                        }
-                        isLegacyClientMode={
-                          isLegacyClientMode
-                        }
-                        selectedStream={
-                          selectedStream
-                        }
-                        onSelectedStreamChange={
-                          setSelectedStream
-                        }
-                        manualStartDate={
-                          manualStartDate
-                        }
-                        onManualStartDateChange={
-                          setManualStartDate
-                        }
-                      />
-                    )}
+                    <StartDateField
+                      dealTypeId={
+                        streamDealTypeId
+                      }
+                      paymentDate={
+                        paymentDate
+                      }
+                      isLegacyClientMode={
+                        isLegacyClientMode
+                      }
+                      selectedStream={
+                        selectedStream
+                      }
+                      onSelectedStreamChange={
+                        setSelectedStream
+                      }
+                      manualStartDate={
+                        manualStartDate
+                      }
+                      onManualStartDateChange={
+                        setManualStartDate
+                      }
+                    />
 
                     {showCuratorStartDate && (
                       <CuratorStartDateField

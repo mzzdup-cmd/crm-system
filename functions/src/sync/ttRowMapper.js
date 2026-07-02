@@ -155,14 +155,12 @@ function mapPaymentToTtRow({
 
   const rawStartDate = isMinimalLegacy
     ? ""
-    : isRejectDeal
-      ? ""
-      : isOptionalStartDateDeal(
-            payment.dealType
-          )
-        ? payment.startDate || ""
-        : payment.startDate ||
-          getStartDate(payment.paymentDate);
+    : isOptionalStartDateDeal(
+          payment.dealType
+        )
+      ? payment.startDate || ""
+      : payment.startDate ||
+        getStartDate(payment.paymentDate);
 
   const budget =
     isMinimalLegacy ||
