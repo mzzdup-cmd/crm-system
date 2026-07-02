@@ -52,6 +52,10 @@ function resolveManagerName(payment, client) {
   return client?.manager || "";
 }
 
+const {
+  isTopupDeal,
+} = require("./dealTypeHelpers");
+
 function mapPaymentToSyncRow({ payment, client = {}, cycle = 1 }) {
   const isLegacyClient =
     payment.isLegacyClient === true;
@@ -64,11 +68,18 @@ function mapPaymentToSyncRow({ payment, client = {}, cycle = 1 }) {
     : payment.startDate ||
       getStartDate(payment.paymentDate);
 
-  const budget = isMinimalLegacy
-    ? ""
-    : isLegacyClient
-      ? Number(payment.budget ?? 0)
-      : Number(client.budget || 0);
+  const isRejectDeal = String(
+    payment.dealType || ""
+  ).startsWith("Отказ");
+
+  const budget =
+    isMinimalLegacy ||
+    isRejectDeal ||
+    isTopupDeal(payment.dealType)
+      ? ""
+      : isLegacyClient
+        ? Number(payment.budget ?? 0)
+        : Number(client.budget || 0);
 
   return [
     formatDateValue(payment.paymentDate),

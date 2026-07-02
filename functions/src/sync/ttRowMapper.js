@@ -27,6 +27,7 @@ const LEGACY_MANAGER_ALIASES = {
 
 const {
   isOptionalStartDateDeal,
+  isTopupDeal,
 } = require("./dealTypeHelpers");
 
 function getStartDate(dateString) {
@@ -163,11 +164,14 @@ function mapPaymentToTtRow({
         : payment.startDate ||
           getStartDate(payment.paymentDate);
 
-  const budget = isMinimalLegacy
-    ? ""
-    : isLegacyClient
-      ? Number(payment.budget ?? 0)
-      : Number(client.budget || 0);
+  const budget =
+    isMinimalLegacy ||
+    isRejectDeal ||
+    isTopupDeal(payment.dealType)
+      ? ""
+      : isLegacyClient
+        ? Number(payment.budget ?? 0)
+        : Number(client.budget || 0);
 
   return [
     formatDateRu(payment.paymentDate),
