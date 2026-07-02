@@ -11,6 +11,10 @@ import {
 } from "./userService";
 
 import {
+  canAccessPayment,
+} from "../domain/auth/permissionHelpers";
+
+import {
   getManagerIdByName,
 } from "../constants/managers";
 
@@ -88,9 +92,7 @@ export async function notifyCuratorStart({
       dialogLink,
       vkLink,
     }),
-    link: payment.clientId
-      ? `/client/${payment.clientId}`
-      : "/payments",
+    link: `/payments?edit=${payment.id}`,
     priority: "high",
     resolved: false,
     data: {
@@ -173,7 +175,11 @@ export async function syncCuratorStartRemindersForUser(
   const dueToday = payments.filter(
     (payment) =>
       !payment.deletedAt &&
-      payment.curatorStartDate === today
+      payment.curatorStartDate === today &&
+      canAccessPayment(
+        userData,
+        payment
+      )
   );
 
   await Promise.all(

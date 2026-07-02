@@ -36,7 +36,9 @@ import {
   canDeletePayment,
   isPaymentDeleted,
   canEditPaymentStartDate,
+  canEditCuratorStartDate,
   isStartDateOnlyPaymentUpdates,
+  isCuratorStartDateOnlyPaymentUpdates,
   shouldSkipClientRecalcForPaymentUpdates,
 } from "../domain/payment/paymentPermissions";
 import {
@@ -492,24 +494,12 @@ export async function updatePaymentStartDate({
     hasTtRow &&
     startDateChanged;
 
-  const managerFields =
-    resolveManagerFieldsForWrite(
-      userData
-    );
-
   const payload = {
     startDate: startDate || "",
     ...buildUpdateAudit(
       resolveAuditUser(userData)
     ),
   };
-
-  if (managerFields.managerId) {
-    payload.managerId =
-      managerFields.managerId;
-    payload.manager =
-      managerFields.manager;
-  }
 
   if (shouldResyncStartDate) {
     payload.ttStartDateResyncPending = true;
@@ -559,6 +549,66 @@ export async function updatePaymentStartDate({
   };
 }
 
+export async function updatePaymentCuratorStartDate({
+  paymentId,
+  curatorStartDate,
+  userData,
+}) {
+  const payment =
+    await getPaymentById(paymentId);
+
+  if (!payment) {
+    throw new Error(
+      "Оплата не найдена"
+    );
+  }
+
+  if (
+    !canEditCuratorStartDate(
+      payment,
+      userData
+    )
+  ) {
+    throw new Error(
+      "Нет прав на редактирование"
+    );
+  }
+
+  const payload = {
+    curatorStartDate:
+      curatorStartDate || "",
+    ...buildUpdateAudit(
+      resolveAuditUser(userData)
+    ),
+  };
+
+  try {
+    await updateDoc(
+      doc(db, "payments", paymentId),
+      payload
+    );
+  } catch (error) {
+    console.error(
+      "[paymentService] updatePaymentCuratorStartDate failed:",
+      {
+        paymentId,
+        dealType: payment.dealType,
+        managerId: payment.managerId,
+        manager: payment.manager,
+        payload,
+        code: error?.code,
+      }
+    );
+    throw error;
+  }
+
+  return {
+    id: paymentId,
+    ...payment,
+    ...payload,
+  };
+}
+
 export async function updatePayment({
   paymentId,
   updates,
@@ -584,6 +634,13 @@ export async function updatePayment({
         userData
       ) &&
       updates.startDate !== undefined
+    ) &&
+    !(
+      canEditCuratorStartDate(
+        payment,
+        userData
+      ) &&
+      updates.curatorStartDate !== undefined
     )
   ) {
     throw new Error(
@@ -649,10 +706,17 @@ export async function updatePayment({
       updates,
       payment
     );
+  const isCuratorStartDateOnlyUpdate =
+    isCuratorStartDateOnlyPaymentUpdates(
+      updates
+    );
 
   if (shouldResyncStartDate) {
     payload.ttStartDateResyncPending = true;
-  } else if (!isStartDateOnlyUpdate) {
+  } else if (
+    !isStartDateOnlyUpdate &&
+    !isCuratorStartDateOnlyUpdate
+  ) {
     payload.syncedToSheets = false;
   }
 
@@ -662,23 +726,6 @@ export async function updatePayment({
 
   if (updates.tariff !== undefined) {
     payload.tariff = updates.tariff;
-  }
-
-  if (
-    isStartDateOnlyUpdate &&
-    userData
-  ) {
-    const managerFields =
-      resolveManagerFieldsForWrite(
-        userData
-      );
-
-    if (managerFields.managerId) {
-      payload.managerId =
-        managerFields.managerId;
-      payload.manager =
-        managerFields.manager;
-    }
   }
 
   try {

@@ -4,18 +4,23 @@ import {
 
 import {
   isOptionalStartDateDealType,
+  showCuratorStartDateField,
 } from "../../constants/dealTypes";
 
 export const MANAGER_PAYMENT_EDIT_WINDOW_MS =
   30 * 60 * 1000;
 
-/** Start date on payment does not affect client.amount — skip client recalc. */
+/** Schedule fields on payment do not affect client.amount — skip client recalc. */
 export function shouldSkipClientRecalcForPaymentUpdates(
   updates = {}
 ) {
+  if (updates.amount !== undefined) {
+    return false;
+  }
+
   return (
-    updates.startDate !== undefined &&
-    updates.amount === undefined
+    updates.startDate !== undefined ||
+    updates.curatorStartDate !== undefined
   );
 }
 
@@ -45,6 +50,25 @@ export function isStartDateOnlyPaymentUpdates(
   }
 
   return (
+    updates.paymentDate === undefined &&
+    updates.dealType === undefined &&
+    updates.paymentSystem === undefined &&
+    updates.invoiceNumber === undefined &&
+    updates.course === undefined &&
+    updates.tariff === undefined &&
+    updates.comment === undefined &&
+    updates.curatorStartDate === undefined
+  );
+}
+
+/** Only curatorStartDate changes (no client amount recalc). */
+export function isCuratorStartDateOnlyPaymentUpdates(
+  updates
+) {
+  return (
+    updates.curatorStartDate !== undefined &&
+    updates.amount === undefined &&
+    updates.startDate === undefined &&
     updates.paymentDate === undefined &&
     updates.dealType === undefined &&
     updates.paymentSystem === undefined &&
@@ -133,6 +157,37 @@ export function canEditPaymentStartDate(
       payment.dealTypeId
     )
   ) {
+    return false;
+  }
+
+  return canAccessPayment(
+    userData,
+    payment
+  );
+}
+
+/** Фактический старт куратора — без ограничения 30 мин для своих оплат. */
+export function canEditCuratorStartDate(
+  payment,
+  userData
+) {
+  if (
+    !payment ||
+    !userData ||
+    isPaymentDeleted(payment)
+  ) {
+    return false;
+  }
+
+  if (userData.role === "admin") {
+    return true;
+  }
+
+  const dealType =
+    payment.dealTypeId ||
+    payment.dealType;
+
+  if (!showCuratorStartDateField(dealType)) {
     return false;
   }
 

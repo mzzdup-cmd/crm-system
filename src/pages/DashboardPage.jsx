@@ -518,8 +518,9 @@ function DashboardPageContent() {
         payments,
         clients,
         today,
+        userData,
       }),
-    [payments, clients, today]
+    [payments, clients, today, userData]
   );
 
   const plannedTopups = useMemo(
@@ -869,7 +870,7 @@ function DashboardPageContent() {
                           )}
                           {item.clientId && (
                             <Link
-                              to={`/client/${item.clientId}`}
+                              to={`/payments?edit=${item.id}`}
                               className="text-purple-300 hover:underline"
                             >
                               Отправить куратору →

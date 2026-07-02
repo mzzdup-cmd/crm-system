@@ -25,6 +25,8 @@ from "../context/ToastContext";
 
 import {
   getPaymentsByClientId,
+  updatePaymentStartDate,
+  updatePaymentCuratorStartDate,
   updatePaymentWithClient,
   deletePayment,
 } from "../services/paymentService";
@@ -167,24 +169,83 @@ export default function ClientDetailsPage() {
     setSavingPayment(true);
 
     try {
-      const result =
-        await updatePaymentWithClient({
+      const hasStartDate =
+        paymentUpdates.startDate !==
+        undefined;
+      const hasCuratorStartDate =
+        paymentUpdates.curatorStartDate !==
+        undefined;
+      const hasAmount =
+        paymentUpdates.amount !==
+        undefined;
+      const startDateOnly =
+        hasStartDate &&
+        !hasAmount &&
+        !hasCuratorStartDate;
+      const curatorStartDateOnly =
+        hasCuratorStartDate &&
+        !hasAmount &&
+        !hasStartDate;
+      const scheduleFieldsOnly =
+        hasStartDate &&
+        hasCuratorStartDate &&
+        !hasAmount;
+
+      let updatedClient = null;
+
+      if (startDateOnly) {
+        await updatePaymentStartDate({
           paymentId: editPayment.id,
-          paymentUpdates,
-          clientUpdates,
+          startDate:
+            paymentUpdates.startDate,
           userData: actor,
         });
+      } else if (curatorStartDateOnly) {
+        await updatePaymentCuratorStartDate({
+          paymentId: editPayment.id,
+          curatorStartDate:
+            paymentUpdates.curatorStartDate,
+          userData: actor,
+        });
+      } else if (scheduleFieldsOnly) {
+        await updatePaymentStartDate({
+          paymentId: editPayment.id,
+          startDate:
+            paymentUpdates.startDate,
+          userData: actor,
+        });
+        await updatePaymentCuratorStartDate({
+          paymentId: editPayment.id,
+          curatorStartDate:
+            paymentUpdates.curatorStartDate,
+          userData: actor,
+        });
+      } else {
+        const result =
+          await updatePaymentWithClient({
+            paymentId: editPayment.id,
+            paymentUpdates,
+            clientUpdates,
+            userData: actor,
+          });
+
+        updatedClient = result.client;
+      }
 
       toast.success(
-        `Оплата обновлена: ${formatMoney(
-          paymentUpdates.amount
-        )}`
+        startDateOnly ||
+          curatorStartDateOnly ||
+          scheduleFieldsOnly
+          ? "Дата старта сохранена"
+          : `Оплата обновлена: ${formatMoney(
+              paymentUpdates.amount
+            )}`
       );
 
       setEditPayment(null);
 
-      if (result.client) {
-        setClient(result.client);
+      if (updatedClient) {
+        setClient(updatedClient);
       }
 
       await loadPayments();

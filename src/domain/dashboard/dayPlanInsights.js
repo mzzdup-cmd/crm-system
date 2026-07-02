@@ -15,6 +15,10 @@ import {
   getTodayDateString,
 } from "../schedule/scheduleLogic";
 
+import {
+  canAccessPayment,
+} from "../auth/permissionHelpers";
+
 function getMonthKey(dateStr) {
   return dateStr?.slice(0, 7) || "";
 }
@@ -109,6 +113,7 @@ export function getCuratorStartsTodayItems({
   payments = [],
   clients = [],
   today,
+  userData = null,
 }) {
   if (!today) {
     return [];
@@ -125,7 +130,14 @@ export function getCuratorStartsTodayItems({
     .filter(
       (payment) =>
         !payment.deletedAt &&
-        payment.curatorStartDate === today
+        payment.curatorStartDate === today &&
+        (
+          !userData ||
+          canAccessPayment(
+            userData,
+            payment
+          )
+        )
     )
     .map((payment) => {
       const client =

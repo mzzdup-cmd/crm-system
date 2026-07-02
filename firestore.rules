@@ -452,6 +452,19 @@ service cloud.firestore {
         ]);
     }
 
+    function isCuratorStartDatePatchUpdate() {
+      return request.resource.data
+        .diff(resource.data)
+        .affectedKeys()
+        .hasOnly([
+          'curatorStartDate',
+          'updatedAt',
+          'updatedByUid',
+          'managerId',
+          'manager',
+        ]);
+    }
+
     function resolveDealTypeId(value) {
       return value == 'ББ'
         || value == 'bb'
@@ -566,20 +579,11 @@ service cloud.firestore {
         );
     }
 
-    function isSchoolStaff() {
-      return isSignedIn()
-        && hasUserProfile()
-        && (
-          !userDoc().keys().hasAny(['role'])
-          || (
-            userDoc().role != 'admin'
-            && userDoc().role != 'rop'
-          )
-        );
-    }
-
-    function managerCanUpdateOptionalStartDate() {
-      return isSchoolStaff();
+    function paymentPatchOwnershipOk() {
+      return ownsPaymentRecord(resource.data)
+        && paymentManagerIdUnchanged()
+        && resource.data.deletedAt == null
+        && request.resource.data.deletedAt == null;
     }
 
     // Cheap path: no get() calls — avoids rule evaluation limits.
@@ -588,7 +592,14 @@ service cloud.firestore {
         && isStartDatePatchUpdate()
         && paymentHasOptionalStartDate(
           resource.data
-        );
+        )
+        && paymentPatchOwnershipOk();
+    }
+
+    function canPatchCuratorStartDate() {
+      return isSignedIn()
+        && isCuratorStartDatePatchUpdate()
+        && paymentPatchOwnershipOk();
     }
 
     match /payments/{paymentId} {
@@ -600,9 +611,9 @@ service cloud.firestore {
       allow update: if isSignedIn()
         && (
           canPatchOptionalStartDate()
+          || canPatchCuratorStartDate()
           || isLeadership()
           || managerCanEditPayment()
-          || managerCanUpdateOptionalStartDate()
         );
 
       allow delete: if false;

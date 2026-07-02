@@ -1,4 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+
+import { useSearchParams } from "react-router-dom";
 
 import { useAuth }
 from "../context/AuthContext";
@@ -15,6 +17,7 @@ from "../hooks/usePermissions";
 import {
   getPaymentsForUser,
   updatePaymentStartDate,
+  updatePaymentCuratorStartDate,
   updatePaymentWithClient,
   deletePayment,
 } from "../services/paymentService";
@@ -23,6 +26,7 @@ import {
   canEditPayment,
   canDeletePayment,
   canEditPaymentStartDate,
+  canEditCuratorStartDate,
   getPaymentEditTimeLeft,
 } from "../domain/payment/paymentPermissions";
 
@@ -120,9 +124,34 @@ export default function PaymentsPage({
     : null;
 
   const { isLeadership } = usePermissions();
+  const [searchParams, setSearchParams] =
+    useSearchParams();
 
   const paymentList =
     payments || [];
+
+  useEffect(() => {
+    const editId =
+      searchParams.get("edit");
+
+    if (!editId || !paymentList.length) {
+      return;
+    }
+
+    const payment =
+      paymentList.find(
+        (item) => item.id === editId
+      );
+
+    if (payment) {
+      setEditPayment(payment);
+      setSearchParams({}, { replace: true });
+    }
+  }, [
+    paymentList,
+    searchParams,
+    setSearchParams,
+  ]);
 
   async function handleSaveEdit({
     paymentUpdates,
@@ -135,17 +164,53 @@ export default function PaymentsPage({
     setSaving(true);
 
     try {
-      const startDateOnly =
+      const hasStartDate =
         paymentUpdates.startDate !==
-          undefined &&
-        paymentUpdates.amount ===
-          undefined;
+        undefined;
+      const hasCuratorStartDate =
+        paymentUpdates.curatorStartDate !==
+        undefined;
+      const hasAmount =
+        paymentUpdates.amount !==
+        undefined;
+      const startDateOnly =
+        hasStartDate &&
+        !hasAmount &&
+        !hasCuratorStartDate;
+      const curatorStartDateOnly =
+        hasCuratorStartDate &&
+        !hasAmount &&
+        !hasStartDate;
+      const scheduleFieldsOnly =
+        hasStartDate &&
+        hasCuratorStartDate &&
+        !hasAmount;
 
       if (startDateOnly) {
         await updatePaymentStartDate({
           paymentId: editPayment.id,
           startDate:
             paymentUpdates.startDate,
+          userData: actor,
+        });
+      } else if (curatorStartDateOnly) {
+        await updatePaymentCuratorStartDate({
+          paymentId: editPayment.id,
+          curatorStartDate:
+            paymentUpdates.curatorStartDate,
+          userData: actor,
+        });
+      } else if (scheduleFieldsOnly) {
+        await updatePaymentStartDate({
+          paymentId: editPayment.id,
+          startDate:
+            paymentUpdates.startDate,
+          userData: actor,
+        });
+        await updatePaymentCuratorStartDate({
+          paymentId: editPayment.id,
+          curatorStartDate:
+            paymentUpdates.curatorStartDate,
           userData: actor,
         });
       } else {
@@ -158,7 +223,9 @@ export default function PaymentsPage({
       }
 
       toast.success(
-        startDateOnly
+        startDateOnly ||
+          curatorStartDateOnly ||
+          scheduleFieldsOnly
           ? "Дата старта сохранена"
           : `Оплата обновлена: ${formatMoney(
               paymentUpdates.amount ??

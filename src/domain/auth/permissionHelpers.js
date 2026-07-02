@@ -1,10 +1,11 @@
 import {
   isLeadership,
-  getCurrentManagerId,
+  getEffectiveOwnerManagerId,
 } from "./roleHelpers";
 
 import {
   resolveManagerIdFromLegacy,
+  expandManagerIdAliases,
 } from "./managerMigration";
 
 export function canViewAll(userData) {
@@ -23,14 +24,14 @@ function managerIdsMatch(
     return false;
   }
 
-  const left =
-    resolveManagerIdFromLegacy(leftId) ||
-    leftId;
-  const right =
-    resolveManagerIdFromLegacy(rightId) ||
-    rightId;
+  const leftAliases =
+    expandManagerIdAliases(leftId);
+  const rightAliases =
+    expandManagerIdAliases(rightId);
 
-  return left === right;
+  return leftAliases.some((left) =>
+    rightAliases.includes(left)
+  );
 }
 
 export function canAccessByManagerId(
@@ -47,7 +48,7 @@ export function canAccessByManagerId(
   }
 
   const currentManagerId =
-    getCurrentManagerId(userData);
+    getEffectiveOwnerManagerId(userData);
 
   if (
     currentManagerId &&

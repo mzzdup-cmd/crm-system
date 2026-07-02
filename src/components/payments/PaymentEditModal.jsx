@@ -10,6 +10,7 @@ import {
 import {
   canEditPayment,
   canEditPaymentStartDate,
+  canEditCuratorStartDate,
 } from "../../domain/payment/paymentPermissions";
 
 import {
@@ -125,6 +126,17 @@ export default function PaymentEditModal({
       userData
     );
 
+  const canEditCuratorDate =
+    canEditCuratorStartDate(
+      payment,
+      userData
+    );
+
+  const canSave =
+    editable ||
+    canEditStartDate ||
+    canEditCuratorDate;
+
   const optionalStartDate =
     isOptionalStartDateDealType(
       payment.dealType
@@ -171,17 +183,67 @@ export default function PaymentEditModal({
   async function handleSubmit(event) {
     event.preventDefault();
 
-    if (!editable && !canEditStartDate) {
+    if (!canSave) {
       return;
     }
 
-    if (canEditStartDate && !editable) {
+    const startDateChanged =
+      form.startDate !==
+      (payment.startDate ?? "");
+    const curatorStartDateChanged =
+      form.curatorStartDate !==
+      (payment.curatorStartDate ?? "");
+
+    if (
+      !editable &&
+      canEditStartDate &&
+      startDateChanged &&
+      !curatorStartDateChanged
+    ) {
       await onSave({
         paymentUpdates: {
           startDate: form.startDate,
         },
         clientUpdates: {},
       });
+      return;
+    }
+
+    if (
+      !editable &&
+      canEditCuratorDate &&
+      curatorStartDateChanged &&
+      !startDateChanged
+    ) {
+      await onSave({
+        paymentUpdates: {
+          curatorStartDate:
+            form.curatorStartDate,
+        },
+        clientUpdates: {},
+      });
+      return;
+    }
+
+    if (
+      !editable &&
+      canEditStartDate &&
+      canEditCuratorDate &&
+      startDateChanged &&
+      curatorStartDateChanged
+    ) {
+      await onSave({
+        paymentUpdates: {
+          startDate: form.startDate,
+          curatorStartDate:
+            form.curatorStartDate,
+        },
+        clientUpdates: {},
+      });
+      return;
+    }
+
+    if (!editable) {
       return;
     }
 
@@ -191,13 +253,34 @@ export default function PaymentEditModal({
   async function handleConfirmSave() {
     const payload = buildPayload();
 
-    if (!editable && canEditStartDate) {
-      await onSave({
-        paymentUpdates: {
-          startDate: form.startDate,
-        },
-        clientUpdates: {},
-      });
+    if (!editable && canSave) {
+      const paymentUpdates = {};
+
+      if (
+        canEditStartDate &&
+        form.startDate !==
+          (payment.startDate ?? "")
+      ) {
+        paymentUpdates.startDate =
+          form.startDate;
+      }
+
+      if (
+        canEditCuratorDate &&
+        form.curatorStartDate !==
+          (payment.curatorStartDate ?? "")
+      ) {
+        paymentUpdates.curatorStartDate =
+          form.curatorStartDate;
+      }
+
+      if (Object.keys(paymentUpdates).length) {
+        await onSave({
+          paymentUpdates,
+          clientUpdates: {},
+        });
+      }
+
       setConfirmOpen(false);
       return;
     }
@@ -245,6 +328,16 @@ export default function PaymentEditModal({
                   старта — строка в ТТ
                   обновится при следующей
                   выгрузке
+                </span>
+              )}
+            {!isAdmin &&
+              canEditCuratorDate &&
+              !editable &&
+              !canEditStartDate && (
+                <span className="block mt-1 text-cyan-400">
+                  Можно изменить только
+                  фактический старт для
+                  куратора
                 </span>
               )}
           </p>
@@ -411,6 +504,10 @@ export default function PaymentEditModal({
 
             <CuratorStartDateField
               value={form.curatorStartDate}
+              disabled={
+                !editable &&
+                !canEditCuratorDate
+              }
               onChange={(value) =>
                 handleChange(
                   "curatorStartDate",
@@ -521,9 +618,7 @@ export default function PaymentEditModal({
             <button
               type="submit"
               disabled={
-                saving ||
-                (!editable &&
-                  !canEditStartDate)
+                saving || !canSave
               }
               className="
                 px-4 py-2 rounded-xl font-semibold
