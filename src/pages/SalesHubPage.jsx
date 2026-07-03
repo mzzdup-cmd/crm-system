@@ -5,6 +5,9 @@ import {
 import PageHeader
 from "../components/ui/PageHeader";
 
+import PageErrorBoundary
+from "../components/ui/PageErrorBoundary";
+
 import PageTabs
 from "../components/ui/PageTabs";
 
@@ -63,37 +66,39 @@ export default function SalesHubPage() {
   }
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      <PageHeader
-        title="Продажи"
-        subtitle="История оплат, клиенты, сделки, подписки и бронь"
-      />
+    <PageErrorBoundary title="Продажи">
+      <div className="space-y-6 animate-fade-in">
+        <PageHeader
+          title="Продажи"
+          subtitle="История оплат, клиенты, сделки, подписки и бронь"
+        />
 
-      <PageTabs
-        tabs={TABS}
-        activeTab={activeTab}
-        onChange={handleTabChange}
-      />
+        <PageTabs
+          tabs={TABS}
+          activeTab={activeTab}
+          onChange={handleTabChange}
+        />
 
-      {activeTab === "history" && (
-        <PaymentsPage embedded />
-      )}
+        {activeTab === "history" && (
+          <PaymentsPage embedded />
+        )}
 
-      {activeTab === "clients" && (
-        <ClientsPage embedded />
-      )}
+        {activeTab === "clients" && (
+          <ClientsPage embedded />
+        )}
 
-      {activeTab === "deals" && (
-        <DealsPage embedded />
-      )}
+        {activeTab === "deals" && (
+          <DealsPage embedded />
+        )}
 
-      {activeTab === "subscriptions" && (
-        <SubscriptionsPage embedded />
-      )}
+        {activeTab === "subscriptions" && (
+          <SubscriptionsPage embedded />
+        )}
 
-      {activeTab === "bookings" && (
-        <BookingsPage embedded />
-      )}
-    </div>
+        {activeTab === "bookings" && (
+          <BookingsPage embedded />
+        )}
+      </div>
+    </PageErrorBoundary>
   );
 }

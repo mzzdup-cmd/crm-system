@@ -78,6 +78,15 @@ export async function notifyCuratorStart({
     client?.vkLink ||
     "";
 
+  const clientId =
+    payment.clientId ||
+    client?.id ||
+    null;
+
+  const link = clientId
+    ? `/client/${clientId}`
+    : `/payments?edit=${payment.id}`;
+
   return createNotificationIfMissing({
     userId,
     dedupKey: buildCuratorStartDedupKey(
@@ -92,7 +101,7 @@ export async function notifyCuratorStart({
       dialogLink,
       vkLink,
     }),
-    link: `/payments?edit=${payment.id}`,
+    link,
     priority: "high",
     resolved: false,
     data: {

@@ -870,7 +870,7 @@ function DashboardPageContent() {
                           )}
                           {item.clientId && (
                             <Link
-                              to={`/payments?edit=${item.id}`}
+                              to={`/client/${item.clientId}`}
                               className="text-purple-300 hover:underline"
                             >
                               Отправить куратору →

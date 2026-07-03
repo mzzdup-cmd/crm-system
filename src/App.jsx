@@ -23,6 +23,9 @@ from "./components/ProtectedRoute";
 import LoadingState
 from "./components/LoadingState";
 
+import AppErrorBoundary
+from "./components/ui/AppErrorBoundary";
+
 import PageSkeleton
 from "./components/PageSkeleton";
 
@@ -354,10 +357,12 @@ function AppRoutes() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <ToastProvider>
-        <AppRoutes />
-      </ToastProvider>
-    </AuthProvider>
+    <AppErrorBoundary>
+      <AuthProvider>
+        <ToastProvider>
+          <AppRoutes />
+        </ToastProvider>
+      </AuthProvider>
+    </AppErrorBoundary>
   );
 }

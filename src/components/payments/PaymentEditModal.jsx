@@ -44,6 +44,31 @@ from "./CuratorStartDateField";
 const inputClass =
   "mt-1 w-full bg-slate-800 p-3.5 rounded-xl";
 
+function buildFormFromPayment(payment) {
+  return {
+    amount: String(
+      payment.amount ?? ""
+    ),
+    dealType:
+      payment.dealType ?? "",
+    paymentSystem:
+      payment.paymentSystem ?? "",
+    invoiceNumber:
+      payment.invoiceNumber ?? "",
+    comment: payment.comment ?? "",
+    paymentDate:
+      payment.paymentDate ?? "",
+    startDate:
+      payment.startDate ?? "",
+    curatorStartDate:
+      payment.curatorStartDate ?? "",
+    course: payment.course ?? "",
+    tariff: payment.tariff ?? "",
+    budget: "",
+    vkLink: payment.vkLink ?? "",
+  };
+}
+
 export default function PaymentEditModal({
   open,
   payment,
@@ -53,37 +78,21 @@ export default function PaymentEditModal({
   onSave,
   onClose,
 }) {
-  const [form, setForm] = useState({});
+  const [form, setForm] = useState(null);
+  const [formPaymentId, setFormPaymentId] =
+    useState(null);
   const [confirmOpen, setConfirmOpen] =
     useState(false);
 
   useEffect(() => {
     if (!payment) {
+      setForm(null);
+      setFormPaymentId(null);
       return;
     }
 
-    setForm({
-      amount: String(
-        payment.amount ?? ""
-      ),
-      dealType:
-        payment.dealType ?? "",
-      paymentSystem:
-        payment.paymentSystem ?? "",
-      invoiceNumber:
-        payment.invoiceNumber ?? "",
-      comment: payment.comment ?? "",
-      paymentDate:
-        payment.paymentDate ?? "",
-      startDate:
-        payment.startDate ?? "",
-      curatorStartDate:
-        payment.curatorStartDate ?? "",
-      course: payment.course ?? "",
-      tariff: payment.tariff ?? "",
-      budget: "",
-      vkLink: "",
-    });
+    setForm(buildFormFromPayment(payment));
+    setFormPaymentId(payment.id);
 
     if (payment.clientId) {
       getClientById(
@@ -93,27 +102,40 @@ export default function PaymentEditModal({
           return;
         }
 
-        setForm((current) => ({
-          ...current,
-          course:
-            current.course ||
-            clientData.course ||
-            "",
-          tariff:
-            current.tariff ||
-            clientData.tariff ||
-            "",
-          budget: String(
-            clientData.budget ?? ""
-          ),
-          vkLink:
-            clientData.vkLink ?? "",
-        }));
+        setForm((current) => {
+          if (!current) {
+            return current;
+          }
+
+          return {
+            ...current,
+            course:
+              current.course ||
+              clientData.course ||
+              "",
+            tariff:
+              current.tariff ||
+              clientData.tariff ||
+              "",
+            budget: String(
+              clientData.budget ?? ""
+            ),
+            vkLink:
+              clientData.vkLink ??
+              current.vkLink ??
+              "",
+          };
+        });
       });
     }
   }, [payment]);
 
-  if (!open || !payment) {
+  if (
+    !open ||
+    !payment ||
+    !form ||
+    formPaymentId !== payment.id
+  ) {
     return null;
   }
 
@@ -175,7 +197,7 @@ export default function PaymentEditModal({
         ),
         course: form.course,
         tariff: form.tariff,
-        vkLink: form.vkLink.trim(),
+        vkLink: (form.vkLink ?? "").trim(),
       },
     };
   }

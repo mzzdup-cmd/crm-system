@@ -16,6 +16,7 @@ from "../hooks/usePermissions";
 
 import {
   getPaymentsForUser,
+  getPaymentById,
   updatePaymentStartDate,
   updatePaymentCuratorStartDate,
   updatePaymentWithClient,
@@ -134,23 +135,65 @@ export default function PaymentsPage({
     const editId =
       searchParams.get("edit");
 
-    if (!editId || !paymentList.length) {
+    if (!editId || loading) {
       return;
     }
 
-    const payment =
-      paymentList.find(
-        (item) => item.id === editId
-      );
+    let cancelled = false;
 
-    if (payment) {
-      setEditPayment(payment);
-      setSearchParams({}, { replace: true });
+    async function openEditPayment() {
+      const fromList =
+        paymentList.find(
+          (item) => item.id === editId
+        );
+
+      if (fromList) {
+        if (!cancelled) {
+          setEditPayment(fromList);
+          setSearchParams({}, { replace: true });
+        }
+        return;
+      }
+
+      try {
+        const payment =
+          await getPaymentById(editId);
+
+        if (cancelled) {
+          return;
+        }
+
+        if (payment) {
+          setEditPayment(payment);
+          setSearchParams({}, { replace: true });
+        } else {
+          toast.error("Оплата не найдена");
+          setSearchParams({}, { replace: true });
+        }
+      } catch (fetchError) {
+        if (cancelled) {
+          return;
+        }
+
+        console.error(fetchError);
+        toast.error(
+          "Не удалось открыть оплату"
+        );
+        setSearchParams({}, { replace: true });
+      }
     }
+
+    openEditPayment();
+
+    return () => {
+      cancelled = true;
+    };
   }, [
+    loading,
     paymentList,
     searchParams,
     setSearchParams,
+    toast,
   ]);
 
   async function handleSaveEdit({
