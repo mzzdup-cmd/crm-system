@@ -52,12 +52,20 @@ export default function AdminAnalyticsPage({
     connected,
   } = useAdminAnalyticsSummary();
 
-  if (loading || !data) {
-
+  if (loading) {
     return (
       <LoadingState message="Загрузка аналитики..." />
     );
+  }
 
+  if (!data) {
+    return (
+      <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-6 text-red-100">
+        Не удалось загрузить MM Аналитику. Обновите страницу
+        или обратитесь к администратору, если ошибка
+        повторяется.
+      </div>
+    );
   }
 
   const { summary } = data;

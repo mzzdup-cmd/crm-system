@@ -39,6 +39,18 @@ let cacheTimestamp = 0;
 
 const CACHE_TTL_MS = 60 * 1000;
 
+async function loadSyncLogsSafely(count = 50) {
+  try {
+    return await getSyncLogs(count);
+  } catch (error) {
+    console.warn(
+      "[analyticsService] syncLog unavailable:",
+      error
+    );
+    return [];
+  }
+}
+
 async function loadAnalyticsSnapshot() {
   const now = Date.now();
 
@@ -64,7 +76,7 @@ async function loadAnalyticsSnapshot() {
     getAllManualBonuses(),
     getTodayScheduleOrDefault(),
     getTodayTraffic(),
-    getSyncLogs(50),
+    loadSyncLogsSafely(50),
   ]);
 
   cachedSnapshot = {

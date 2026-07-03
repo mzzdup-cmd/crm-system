@@ -640,7 +640,7 @@ service cloud.firestore {
     }
 
     match /syncLog/{logId} {
-      allow read: if isAdmin();
+      allow read: if isLeadership();
 
       allow write: if false;
     }

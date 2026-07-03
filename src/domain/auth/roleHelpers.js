@@ -15,9 +15,8 @@ import {
   getFirestoreManagerIdByEmail,
 } from "../../constants/firestoreManagerIds";
 import {
-  normalizeManagerFields,
-  expandManagerIdAliases,
-} from "./managerMigration";
+  getProvisionProfileForEmail,
+} from "../../constants/provisionProfiles";
 
 export function isAdmin(userData) {
   return userData?.role === ROLES.ADMIN;
@@ -351,9 +350,16 @@ export function normalizeUserRole(userData) {
     return null;
   }
 
+  const provisionRole =
+    getProvisionProfileForEmail(
+      userData.email
+    )?.role;
+
   const role = isValidRoleValue(userData.role)
     ? userData.role
-    : ROLES.MANAGER;
+    : isValidRoleValue(provisionRole)
+      ? provisionRole
+      : ROLES.MANAGER;
 
   const firestoreManagerId =
     userData.managerId || null;

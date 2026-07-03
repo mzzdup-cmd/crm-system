@@ -29,14 +29,23 @@ export function useAdminAnalytics(
   async function loadAnalytics() {
     setLoading(true);
 
-    const report =
-      await getAdminAnalytics({
-        period,
-        customRange,
-      });
+    try {
+      const report =
+        await getAdminAnalytics({
+          period,
+          customRange,
+        });
 
-    setData(report);
-    setLoading(false);
+      setData(report);
+    } catch (error) {
+      console.error(
+        "[useAdminAnalytics] load failed:",
+        error
+      );
+      setData(null);
+    } finally {
+      setLoading(false);
+    }
   }
 
   return {
