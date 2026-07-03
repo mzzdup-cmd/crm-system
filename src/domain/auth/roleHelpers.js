@@ -17,6 +17,10 @@ import {
 import {
   getProvisionProfileForEmail,
 } from "../../constants/provisionProfiles";
+import {
+  normalizeManagerFields,
+  expandManagerIdAliases,
+} from "./managerMigration";
 
 export function isAdmin(userData) {
   return userData?.role === ROLES.ADMIN;
