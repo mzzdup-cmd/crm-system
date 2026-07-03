@@ -258,9 +258,17 @@ export async function updateClient(id, data) {
     const client = await getClientById(id);
 
     if (client) {
-      await resolveMissingVkRemindersForClient(
-        client
-      );
+      try {
+        await resolveMissingVkRemindersForClient(
+          client
+        );
+      } catch (error) {
+        console.warn(
+          "Missing VK reminder resolve skipped:",
+          id,
+          error
+        );
+      }
     }
   }
 }

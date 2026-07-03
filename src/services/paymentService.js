@@ -59,6 +59,7 @@ import {
 import {
   isOptionalStartDateDealType,
   isTopupBbDealType,
+  needsBudgetFieldForExistingDeal,
 } from "../constants/dealTypes";
 import {
   BB_BOOKING_STAGE,
@@ -896,6 +897,7 @@ export async function addPaymentRecord({
   curatorStartDate = "",
   sourceId = null,
   sourceName = "",
+  budget = null,
   userData,
   createdByUid = null,
 }) {
@@ -940,6 +942,9 @@ export async function addPaymentRecord({
     curatorStartDate,
     sourceId: resolvedSourceId,
     sourceName: resolvedSourceName,
+    ...(budget != null
+      ? { budget: Number(budget || 0) }
+      : {}),
     syncedToSheets: false,
     ...(userData
       ? buildWriteAuditFields(
@@ -1264,9 +1269,17 @@ export async function createPayment({
   curatorStartDate = "",
   sourceId = null,
   sourceName = "",
+  budget = null,
   userData,
   createdByUid = null,
 }) {
+  const isUpsellBudget =
+    needsBudgetFieldForExistingDeal(dealType);
+  const budgetValue =
+    budget != null
+      ? Number(budget || 0)
+      : null;
+
   const paymentPayload = await addPaymentRecord({
     client,
     dealType,
@@ -1281,13 +1294,31 @@ export async function createPayment({
     curatorStartDate,
     sourceId,
     sourceName,
+    budget: isUpsellBudget ? budgetValue : null,
     userData,
     createdByUid,
   });
 
+  let clientForApply = client;
+
+  if (
+    isUpsellBudget &&
+    budgetValue != null &&
+    budgetValue > 0
+  ) {
+    await updateClient(client.id, {
+      budget: budgetValue,
+    });
+
+    clientForApply = {
+      ...client,
+      budget: budgetValue,
+    };
+  }
+
   let updatedClient =
     await applyPaymentToClient({
-      client,
+      client: clientForApply,
       paymentAmount,
       paymentDate,
     });

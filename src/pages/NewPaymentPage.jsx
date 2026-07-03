@@ -59,6 +59,7 @@ import {
   isBbDealType,
   isOptionalStartDateDealType,
   isRejectDealType,
+  needsBudgetFieldForExistingDeal,
   resolveDealTypeId,
   resolveLegacyTtDealTypeId,
   showCuratorStartDateField,
@@ -651,6 +652,15 @@ export default function NewPaymentPage() {
       return "Выберите менеджера";
     }
 
+    if (
+      needsBudgetFieldForExistingDeal(
+        dealTypeId
+      ) &&
+      !budget
+    ) {
+      return "Укажите бюджет (сумма тарифа)";
+    }
+
     return null;
   }
 
@@ -1155,6 +1165,11 @@ export default function NewPaymentPage() {
         paymentDate,
         startDate: getStartDateValue(),
         curatorStartDate,
+        budget: needsBudgetFieldForExistingDeal(
+          dealTypeId
+        )
+          ? parseMoneyNumber(budget)
+          : null,
         ...getSourcePayload(),
         userData: actor,
         createdByUid,
@@ -2649,6 +2664,29 @@ export default function NewPaymentPage() {
                 <>
                   {!isRejectDeal && (
                     <FormSection title="Сделка">
+                      {needsBudgetFieldForExistingDeal(
+                        dealTypeId
+                      ) && (
+                        <label className="block">
+                          <FieldLabel
+                            done={
+                              parseMoneyNumber(
+                                budget
+                              ) > 0
+                            }
+                          >
+                            Бюджет (сумма тарифа) *
+                          </FieldLabel>
+                          <MoneyInput
+                            placeholder=""
+                            required
+                            value={budget}
+                            onChange={setBudget}
+                            className={inputClass}
+                          />
+                        </label>
+                      )}
+
                       <label className="block">
                         <FieldLabel
                           done={

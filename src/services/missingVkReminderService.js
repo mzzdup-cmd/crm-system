@@ -121,6 +121,10 @@ export async function resolveMissingVkRemindersForClient(
 
   const userIds = new Set();
 
+  if (auth.currentUser?.uid) {
+    userIds.add(auth.currentUser.uid);
+  }
+
   if (client.managerId) {
     const users =
       await getUsersByManagerIds([

@@ -263,6 +263,13 @@ export function isRefundDealType(value) {
   );
 }
 
+/** Бюджет (сумма тарифа) при оплате существующего клиента — только апсэйл. */
+export function needsBudgetFieldForExistingDeal(
+  value
+) {
+  return resolveDealTypeId(value) === "upsell";
+}
+
 /** «Фактический старт (для куратора)» — только для новых стартов, не доплаты/отказы/возвраты. */
 export function showCuratorStartDateField(
   value

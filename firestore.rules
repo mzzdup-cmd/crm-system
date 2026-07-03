@@ -228,6 +228,22 @@ service cloud.firestore {
         && clientManagerFieldsUnchanged();
     }
 
+    function managerCanPatchClientContactFields() {
+      return isOperationalUser()
+        && isActiveRecord(resource.data)
+        && ownsManagerRecord(resource.data)
+        && clientManagerFieldsUnchanged()
+        && request.resource.data
+          .diff(resource.data)
+          .affectedKeys()
+          .hasOnly([
+            'vkLink',
+            'dialogLink',
+            'clientNote',
+            'updatedAt',
+          ]);
+    }
+
     function managerIdsMatch(leftId, rightId) {
       return leftId != null
         && rightId != null
@@ -389,6 +405,7 @@ service cloud.firestore {
             request.resource.data
           )
           || managerCanUpdateOwnedClient()
+          || managerCanPatchClientContactFields()
         );
 
       allow delete: if isAdmin();
