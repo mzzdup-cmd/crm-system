@@ -25,6 +25,11 @@ import {
 } from "../payment/paymentPermissions";
 
 import {
+  expandManagerIdAliases,
+  resolveManagerIdFromLegacy,
+} from "../auth/managerMigration";
+
+import {
   hasDebt,
 } from "../client/clientStatus";
 
@@ -76,19 +81,38 @@ export function paymentBelongsToManager(
     return true;
   }
 
+  const paymentManagerId =
+    payment.managerId
+      ? resolveManagerIdFromLegacy(
+          payment.managerId
+        ) || payment.managerId
+      : resolveManagerIdFromLegacy(
+          payment.manager
+        );
+
+  if (managerId && paymentManagerId) {
+    const ownerAliases =
+      expandManagerIdAliases(managerId);
+    const paymentAliases =
+      expandManagerIdAliases(
+        paymentManagerId
+      );
+
+    if (
+      ownerAliases.some((ownerId) =>
+        paymentAliases.includes(ownerId)
+      )
+    ) {
+      return true;
+    }
+  }
+
   const paymentKey =
     payment.managerId ||
     payment.manager;
 
   if (!paymentKey) {
     return false;
-  }
-
-  if (
-    managerId &&
-    paymentKey === managerId
-  ) {
-    return true;
   }
 
   const resolvedName =
@@ -103,9 +127,9 @@ export function paymentBelongsToManager(
   }
 
   if (
-    managerId &&
-    getManagerNameById(paymentKey) &&
-    paymentKey === managerId
+    payment.manager &&
+    resolvedName &&
+    payment.manager === resolvedName
   ) {
     return true;
   }
@@ -307,11 +331,30 @@ function matchesManagerKey(
   managerId,
   managerName
 ) {
-  if (
-    managerId &&
-    managerKey === managerId
-  ) {
-    return true;
+  if (!managerKey) {
+    return false;
+  }
+
+  const normalizedKey =
+    resolveManagerIdFromLegacy(
+      managerKey
+    ) || managerKey;
+
+  if (managerId) {
+    const ownerAliases =
+      expandManagerIdAliases(managerId);
+    const keyAliases =
+      expandManagerIdAliases(
+        normalizedKey
+      );
+
+    if (
+      ownerAliases.some((ownerId) =>
+        keyAliases.includes(ownerId)
+      )
+    ) {
+      return true;
+    }
   }
 
   const resolvedName =
@@ -320,7 +363,10 @@ function matchesManagerKey(
 
   if (
     resolvedName &&
-    managerKey === resolvedName
+    (
+      managerKey === resolvedName ||
+      normalizedKey === resolvedName
+    )
   ) {
     return true;
   }

@@ -19,6 +19,10 @@ import {
   canAccessPayment,
 } from "../auth/permissionHelpers";
 
+import {
+  isPaymentDeleted,
+} from "../payment/paymentPermissions";
+
 function getMonthKey(dateStr) {
   return dateStr?.slice(0, 7) || "";
 }
@@ -289,4 +293,34 @@ export function getPlannedTopupsSummary(
     bbTotalRemain,
     bbMonthRemain,
   };
+}
+
+export function countTodayPaymentsForUser({
+  payments = [],
+  today,
+  userData = null,
+  isLeadership = false,
+  canAccessPayment: canAccessPaymentFn = null,
+}) {
+  if (!today) {
+    return 0;
+  }
+
+  const canAccess =
+    canAccessPaymentFn ||
+    ((payment) =>
+      canAccessPayment(
+        userData,
+        payment
+      ));
+
+  return payments.filter(
+    (payment) =>
+      !isPaymentDeleted(payment) &&
+      payment.paymentDate === today &&
+      (
+        isLeadership ||
+        canAccess(payment)
+      )
+  ).length;
 }

@@ -158,6 +158,171 @@ async function fetchStartDateResyncPayments() {
     );
 }
 
+async function fetchVkResyncPayments() {
+  const snapshot = await getDb()
+    .collection("payments")
+    .where(
+      "ttVkResyncPending",
+      "==",
+      true
+    )
+    .get();
+
+  return snapshot.docs
+    .map((docSnap) => ({
+      id: docSnap.id,
+      ...docSnap.data(),
+    }))
+    .filter(
+      (payment) =>
+        !payment.deletedAt &&
+        parseTtRowNumber(payment)
+    );
+}
+
+function findStaleVkTtRows(
+  payments = [],
+  clientsById = {}
+) {
+  return payments.filter((payment) => {
+    if (
+      payment.deletedAt ||
+      payment.syncedToSheets !== true ||
+      payment.ttVkResyncPending === true
+    ) {
+      return false;
+    }
+
+    if (!parseTtRowNumber(payment)) {
+      return false;
+    }
+
+    const client =
+      clientsById[payment.clientId] || {};
+    const clientVk = (
+      client.vkLink || ""
+    ).trim();
+
+    if (!clientVk) {
+      return false;
+    }
+
+    const paymentVk = (
+      payment.vkLink || ""
+    ).trim();
+
+    return clientVk !== paymentVk;
+  });
+}
+
+async function processVkResyncs({
+  clientsById,
+  cycleMap,
+  summary,
+  extraPayments = [],
+}) {
+  const flagged =
+    await fetchVkResyncPayments();
+
+  const seen = new Set();
+  const payments = [];
+
+  for (const payment of [
+    ...flagged,
+    ...extraPayments,
+  ]) {
+    if (seen.has(payment.id)) {
+      continue;
+    }
+
+    seen.add(payment.id);
+    payments.push(payment);
+  }
+
+  for (const payment of payments) {
+    summary.processed += 1;
+
+    const rowNumber =
+      parseTtRowNumber(payment);
+
+    if (!rowNumber) {
+      summary.skipped += 1;
+      summary.skipReasons.missing_tt_row =
+        (summary.skipReasons
+          .missing_tt_row || 0) + 1;
+      continue;
+    }
+
+    const client =
+      clientsById[payment.clientId] || {};
+
+    const metadata =
+      await getTtRowMetadataWithVk({
+        payment,
+        client,
+        cycle: cycleMap[payment.id] || 1,
+      });
+
+    const ttConfig = getTtSheetForManager(
+      metadata.managerId
+    );
+
+    if (!ttConfig) {
+      summary.skipped += 1;
+      continue;
+    }
+
+    try {
+      const sheetsResult =
+        await updateTtRow({
+          spreadsheetId:
+            ttConfig.spreadsheetId,
+          sheetName: ttConfig.sheetName,
+          rowNumber,
+          row: metadata.row,
+        });
+
+      await getDb()
+        .collection("payments")
+        .doc(payment.id)
+        .update({
+          ttVkResyncPending: false,
+          ttVkResyncedAt: Date.now(),
+          ttUpdatedRange:
+            sheetsResult.updatedRange,
+          ttRowNumber: rowNumber,
+        });
+
+      summary.success += 1;
+
+      await getDb()
+        .collection("syncLog")
+        .add({
+          type: "tt_update",
+          updateKind: "vk_link",
+          paymentId: payment.id,
+          managerId: metadata.managerId,
+          spreadsheetId:
+            ttConfig.spreadsheetId,
+          sheetName: ttConfig.sheetName,
+          status: SYNC_LOG_STATUS.SUCCESS,
+          sheetsUpdatedRange:
+            sheetsResult.updatedRange,
+          createdAt: Date.now(),
+        });
+    } catch (error) {
+      summary.failed += 1;
+      summary.errors.push({
+        paymentId: payment.id,
+        managerId: metadata.managerId,
+        error:
+          error.message ||
+          String(error),
+      });
+    }
+  }
+}
+
 async function processStartDateResyncs({
   clientsById,
   cycleMap,
@@ -315,19 +480,45 @@ async function runTtSheetsSync({
     const resyncPayments =
       await fetchStartDateResyncPayments();
 
+    const vkResyncPayments =
+      await fetchVkResyncPayments();
+
+    const syncedForVkCheck =
+      allPayments.filter(
+        (payment) =>
+          payment.syncedToSheets === true &&
+          payment.clientId &&
+          parseTtRowNumber(payment)
+      );
+
     const clientsById =
       await fetchClientsForPayments([
         ...payments,
         ...resyncPayments,
+        ...vkResyncPayments,
+        ...syncedForVkCheck,
       ]);
 
     const cycleMap =
       buildPaymentCycleMap(allPayments);
 
+    const staleVkRows =
+      findStaleVkTtRows(
+        syncedForVkCheck,
+        clientsById
+      );
+
     await processStartDateResyncs({
       clientsById,
       cycleMap,
       summary,
+    });
+
+    await processVkResyncs({
+      clientsById,
+      cycleMap,
+      summary,
+      extraPayments: staleVkRows,
     });
 
     const sorted = sortPayments(payments);

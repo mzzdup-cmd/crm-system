@@ -10,6 +10,7 @@ import { usePermissions } from "./usePermissions";
 import {
   subscribeClientsForUser,
   subscribeOperationalPayments,
+  subscribeRecentPaymentsForUser,
   subscribeScheduleByDate,
   subscribeTrafficByDate,
 } from "../services/realtimeService";
@@ -324,7 +325,7 @@ export function useSubscriptionsRealtime() {
       );
 
     const unsubPayments =
-      subscribeOperationalPayments(
+      subscribeRecentPaymentsForUser(
         userData,
         OPERATIONAL_PAYMENTS_LIMIT,
         (items) => {
@@ -418,7 +419,7 @@ export function useBookingsRealtime() {
       );
 
     const unsubPayments =
-      subscribeOperationalPayments(
+      subscribeRecentPaymentsForUser(
         userData,
         OPERATIONAL_PAYMENTS_LIMIT,
         (items) => {

@@ -31,6 +31,7 @@ import {
 import { resolveNextPaymentDate } from "../domain/client/clientDates";
 import { getClientStatus, getRemain } from "../domain/client/clientStatus";
 import { resolveMissingVkRemindersForClient } from "./missingVkReminderService";
+import { queueTtVkResyncForClient } from "./ttVkResyncService";
 
 function mapClientDoc(snapshot) {
   const data = snapshot.data();
@@ -265,6 +266,16 @@ export async function updateClient(id, data) {
       } catch (error) {
         console.warn(
           "Missing VK reminder resolve skipped:",
+          id,
+          error
+        );
+      }
+
+      try {
+        await queueTtVkResyncForClient(id);
+      } catch (error) {
+        console.warn(
+          "TT VK resync queue skipped:",
           id,
           error
         );

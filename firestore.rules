@@ -469,6 +469,19 @@ service cloud.firestore {
         ]);
     }
 
+    function isVkResyncQueuePatchUpdate() {
+      return request.resource.data
+        .diff(resource.data)
+        .affectedKeys()
+        .hasOnly([
+          'ttVkResyncPending',
+          'updatedAt',
+          'updatedByUid',
+          'managerId',
+          'manager',
+        ]);
+    }
+
     function isCuratorStartDatePatchUpdate() {
       return request.resource.data
         .diff(resource.data)
@@ -613,6 +626,13 @@ service cloud.firestore {
         && paymentPatchOwnershipOk();
     }
 
+    function canPatchVkResyncQueue() {
+      return isSignedIn()
+        && isVkResyncQueuePatchUpdate()
+        && resource.data.syncedToSheets == true
+        && paymentPatchOwnershipOk();
+    }
+
     function canPatchCuratorStartDate() {
       return isSignedIn()
         && isCuratorStartDatePatchUpdate()
@@ -628,6 +648,7 @@ service cloud.firestore {
       allow update: if isSignedIn()
         && (
           canPatchOptionalStartDate()
+          || canPatchVkResyncQueue()
           || canPatchCuratorStartDate()
           || isLeadership()
           || managerCanEditPayment()

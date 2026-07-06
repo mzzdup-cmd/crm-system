@@ -12,8 +12,12 @@ import { db } from "./firebase";
 
 import {
   isLeadership,
-  getCurrentManagerId,
+  getManagerIdsForScopedQuery,
 } from "../domain/auth/roleHelpers";
+
+import {
+  canAccessPayment,
+} from "../domain/auth/permissionHelpers";
 
 import {
   normalizeClientPayload,
@@ -66,22 +70,34 @@ export function subscribeClientsForUser(
       "clients"
     );
   } else {
-    const managerId =
-      getCurrentManagerId(userData);
+    const managerIds =
+      getManagerIdsForScopedQuery(
+        userData
+      );
 
-    if (!managerId) {
+    if (!managerIds.length) {
       callback([]);
       return () => {};
     }
 
-    clientsQuery = query(
-      collection(db, "clients"),
-      where(
-        "managerId",
-        "==",
-        managerId
-      )
-    );
+    clientsQuery =
+      managerIds.length === 1
+        ? query(
+            collection(db, "clients"),
+            where(
+              "managerId",
+              "==",
+              managerIds[0]
+            )
+          )
+        : query(
+            collection(db, "clients"),
+            where(
+              "managerId",
+              "in",
+              managerIds.slice(0, 30)
+            )
+          );
   }
 
   return onSnapshot(
@@ -106,6 +122,70 @@ export function subscribeClientsForUser(
   );
 }
 
+function buildScopedPaymentsQuery(
+  userData,
+  maxCount
+) {
+  if (isLeadership(userData)) {
+    return query(
+      collection(db, "payments"),
+      orderBy("createdAt", "desc"),
+      limit(maxCount)
+    );
+  }
+
+  const managerIds =
+    getManagerIdsForScopedQuery(userData);
+
+  if (!managerIds.length) {
+    return null;
+  }
+
+  if (managerIds.length === 1) {
+    return query(
+      collection(db, "payments"),
+      where(
+        "managerId",
+        "==",
+        managerIds[0]
+      ),
+      orderBy("createdAt", "desc"),
+      limit(maxCount)
+    );
+  }
+
+  return query(
+    collection(db, "payments"),
+    where(
+      "managerId",
+      "in",
+      managerIds.slice(0, 30)
+    ),
+    orderBy("createdAt", "desc"),
+    limit(maxCount)
+  );
+}
+
+function mapScopedPayments(
+  snapshot,
+  userData
+) {
+  const items = snapshot.docs.map(
+    mapPaymentFromSnapshot
+  );
+
+  if (isLeadership(userData)) {
+    return items;
+  }
+
+  return items.filter((payment) =>
+    canAccessPayment(
+      userData,
+      payment
+    )
+  );
+}
+
 export function subscribeOperationalPayments(
   userData,
   maxCount,
@@ -116,6 +196,7 @@ export function subscribeOperationalPayments(
     return () => {};
   }
 
+  // All payments — used for team leaderboard on manager dashboard.
   const paymentsQuery = query(
     collection(db, "payments"),
     orderBy("createdAt", "desc"),
@@ -126,7 +207,9 @@ export function subscribeOperationalPayments(
     paymentsQuery,
     (snapshot) => {
       callback(
-        snapshot.docs.map(mapPaymentFromSnapshot)
+        snapshot.docs.map(
+          mapPaymentFromSnapshot
+        )
       );
     },
     (error) => {
@@ -149,40 +232,25 @@ export function subscribeRecentPaymentsForUser(
     return () => {};
   }
 
-  let paymentsQuery;
-
-  if (isLeadership(userData)) {
-    paymentsQuery = query(
-      collection(db, "payments"),
-      orderBy("createdAt", "desc"),
-      limit(maxCount)
+  const paymentsQuery =
+    buildScopedPaymentsQuery(
+      userData,
+      maxCount
     );
-  } else {
-    const managerId =
-      getCurrentManagerId(userData);
 
-    if (!managerId) {
-      callback([]);
-      return () => {};
-    }
-
-    paymentsQuery = query(
-      collection(db, "payments"),
-      where(
-        "managerId",
-        "==",
-        managerId
-      ),
-      orderBy("createdAt", "desc"),
-      limit(maxCount)
-    );
+  if (!paymentsQuery) {
+    callback([]);
+    return () => {};
   }
 
   return onSnapshot(
     paymentsQuery,
     (snapshot) => {
       callback(
-        snapshot.docs.map(mapPaymentFromSnapshot)
+        mapScopedPayments(
+          snapshot,
+          userData
+        )
       );
     },
     (error) => {

@@ -18,6 +18,31 @@ const clientWithBudget = {
   tariff: "Базовый",
 };
 
+test("vk link uses client profile when payment has none", () => {
+  const row = mapPaymentToTtRow({
+    payment: {
+      ...basePayment,
+      dealType: "Новая",
+      dialogLink:
+        "https://bluesales.ru/app/Messenger?dialogId=123",
+    },
+    client: {
+      ...clientWithBudget,
+      vkLink: "https://vk.com/id545801373",
+    },
+    cycle: 1,
+  });
+
+  assert.equal(
+    row[2],
+    "https://bluesales.ru/app/Messenger?dialogId=123"
+  );
+  assert.equal(
+    row[3],
+    "https://vk.com/id545801373"
+  );
+});
+
 test("topup rows omit budget column in TT export", () => {
   const row = mapPaymentToTtRow({
     payment: {

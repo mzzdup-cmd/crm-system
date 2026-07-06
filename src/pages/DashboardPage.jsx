@@ -66,6 +66,7 @@ import {
 import {
   getCuratorStartsTodayItems,
   getPlannedTopupsSummary,
+  countTodayPaymentsForUser,
 } from "../domain/dashboard/dayPlanInsights";
 
 import {
@@ -454,8 +455,12 @@ export default function DashboardPage() {
 
 function DashboardPageContent() {
   const { userData } = useAuth();
-  const { isManager, isLeadership, displayName } =
-    usePermissions();
+  const {
+    isManager,
+    isLeadership,
+    displayName,
+    canAccessPayment,
+  } = usePermissions();
 
   const {
     clients,
@@ -533,11 +538,23 @@ function DashboardPageContent() {
     [clients, payments, today]
   );
 
-  const todayPaymentsCount =
-    payments.filter(
-      (payment) =>
-        payment.paymentDate === today
-    ).length;
+  const todayPaymentsCount = useMemo(
+    () =>
+      countTodayPaymentsForUser({
+        payments,
+        today,
+        userData,
+        isLeadership,
+        canAccessPayment,
+      }),
+    [
+      payments,
+      today,
+      userData,
+      isLeadership,
+      canAccessPayment,
+    ]
+  );
 
   if (initialLoading) {
     return (
