@@ -1,6 +1,6 @@
 import {
   isLeadership,
-  getFirestoreManagerId,
+  getEffectiveOwnerManagerId,
 } from "../auth/roleHelpers";
 
 import {
@@ -49,7 +49,7 @@ export function canCreatePendingSale(
   }
 
   const creatorId =
-    getFirestoreManagerId(userData);
+    getEffectiveOwnerManagerId(userData);
 
   if (!creatorId) {
     return false;
@@ -118,7 +118,7 @@ export function canConfirmPendingSale(
   }
 
   const managerId =
-    getFirestoreManagerId(userData);
+    getEffectiveOwnerManagerId(userData);
 
   return (
     managerId &&

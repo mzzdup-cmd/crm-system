@@ -8,6 +8,10 @@ import { useAuth } from "../context/AuthContext";
 import { usePermissions } from "./usePermissions";
 
 import {
+  getEffectiveOwnerManagerId,
+} from "../domain/auth/roleHelpers";
+
+import {
   subscribePendingSalesForUser,
   countPendingForOwner,
   filterPendingIncoming,
@@ -31,6 +35,10 @@ export function usePendingSales() {
   const { userData } = useAuth();
   const { managerId, isManager, isLeadership } =
     usePermissions();
+
+  const effectiveOwnerManagerId =
+    getEffectiveOwnerManagerId(userData) ||
+    managerId;
 
   const today = getTodayDateString();
 
@@ -109,20 +117,20 @@ export function usePendingSales() {
 
     return filterPendingIncoming(
       pendingSales,
-      managerId
+      effectiveOwnerManagerId
     );
-  }, [pendingSales, managerId, isLeadership]);
+  }, [pendingSales, effectiveOwnerManagerId, isLeadership]);
 
   const created = useMemo(() => {
-    if (!managerId) {
+    if (!effectiveOwnerManagerId) {
       return [];
     }
 
     return filterPendingCreated(
       pendingSales,
-      managerId
+      effectiveOwnerManagerId
     );
-  }, [pendingSales, managerId]);
+  }, [pendingSales, effectiveOwnerManagerId]);
 
   const pendingCount = useMemo(() => {
     if (isLeadership) {
@@ -131,9 +139,9 @@ export function usePendingSales() {
 
     return countPendingForOwner(
       pendingSales,
-      managerId
+      effectiveOwnerManagerId
     );
-  }, [pendingSales, managerId, isLeadership, incoming]);
+  }, [pendingSales, effectiveOwnerManagerId, isLeadership, incoming]);
 
   const coveringTargets = useMemo(() => {
     if (!managerId) {

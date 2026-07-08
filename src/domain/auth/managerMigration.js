@@ -136,6 +136,43 @@ export function normalizeManagerFields(data = {}) {
   };
 }
 
+/** Matches firestore.rules canonicalManagerId(). */
+export function canonicalManagerId(managerId) {
+  if (!managerId) {
+    return null;
+  }
+
+  const resolved =
+    resolveManagerIdFromLegacy(managerId) ||
+    managerId;
+
+  switch (resolved) {
+    case "polina_plamadyala":
+      return "polina_plamadya";
+    case "vilu_petrova":
+    case "violeta_petrova":
+    case "vilu":
+    case "violeta":
+      return "violeta_petrova";
+    case "denis":
+      return "denis_manuilov";
+    case "ruslan":
+      return "ruslan_romanyuk";
+    case "alexander":
+      return "alexander_simanov";
+    case "sergey":
+      return "sergey_grebenshchikov";
+    case "andrey":
+      return "andrey_volkov";
+    case "katya":
+      return "katya_bakaeva";
+    case "Денис М":
+      return "denis_manuilov";
+    default:
+      return resolved;
+  }
+}
+
 export function expandManagerIdAliases(
   managerId
 ) {
@@ -179,14 +216,10 @@ export function managerIdsMatch(
     return false;
   }
 
-  const left =
-    resolveManagerIdFromLegacy(leftId) ||
-    leftId;
-  const right =
-    resolveManagerIdFromLegacy(rightId) ||
-    rightId;
-
-  return left === right;
+  return (
+    canonicalManagerId(leftId) ===
+    canonicalManagerId(rightId)
+  );
 }
 
 export function managerRequestMatchesUser(

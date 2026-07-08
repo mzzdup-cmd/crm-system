@@ -28,6 +28,10 @@ import {
 } from "../constants/managers";
 
 import {
+  managerIdsMatch,
+} from "../domain/auth/managerMigration";
+
+import {
   createNotificationIfMissing,
 } from "./notificationService";
 
@@ -312,7 +316,10 @@ export function countPendingForOwner(
 ) {
   return pendingSales.filter(
     (sale) =>
-      sale.ownerManagerId === ownerManagerId &&
+      managerIdsMatch(
+        sale.ownerManagerId,
+        ownerManagerId
+      ) &&
       sale.status === PENDING_SALE_STATUS.PENDING
   ).length;
 }
@@ -323,7 +330,10 @@ export function filterPendingIncoming(
 ) {
   return pendingSales.filter(
     (sale) =>
-      sale.ownerManagerId === ownerManagerId &&
+      managerIdsMatch(
+        sale.ownerManagerId,
+        ownerManagerId
+      ) &&
       sale.status === PENDING_SALE_STATUS.PENDING
   );
 }
@@ -334,8 +344,10 @@ export function filterPendingCreated(
 ) {
   return pendingSales.filter(
     (sale) =>
-      sale.createdByManagerId ===
-      creatorManagerId
+      managerIdsMatch(
+        sale.createdByManagerId,
+        creatorManagerId
+      )
   );
 }
 

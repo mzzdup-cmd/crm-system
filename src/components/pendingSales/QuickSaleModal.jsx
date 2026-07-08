@@ -25,6 +25,10 @@ import {
 } from "../../domain/pendingSales/pendingSalesLogic";
 
 import {
+  getEffectiveOwnerManagerId,
+} from "../../domain/auth/roleHelpers";
+
+import {
   createPendingSale,
 } from "../../services/pendingSalesService";
 
@@ -46,8 +50,11 @@ export default function QuickSaleModal({
   schedule,
   coveringTargets = [],
 }) {
-  const { userData, managerId, firestoreManagerId, isLeadership, isManager } =
+  const { userData, managerId, isLeadership, isManager } =
     usePermissions();
+
+  const effectiveOwnerManagerId =
+    getEffectiveOwnerManagerId(userData);
 
   const toast = useToast();
 
@@ -113,7 +120,7 @@ export default function QuickSaleModal({
   async function handleSubmit(event) {
     event.preventDefault();
 
-    if (isManager && !isLeadership && !firestoreManagerId) {
+    if (isManager && !isLeadership && !effectiveOwnerManagerId) {
       setError(
         "Профиль не настроен: попросите администратора указать managerId в Firebase (users → ваш UID)."
       );
@@ -152,7 +159,7 @@ export default function QuickSaleModal({
     try {
       await createPendingSale({
         createdByManagerId:
-          firestoreManagerId || managerId,
+          effectiveOwnerManagerId || managerId,
         ownerManagerId,
         dialogLink,
         amount,

@@ -31,6 +31,8 @@ const {
   SYNC_LOG_STATUS,
 } = require("./syncConstants");
 
+const STALE_VK_BATCH_LIMIT = 50;
+
 function getDb() {
   return admin.firestore();
 }
@@ -282,6 +284,12 @@ async function processVkResyncs({
           row: metadata.row,
         });
 
+      const syncedVk = (
+        client.vkLink ||
+        payment.vkLink ||
+        ""
+      ).trim();
+
       await getDb()
         .collection("payments")
         .doc(payment.id)
@@ -291,6 +299,9 @@ async function processVkResyncs({
           ttUpdatedRange:
             sheetsResult.updatedRange,
           ttRowNumber: rowNumber,
+          ...(syncedVk
+            ? { vkLink: syncedVk }
+            : {}),
         });
 
       summary.success += 1;
@@ -311,14 +322,20 @@ async function processVkResyncs({
           createdAt: Date.now(),
         });
     } catch (error) {
-      summary.failed += 1;
-      summary.errors.push({
+      summary.resyncFailed += 1;
+      summary.resyncErrors.push({
         paymentId: payment.id,
         managerId: metadata.managerId,
+        kind: "vk_link",
         error:
           error.message ||
           String(error),
       });
+      console.warn(
+        "[tt-sync] VK resync failed:",
+        payment.id,
+        error.message || error
+      );
     }
   }
 }
@@ -402,14 +419,20 @@ async function processStartDateResyncs({
           createdAt: Date.now(),
         });
     } catch (error) {
-      summary.failed += 1;
-      summary.errors.push({
+      summary.resyncFailed += 1;
+      summary.resyncErrors.push({
         paymentId: payment.id,
         managerId: metadata.managerId,
+        kind: "start_date",
         error:
           error.message ||
           String(error),
       });
+      console.warn(
+        "[tt-sync] Start-date resync failed:",
+        payment.id,
+        error.message || error
+      );
     }
   }
 }
@@ -456,11 +479,13 @@ async function runTtSheetsSync({
     success: 0,
     skipped: 0,
     failed: 0,
+    resyncFailed: 0,
     pendingBefore: 0,
     byManager: {},
     skipReasons: {},
     syncedRows: [],
     errors: [],
+    resyncErrors: [],
     configuredManagers:
       listConfiguredManagers(),
   };
@@ -518,7 +543,10 @@ async function runTtSheetsSync({
       clientsById,
       cycleMap,
       summary,
-      extraPayments: staleVkRows,
+      extraPayments: staleVkRows.slice(
+        0,
+        STALE_VK_BATCH_LIMIT
+      ),
     });
 
     const sorted = sortPayments(payments);
@@ -689,9 +717,19 @@ async function runTtSheetsSync({
           successCount: summary.success,
           skippedCount: summary.skipped,
           failedCount: summary.failed,
+          resyncFailedCount:
+            summary.resyncFailed,
           byManager: summary.byManager,
           completedAt: Date.now(),
         });
+    }
+
+    if (summary.resyncFailed > 0) {
+      console.warn(
+        "[tt-sync] Resync warnings:",
+        summary.resyncFailed,
+        "payment(s) — new appends still ran"
+      );
     }
 
     return {

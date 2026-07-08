@@ -90,7 +90,7 @@ async function main() {
   console.log(
     `[tt-sync] Summary: pending=${result.pendingBefore}, ` +
       `exported=${result.success}, skipped=${result.skipped}, ` +
-      `failed=${result.failed}`
+      `failed=${result.failed}, resyncFailed=${result.resyncFailed || 0}`
   );
 
   if (result.syncedRows?.length) {
@@ -112,6 +112,13 @@ async function main() {
       result.skipReasons
     );
     process.exit(1);
+  }
+
+  if (result.resyncFailed > 0) {
+    console.warn(
+      "[tt-sync] WARNING: resync errors (non-fatal):",
+      result.resyncErrors
+    );
   }
 
   if (result.failed > 0) {
