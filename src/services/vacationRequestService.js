@@ -30,10 +30,6 @@ import {
 } from "../constants/timeOff";
 
 import {
-  getManagerNameById,
-} from "../constants/managers";
-
-import {
   countVacationDays,
 } from "../domain/schedule/timeOffDates";
 

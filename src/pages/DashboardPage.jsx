@@ -69,10 +69,6 @@ import {
   countTodayPaymentsForUser,
 } from "../domain/dashboard/dayPlanInsights";
 
-import {
-  buildBbBookingItems,
-} from "../domain/client/bbBookingLogic";
-
 import PageErrorBoundary
 from "../components/ui/PageErrorBoundary";
 

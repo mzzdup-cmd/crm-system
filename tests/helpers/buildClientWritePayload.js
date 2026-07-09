@@ -68,69 +68,6 @@ function resolveManagerIdFromLegacy(value) {
   return null;
 }
 
-function resolveManagerIdFromEmail(email) {
-  if (!email || !email.includes("@")) {
-    return null;
-  }
-
-  const local = email
-    .split("@")[0]
-    .trim()
-    .toLowerCase();
-
-  return MANAGER_EMAIL_LOCAL_IDS[local] ?? null;
-}
-
-function getCurrentManagerId(userData) {
-  if (!userData) {
-    return null;
-  }
-
-  const fromDoc = userData.managerId
-    ? resolveManagerIdFromLegacy(
-        userData.managerId
-      )
-    : null;
-
-  if (fromDoc && getManagerById(fromDoc)) {
-    return fromDoc;
-  }
-
-  if (userData.role === ROLES.MANAGER) {
-    if (userData.name) {
-      const fromName =
-        resolveManagerIdFromLegacy(
-          userData.name
-        );
-
-      if (fromName) {
-        return fromName;
-      }
-    }
-
-    if (userData.email) {
-      const fromEmail =
-        resolveManagerIdFromEmail(
-          userData.email
-        );
-
-      if (fromEmail) {
-        return fromEmail;
-      }
-    }
-  }
-
-  if (userData.managerId) {
-    return (
-      resolveManagerIdFromLegacy(
-        userData.managerId
-      ) || userData.managerId
-    );
-  }
-
-  return null;
-}
-
 function normalizeManagerFields(data = {}) {
   if (data.managerId) {
     const resolvedId =

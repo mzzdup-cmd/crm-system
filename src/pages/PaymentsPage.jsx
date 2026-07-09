@@ -27,7 +27,6 @@ import {
   canEditPayment,
   canDeletePayment,
   canEditPaymentStartDate,
-  canEditCuratorStartDate,
   getPaymentEditTimeLeft,
 } from "../domain/payment/paymentPermissions";
 
