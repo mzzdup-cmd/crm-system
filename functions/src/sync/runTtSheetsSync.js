@@ -442,6 +442,135 @@ async function processStartDateResyncs({
   }
 }
 
+async function fetchTtRowResyncPayments() {
+  const snapshot = await getDb()
+    .collection("payments")
+    .where(
+      "ttRowResyncPending",
+      "==",
+      true
+    )
+    .get();
+
+  return snapshot.docs
+    .map((docSnap) => ({
+      id: docSnap.id,
+      ...docSnap.data(),
+    }))
+    .filter(
+      (payment) =>
+        !payment.deletedAt &&
+        parseTtRowNumber(payment)
+    );
+}
+
+async function processTtRowResyncs({
+  clientsById,
+  cycleMap,
+  summary,
+}) {
+  const payments =
+    await fetchTtRowResyncPayments();
+
+  for (const payment of payments) {
+    summary.processed += 1;
+
+    const rowNumber =
+      parseTtRowNumber(payment);
+
+    if (!rowNumber) {
+      summary.skipped += 1;
+      summary.skipReasons.missing_tt_row =
+        (summary.skipReasons
+          .missing_tt_row || 0) + 1;
+      continue;
+    }
+
+    const client =
+      clientsById[payment.clientId] || {};
+
+    const metadata =
+      await getTtRowMetadataWithVk({
+        payment,
+        client,
+        cycle: cycleMap[payment.id] || 1,
+      });
+
+    const ttConfig = getTtSheetForManager(
+      metadata.managerId
+    );
+
+    if (!ttConfig) {
+      summary.skipped += 1;
+      continue;
+    }
+
+    try {
+      const sheetsResult =
+        await updateTtRow({
+          spreadsheetId:
+            ttConfig.spreadsheetId,
+          sheetName: ttConfig.sheetName,
+          rowNumber,
+          row: metadata.row,
+        });
+
+      const syncedVk = (
+        client.vkLink ||
+        payment.vkLink ||
+        ""
+      ).trim();
+
+      await getDb()
+        .collection("payments")
+        .doc(payment.id)
+        .update({
+          ttRowResyncPending: false,
+          ttResyncedAt: Date.now(),
+          ttUpdatedRange:
+            sheetsResult.updatedRange,
+          ttRowNumber: rowNumber,
+          ...(syncedVk
+            ? { vkLink: syncedVk }
+            : {}),
+        });
+
+      summary.success += 1;
+
+      await getDb()
+        .collection("syncLog")
+        .add({
+          type: "tt_update",
+          updateKind: "payment_edit",
+          paymentId: payment.id,
+          managerId: metadata.managerId,
+          spreadsheetId:
+            ttConfig.spreadsheetId,
+          sheetName: ttConfig.sheetName,
+          status: SYNC_LOG_STATUS.SUCCESS,
+          sheetsUpdatedRange:
+            sheetsResult.updatedRange,
+          createdAt: Date.now(),
+        });
+    } catch (error) {
+      summary.resyncFailed += 1;
+      summary.resyncErrors.push({
+        paymentId: payment.id,
+        managerId: metadata.managerId,
+        kind: "payment_edit",
+        error:
+          error.message ||
+          String(error),
+      });
+      console.warn(
+        "[tt-sync] Payment row resync failed:",
+        payment.id,
+        error.message || error
+      );
+    }
+  }
+}
+
 async function processTtRowDeletions(
   summary
 ) {
@@ -609,6 +738,12 @@ async function runTtSheetsSync({
       );
 
     await processStartDateResyncs({
+      clientsById,
+      cycleMap,
+      summary,
+    });
+
+    await processTtRowResyncs({
       clientsById,
       cycleMap,
       summary,

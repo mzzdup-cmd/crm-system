@@ -3,6 +3,10 @@ import {
 } from "../auth/permissionHelpers";
 
 import {
+  isLeadership,
+} from "../auth/roleHelpers";
+
+import {
   isOptionalStartDateDealType,
   showCuratorStartDateField,
 } from "../../constants/dealTypes";
@@ -109,7 +113,7 @@ export function canEditPayment(
     return false;
   }
 
-  if (userData.role === "admin") {
+  if (isLeadership(userData)) {
     return true;
   }
 
@@ -145,7 +149,7 @@ export function canEditPaymentStartDate(
     return false;
   }
 
-  if (userData.role === "admin") {
+  if (isLeadership(userData)) {
     return true;
   }
 
@@ -179,7 +183,7 @@ export function canEditCuratorStartDate(
     return false;
   }
 
-  if (userData.role === "admin") {
+  if (isLeadership(userData)) {
     return true;
   }
 
@@ -205,10 +209,7 @@ export function canDeletePayment(
     return false;
   }
 
-  return (
-    userData.role === "admin" ||
-    userData.role === "rop"
-  );
+  return isLeadership(userData);
 }
 
 export function getPaymentEditTimeLeft(

@@ -718,6 +718,16 @@ export async function updatePayment({
   if (shouldResyncStartDate) {
     payload.ttStartDateResyncPending = true;
   } else if (
+    isStartDateOnlyUpdate ||
+    isCuratorStartDateOnlyUpdate
+  ) {
+    // schedule-only edits — TT row unchanged
+  } else if (
+    payment.syncedToSheets === true &&
+    hasTtRow
+  ) {
+    payload.ttRowResyncPending = true;
+  } else if (
     !isStartDateOnlyUpdate &&
     !isCuratorStartDateOnlyUpdate
   ) {
@@ -1389,7 +1399,7 @@ export async function createPayment({
 
 /** @deprecated use getPaymentsForUser */
 export function filterPaymentsByAccess(payments, userData) {
-  if (userData?.role === "admin") {
+  if (isLeadership(userData)) {
     return payments;
   }
 

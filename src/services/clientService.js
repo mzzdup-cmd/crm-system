@@ -310,7 +310,7 @@ export async function markSubscriptionChurned(
 
 /** @deprecated use getClientsForUser */
 export function filterClientsByAccess(clients, userData) {
-  if (userData?.role === "admin") {
+  if (isLeadership(userData)) {
     return clients;
   }
 
