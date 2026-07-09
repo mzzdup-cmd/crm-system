@@ -264,6 +264,60 @@ async function updateTtRow({
   };
 }
 
+async function clearTtRow({
+  spreadsheetId,
+  sheetName,
+  rowNumber,
+}) {
+  if (!spreadsheetId) {
+    return {
+      skipped: true,
+      reason: "no_spreadsheet",
+    };
+  }
+
+  if (!rowNumber || rowNumber < 2) {
+    return {
+      skipped: true,
+      reason: "invalid_row",
+    };
+  }
+
+  const emptyRow = Array(16).fill("");
+
+  try {
+    const result = await updateTtRow({
+      spreadsheetId,
+      sheetName,
+      rowNumber,
+      row: emptyRow,
+    });
+
+    return {
+      skipped: false,
+      ...result,
+    };
+  } catch (error) {
+    const message = String(
+      error?.message || error
+    );
+
+    if (
+      /not found|404|unable to parse range/i.test(
+        message
+      )
+    ) {
+      return {
+        skipped: true,
+        reason: "row_not_found",
+        error: message,
+      };
+    }
+
+    throw error;
+  }
+}
+
 async function writeTtSyncMeta({
   spreadsheetId,
   metaTab = "_CRM_Sync",
@@ -332,6 +386,7 @@ function formatMsk(timestamp) {
 module.exports = {
   appendTtRow,
   updateTtRow,
+  clearTtRow,
   writeTtSyncMeta,
   formatMsk,
   resolveSheetTabName,

@@ -45,8 +45,11 @@ function statusBadge(status) {
 export default function PendingSaleCard({
   sale,
   showActions = false,
+  canDelete = false,
   onReject,
+  onDelete,
   rejecting = false,
+  deleting = false,
 }) {
   const creatorName =
     getManagerNameById(sale.createdByManagerId) ||
@@ -212,37 +215,58 @@ export default function PendingSaleCard({
 
       {
 
-        showActions &&
+        (showActions || canDelete) &&
         sale.status === PENDING_SALE_STATUS.PENDING && (
 
           <div className="flex flex-col sm:flex-row gap-2 mt-4 pt-4 border-t border-slate-800">
 
-            <Link
-              to={`/new-payment?pendingSale=${sale.id}`}
-              className="
-                flex-1 text-center py-3 rounded-xl font-bold
-                bg-green-500 hover:bg-green-400 transition-colors
-              "
-            >
+            {showActions && (
+              <Link
+                to={`/new-payment?pendingSale=${sale.id}`}
+                className="
+                  flex-1 text-center py-3 rounded-xl font-bold
+                  bg-green-500 hover:bg-green-400 transition-colors
+                "
+              >
 
-              Подтвердить и заполнить
+                Подтвердить и заполнить
 
-            </Link>
+              </Link>
+            )}
 
-            <button
-              type="button"
-              onClick={() => onReject?.(sale.id)}
-              disabled={rejecting}
-              className="
-                flex-1 py-3 rounded-xl font-bold
-                bg-slate-800 hover:bg-slate-700
-                text-slate-300 disabled:opacity-50
-              "
-            >
+            {showActions && (
+              <button
+                type="button"
+                onClick={() => onReject?.(sale.id)}
+                disabled={rejecting || deleting}
+                className="
+                  flex-1 py-3 rounded-xl font-bold
+                  bg-slate-800 hover:bg-slate-700
+                  text-slate-300 disabled:opacity-50
+                "
+              >
 
-              Отклонить
+                Отклонить
 
-            </button>
+              </button>
+            )}
+
+            {canDelete && (
+              <button
+                type="button"
+                onClick={() => onDelete?.(sale)}
+                disabled={rejecting || deleting}
+                className="
+                  flex-1 py-3 rounded-xl font-bold
+                  bg-red-600/80 hover:bg-red-600
+                  text-white disabled:opacity-50
+                "
+              >
+
+                {deleting ? "Удаление..." : "Удалить"}
+
+              </button>
+            )}
 
           </div>
 

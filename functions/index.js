@@ -149,9 +149,20 @@ const {
   updatePaymentStartDateHandler,
 } = require("./src/payments/updatePaymentStartDateHandler");
 
+const {
+  clearPendingSaleTtRowHandler,
+} = require("./src/sync/deleteTtRowHandler");
+
 exports.updatePaymentStartDate = onCall(
   {
     region: "europe-west1",
   },
   updatePaymentStartDateHandler
+);
+
+exports.clearPendingSaleTtRow = onCall(
+  {
+    region: "europe-west1",
+  },
+  clearPendingSaleTtRowHandler
 );

@@ -5,6 +5,7 @@ import {
   getDocs,
   addDoc,
   updateDoc,
+  deleteDoc,
   query,
   where,
   orderBy,
@@ -34,6 +35,14 @@ import {
 import {
   createNotificationIfMissing,
 } from "./notificationService";
+
+import {
+  clearPendingSaleTtRowIfNeeded,
+} from "./pendingSaleTtService";
+
+import {
+  canDeletePendingSale,
+} from "../domain/pendingSales/pendingSalesLogic";
 
 import {
   getUsersByManagerIds,
@@ -175,6 +184,38 @@ export async function rejectPendingSale(id) {
     status: PENDING_SALE_STATUS.REJECTED,
     confirmedAt: Date.now(),
   });
+}
+
+export async function deletePendingSale(
+  id,
+  { userData } = {}
+) {
+  const sale = await getPendingSaleById(id);
+
+  if (!sale) {
+    throw new Error(
+      "Продажа не найдена"
+    );
+  }
+
+  if (
+    !canDeletePendingSale(
+      userData,
+      sale
+    )
+  ) {
+    throw new Error(
+      "Нет прав на удаление"
+    );
+  }
+
+  await clearPendingSaleTtRowIfNeeded(sale);
+
+  await deleteDoc(
+    doc(db, "pendingSales", id)
+  );
+
+  return { id };
 }
 
 function subscribeQuery(

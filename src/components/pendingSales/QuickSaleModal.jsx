@@ -1,6 +1,7 @@
 import {
   useState,
   useEffect,
+  useMemo,
 } from "react";
 
 import {
@@ -80,11 +81,20 @@ export default function QuickSaleModal({
 
   const [saving, setSaving] = useState(false);
 
-  const availableTargets = (isLeadership || isManager)
-    ? MANAGERS.filter(
+  const availableTargets = useMemo(() => {
+    if (isLeadership || isManager) {
+      return MANAGERS.filter(
         (m) => m.id !== managerId
-      ).map((m) => m.id)
-    : coveringTargets;
+      ).map((m) => m.id);
+    }
+
+    return coveringTargets;
+  }, [
+    isLeadership,
+    isManager,
+    managerId,
+    coveringTargets,
+  ]);
 
   const singleTarget =
     availableTargets.length === 1;
@@ -108,7 +118,7 @@ export default function QuickSaleModal({
     setComment("");
     setCourse("");
     setDealTypeId("new");
-  }, [open, availableTargets, singleTarget]);
+  }, [open, singleTarget, availableTargets]);
 
   if (!open) {
     return null;
@@ -302,7 +312,9 @@ export default function QuickSaleModal({
             </label>
 
             <input
-              type="url"
+              type="text"
+              inputMode="url"
+              autoComplete="off"
               value={dialogLink}
               onChange={(e) =>
                 setDialogLink(e.target.value)

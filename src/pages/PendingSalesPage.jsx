@@ -2,11 +2,15 @@ import {
   useState,
 } from "react";
 
+import { useAuth } from "../context/AuthContext";
+import { usePermissions } from "../hooks/usePermissions";
+
 import { usePendingSales }
 from "../hooks/usePendingSales";
 
 import {
   rejectPendingSale,
+  deletePendingSale,
 } from "../services/pendingSalesService";
 
 import PageHeader
@@ -14,6 +18,9 @@ from "../components/ui/PageHeader";
 
 import EmptyState
 from "../components/ui/EmptyState";
+
+import ConfirmModal
+from "../components/ui/ConfirmModal";
 
 import RealtimeIndicator
 from "../components/ui/RealtimeIndicator";
@@ -35,7 +42,17 @@ import {
   getQuickSaleButtonLabel,
 } from "../domain/pendingSales/pendingSalesLogic";
 
+import {
+  formatMoney,
+} from "../utils/moneyFormat";
+
+import { useToast }
+from "../context/ToastContext";
+
 export default function PendingSalesPage() {
+  const { userData } = useAuth();
+  const { isLeadership } = usePermissions();
+  const toast = useToast();
   const {
     incoming,
     created,
@@ -58,6 +75,12 @@ export default function PendingSalesPage() {
   const [rejectingId, setRejectingId] =
     useState(null);
 
+  const [deletingId, setDeletingId] =
+    useState(null);
+
+  const [deleteTarget, setDeleteTarget] =
+    useState(null);
+
   async function handleReject(id) {
     setRejectingId(id);
 
@@ -65,6 +88,37 @@ export default function PendingSalesPage() {
       await rejectPendingSale(id);
     } finally {
       setRejectingId(null);
+    }
+  }
+
+  async function handleConfirmDelete() {
+    if (!deleteTarget || !userData) {
+      return;
+    }
+
+    setDeletingId(deleteTarget.id);
+
+    try {
+      await deletePendingSale(
+        deleteTarget.id,
+        { userData }
+      );
+
+      toast.success(
+        `Продажа удалена: ${formatMoney(
+          deleteTarget.amount
+        )}`
+      );
+
+      setDeleteTarget(null);
+    } catch (deleteError) {
+      console.error(deleteError);
+      toast.error(
+        deleteError.message ||
+          "Не удалось удалить"
+      );
+    } finally {
+      setDeletingId(null);
     }
   }
 
@@ -152,9 +206,14 @@ export default function PendingSalesPage() {
                       key={sale.id}
                       sale={sale}
                       showActions
+                      canDelete={isLeadership}
                       onReject={handleReject}
+                      onDelete={setDeleteTarget}
                       rejecting={
                         rejectingId === sale.id
+                      }
+                      deleting={
+                        deletingId === sale.id
                       }
                     />
 
@@ -190,6 +249,11 @@ export default function PendingSalesPage() {
               <PendingSaleCard
                 key={sale.id}
                 sale={sale}
+                canDelete={isLeadership}
+                onDelete={setDeleteTarget}
+                deleting={
+                  deletingId === sale.id
+                }
               />
             ))}
           </div>
@@ -272,6 +336,24 @@ export default function PendingSalesPage() {
         onClose={() => setModalOpen(false)}
         schedule={schedule}
         coveringTargets={coveringTargets}
+      />
+
+      <ConfirmModal
+        open={Boolean(deleteTarget)}
+        title="Удалить быструю продажу?"
+        message={
+          deleteTarget
+            ? `${formatMoney(
+                deleteTarget.amount
+              )} · ${deleteTarget.paymentDate || "—"}. Запись будет удалена безвозвратно.`
+            : ""
+        }
+        confirmLabel="Удалить"
+        loading={Boolean(deletingId)}
+        onConfirm={handleConfirmDelete}
+        onCancel={() =>
+          setDeleteTarget(null)
+        }
       />
 
     </div>

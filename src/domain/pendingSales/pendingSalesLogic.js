@@ -129,6 +129,32 @@ export function canConfirmPendingSale(
   );
 }
 
+export function canDeletePendingSale(
+  userData,
+  pendingSale
+) {
+  if (!userData || !pendingSale) {
+    return false;
+  }
+
+  return isLeadership(userData);
+}
+
+export function pendingSaleHasTtExport(
+  pendingSale
+) {
+  if (!pendingSale) {
+    return false;
+  }
+
+  return (
+    pendingSale.syncedToTt === true ||
+    pendingSale.syncedToSheets === true ||
+    Boolean(pendingSale.ttRowNumber) ||
+    Boolean(pendingSale.ttUpdatedRange)
+  );
+}
+
 export function validatePendingSaleInput({
   ownerManagerId,
   dialogLink,
