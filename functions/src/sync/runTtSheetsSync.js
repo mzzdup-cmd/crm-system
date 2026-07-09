@@ -31,7 +31,12 @@ const {
   SYNC_LOG_STATUS,
 } = require("./syncConstants");
 
+const {
+  clearTtRowForRecord,
+} = require("./deleteTtRowHandler");
+
 const STALE_VK_BATCH_LIMIT = 50;
+const TT_ROW_DELETION_BATCH_LIMIT = 30;
 
 function getDb() {
   return admin.firestore();
@@ -437,6 +442,74 @@ async function processStartDateResyncs({
   }
 }
 
+async function processTtRowDeletions(
+  summary
+) {
+  const snapshot = await getDb()
+    .collection("ttRowDeletions")
+    .where("status", "==", "pending")
+    .limit(TT_ROW_DELETION_BATCH_LIMIT)
+    .get();
+
+  for (const docSnap of snapshot.docs) {
+    const record = {
+      id: docSnap.id,
+      ...docSnap.data(),
+    };
+
+    try {
+      const result =
+        await clearTtRowForRecord(record);
+
+      await docSnap.ref.update({
+        status: result.cleared
+          ? "done"
+          : "skipped",
+        processedAt: Date.now(),
+        result,
+      });
+
+      if (
+        !result.cleared &&
+        !result.skipped
+      ) {
+        summary.resyncFailed += 1;
+        summary.resyncErrors.push({
+          type: "tt_row_deletion",
+          sourceId: record.sourceId || record.id,
+          error:
+            result.error ||
+            result.reason ||
+            "clear_failed",
+        });
+      }
+    } catch (error) {
+      summary.resyncFailed += 1;
+      summary.resyncErrors.push({
+        type: "tt_row_deletion",
+        sourceId: record.sourceId || record.id,
+        error:
+          error.message ||
+          String(error),
+      });
+
+      await docSnap.ref.update({
+        status: "failed",
+        processedAt: Date.now(),
+        error:
+          error.message ||
+          String(error),
+      });
+
+      console.warn(
+        "[tt-sync] TT row deletion failed:",
+        record.sourceId || record.id,
+        error.message || error
+      );
+    }
+  }
+}
+
 function sortPayments(payments) {
   return [...payments].sort((a, b) => {
     const dateA =
@@ -495,6 +568,8 @@ async function runTtSheetsSync({
       status: SYNC_LOG_STATUS.PENDING,
       source,
     });
+
+    await processTtRowDeletions(summary);
 
     const [payments, allPayments] =
       await Promise.all([

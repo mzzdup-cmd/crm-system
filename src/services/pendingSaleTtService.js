@@ -1,15 +1,10 @@
 import {
-  getFunctions,
-  httpsCallable,
-} from "firebase/functions";
-
-import app from "./firebase";
-
-import {
   pendingSaleHasTtExport,
 } from "../domain/pendingSales/pendingSalesLogic";
 
-const functions = getFunctions(app);
+import {
+  queueTtRowDeletion,
+} from "./ttRowDeletionQueueService";
 
 export async function clearPendingSaleTtRowIfNeeded(
   pendingSale
@@ -18,20 +13,17 @@ export async function clearPendingSaleTtRowIfNeeded(
     return { skipped: true };
   }
 
-  const clearTtRow = httpsCallable(
-    functions,
-    "clearPendingSaleTtRow"
-  );
-
   try {
-    const response = await clearTtRow({
-      pendingSaleId: pendingSale.id,
-    });
-
-    return response.data || { skipped: true };
+    return await queueTtRowDeletion(
+      pendingSale,
+      {
+        sourceType: "pendingSale",
+        sourceId: pendingSale.id,
+      }
+    );
   } catch (error) {
     console.warn(
-      "Pending sale TT row cleanup failed:",
+      "Pending sale TT row deletion queue failed:",
       error
     );
 

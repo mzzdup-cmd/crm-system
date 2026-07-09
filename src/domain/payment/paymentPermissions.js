@@ -205,7 +205,10 @@ export function canDeletePayment(
     return false;
   }
 
-  return userData.role === "admin";
+  return (
+    userData.role === "admin" ||
+    userData.role === "rop"
+  );
 }
 
 export function getPaymentEditTimeLeft(

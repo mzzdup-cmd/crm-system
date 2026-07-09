@@ -770,6 +770,15 @@ service cloud.firestore {
       allow delete: if isLeadership();
     }
 
+    match /ttRowDeletions/{deletionId} {
+      allow read: if isLeadership();
+
+      allow create: if isLeadership()
+        && request.resource.data.status == 'pending'
+        && request.resource.data.sourceId is string
+        && request.resource.data.sourceType is string;
+    }
+
     function canCreateOwnManagerRequest() {
       return isSignedIn()
         && hasUserProfile()

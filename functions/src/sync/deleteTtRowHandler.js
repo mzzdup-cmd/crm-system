@@ -19,18 +19,22 @@ function isLeadershipRole(userData) {
   );
 }
 
-function resolveSpreadsheetForPendingSale(
-  sale
+function resolveSpreadsheetForRecord(
+  record
 ) {
-  if (sale?.ttSpreadsheetId) {
+  if (record?.ttSpreadsheetId) {
     return {
-      spreadsheetId: sale.ttSpreadsheetId,
-      sheetName: sale.ttSheetName || "TT",
+      spreadsheetId: record.ttSpreadsheetId,
+      sheetName: record.ttSheetName || "TT",
     };
   }
 
+  const managerId =
+    record?.ownerManagerId ||
+    record?.managerId;
+
   const sheetConfig = getTtSheetForManager(
-    sale?.ownerManagerId
+    managerId
   );
 
   if (!sheetConfig) {
@@ -45,27 +49,25 @@ function resolveSpreadsheetForPendingSale(
   };
 }
 
-function shouldClearPendingSaleTtRow(
-  sale
-) {
-  const rowNumber = parseTtRowNumber(sale);
+function shouldClearTtRow(record) {
+  const rowNumber = parseTtRowNumber(record);
 
   if (!rowNumber) {
     return false;
   }
 
   return (
-    sale?.syncedToTt === true ||
-    sale?.syncedToSheets === true ||
-    Boolean(sale?.ttRowNumber) ||
-    Boolean(sale?.ttUpdatedRange)
+    record?.syncedToTt === true ||
+    record?.syncedToSheets === true ||
+    Boolean(record?.ttRowNumber) ||
+    Boolean(record?.ttUpdatedRange)
   );
 }
 
-async function clearPendingSaleTtRow(
-  sale
+async function clearTtRowForRecord(
+  record
 ) {
-  if (!shouldClearPendingSaleTtRow(sale)) {
+  if (!shouldClearTtRow(record)) {
     return {
       cleared: false,
       skipped: true,
@@ -73,9 +75,9 @@ async function clearPendingSaleTtRow(
     };
   }
 
-  const rowNumber = parseTtRowNumber(sale);
+  const rowNumber = parseTtRowNumber(record);
   const sheetTarget =
-    resolveSpreadsheetForPendingSale(sale);
+    resolveSpreadsheetForRecord(record);
 
   if (!sheetTarget?.spreadsheetId) {
     return {
@@ -166,14 +168,16 @@ async function clearPendingSaleTtRowHandler(
     };
   }
 
-  return clearPendingSaleTtRow({
+  return clearTtRowForRecord({
     id: saleSnap.id,
     ...saleSnap.data(),
   });
 }
 
 module.exports = {
-  clearPendingSaleTtRow,
+  clearTtRowForRecord,
+  clearPendingSaleTtRow: clearTtRowForRecord,
   clearPendingSaleTtRowHandler,
-  shouldClearPendingSaleTtRow,
+  shouldClearTtRow,
+  shouldClearPendingSaleTtRow: shouldClearTtRow,
 };

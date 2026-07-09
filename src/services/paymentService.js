@@ -13,6 +13,9 @@ import {
 
 import { db } from "./firebase";
 import {
+  queueTtRowDeletion,
+} from "./ttRowDeletionQueueService";
+import {
   normalizeManagerFields,
 } from "../domain/auth/managerMigration";
 import {
@@ -860,6 +863,18 @@ export async function deletePayment({
   ) {
     throw new Error(
       "Нет прав на удаление"
+    );
+  }
+
+  try {
+    await queueTtRowDeletion(payment, {
+      sourceType: "payment",
+      sourceId: paymentId,
+    });
+  } catch (error) {
+    console.warn(
+      "Payment TT row deletion queue failed:",
+      error
     );
   }
 
