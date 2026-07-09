@@ -200,7 +200,8 @@ function LegacyTtDealTypeSelect({
 }
 
 export default function NewPaymentPage() {
-  const { user, userData } = useAuth();
+  const { user, userData, loading: authLoading } =
+    useAuth();
   const toast = useToast();
   const navigate = useNavigate();
   const { isLeadership } = usePermissions();
@@ -223,7 +224,7 @@ export default function NewPaymentPage() {
     useState(null);
 
   const [loadingPending, setLoadingPending] =
-    useState(!!pendingSaleId);
+    useState(false);
 
   const [dealTypeId, setDealTypeId] =
     useState("");
@@ -414,10 +415,42 @@ export default function NewPaymentPage() {
   }, [clientId, userData]);
 
   useEffect(() => {
-    if (pendingSaleId && userData) {
-      loadPendingSale(pendingSaleId);
+    if (!pendingSaleId) {
+      return;
     }
-  }, [pendingSaleId, userData]);
+
+    if (authLoading) {
+      return;
+    }
+
+    if (!userData) {
+      setLoadingPending(false);
+      toast.error(
+        "Не удалось загрузить профиль. Обновите страницу."
+      );
+      navigate("/pending-sales");
+      return;
+    }
+
+    loadPendingSale(pendingSaleId);
+  }, [pendingSaleId, userData, authLoading]);
+
+  async function finalizePendingSaleConfirmation(
+    paymentId
+  ) {
+    if (!pendingSaleId) {
+      return false;
+    }
+
+    await confirmPendingSale(
+      pendingSaleId,
+      { paymentId }
+    );
+
+    toast.success("Оплата подтверждена");
+    navigate("/pending-sales");
+    return true;
+  }
 
   useEffect(() => {
     if (
@@ -667,58 +700,75 @@ export default function NewPaymentPage() {
   async function loadPendingSale(id) {
     setLoadingPending(true);
 
-    const sale =
-      await getPendingSaleById(id);
+    try {
+      const sale =
+        await getPendingSaleById(id);
 
-    if (!sale) {
-      setLoadingPending(false);
-      toast.error(
-        "Временная продажа не найдена"
+      if (!sale) {
+        toast.error(
+          "Временная продажа не найдена"
+        );
+        navigate("/pending-sales");
+        return;
+      }
+
+      if (
+        !canConfirmPendingSale(
+          userData,
+          sale
+        )
+      ) {
+        toast.error(
+          "Нет доступа к этой продаже"
+        );
+        navigate("/pending-sales");
+        return;
+      }
+
+      setPendingSale(sale);
+      setDialogLink(sale.dialogLink || "");
+      setPaymentAmount(
+        String(sale.amount || "")
       );
-      return;
-    }
+      setPaymentDate(sale.paymentDate || "");
+      setPaymentComment(sale.comment || "");
+      setManager(
+        getManagerNameById(
+          sale.ownerManagerId
+        ) || ""
+      );
+      setDealTypeId(
+        resolveDealTypeId(
+          sale.dealTypeId ||
+            sale.dealType ||
+            "new"
+        )
+      );
 
-    if (
-      !canConfirmPendingSale(
-        userData,
-        sale
-      )
-    ) {
-      setLoadingPending(false);
+      if (sale.course) {
+        setCourse(sale.course);
+      }
+
+      if (sale.dialogLink) {
+        findClient(sale.dialogLink).catch(
+          (error) => {
+            console.warn(
+              "Pending sale client lookup failed:",
+              error
+            );
+          }
+        );
+      }
+    } catch (error) {
+      console.error(error);
       toast.error(
-        "Нет доступа к этой продаже"
+        error.message ||
+          "Не удалось загрузить временную продажу"
       );
       navigate("/pending-sales");
-      return;
+    } finally {
+      setLoadingPending(false);
     }
-
-    setPendingSale(sale);
-    setDialogLink(sale.dialogLink || "");
-    setPaymentAmount(
-      String(sale.amount || "")
-    );
-    setPaymentDate(sale.paymentDate || "");
-    setPaymentComment(sale.comment || "");
-    setManager(
-      getManagerNameById(
-        sale.ownerManagerId
-      ) || ""
-    );
-    setDealTypeId(
-      resolveDealTypeId(
-        sale.dealTypeId ||
-        sale.dealType ||
-        "new"
-      )
-    );
-
-    if (sale.course) {
-      setCourse(sale.course);
-    }
-
-    await findClient(sale.dialogLink || "");
-
-    setLoadingPending(false);
   }
 
   async function loadClientById(id) {
@@ -1175,21 +1225,11 @@ export default function NewPaymentPage() {
         createdByUid,
       });
 
-      if (pendingSaleId) {
-        await confirmPendingSale(
-          pendingSaleId,
-          {
-            paymentId:
-              result.payment?.id,
-          }
-        );
-      }
-
-      if (pendingSaleId) {
-        toast.success(
-          "Оплата подтверждена"
-        );
-        navigate("/pending-sales");
+      if (
+        await finalizePendingSaleConfirmation(
+          result.payment?.id
+        )
+      ) {
         return;
       }
 
@@ -1337,6 +1377,14 @@ export default function NewPaymentPage() {
           "Missing VK reminder skipped:",
           error
         );
+      }
+
+      if (
+        await finalizePendingSaleConfirmation(
+          paymentResult?.payment?.id
+        )
+      ) {
+        return;
       }
 
       toast.success(
@@ -1501,7 +1549,10 @@ export default function NewPaymentPage() {
     setConfirmSave(null);
   }
 
-  if (loadingPending) {
+  if (
+    loadingPending ||
+    (pendingSaleId && authLoading)
+  ) {
     return (
       <LoadingState message="Загрузка временной продажи..." />
     );

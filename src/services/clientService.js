@@ -143,27 +143,36 @@ export async function findClientByDialogLink(
     return null;
   }
 
-  const clientsQuery = query(
-    collection(db, "clients"),
-    where("dialogLink", "==", dialogLink)
-  );
+  try {
+    const clientsQuery = query(
+      collection(db, "clients"),
+      where("dialogLink", "==", dialogLink)
+    );
 
-  const snapshot = await getDocs(clientsQuery);
+    const snapshot = await getDocs(clientsQuery);
 
-  if (snapshot.empty) {
+    if (snapshot.empty) {
+      return null;
+    }
+
+    const client = mapClientDoc(snapshot.docs[0]);
+
+    if (
+      userData &&
+      !canAccessClient(userData, client)
+    ) {
+      return null;
+    }
+
+    return client;
+  } catch (error) {
+    console.warn(
+      "Client lookup by dialog link failed:",
+      error
+    );
+
     return null;
   }
-
-  const client = mapClientDoc(snapshot.docs[0]);
-
-  if (
-    userData &&
-    !canAccessClient(userData, client)
-  ) {
-    return null;
-  }
-
-  return client;
 }
 
 export async function addClient(formData) {
