@@ -151,6 +151,8 @@ export function normalizePaymentPayload(data) {
       data.curatorStartDate || "",
     createdAt: data.createdAt || Date.now(),
     syncedToSheets: data.syncedToSheets ?? false,
+    lastTtSyncSkipReason:
+      data.lastTtSyncSkipReason || null,
     deletedAt: data.deletedAt ?? null,
   };
 }
@@ -170,17 +172,10 @@ function sortPaymentsDesc(payments) {
 }
 
 function paymentHasExportedTtRow(payment) {
-  if (
+  return Boolean(
     payment?.ttRowNumber ||
-    payment?.ttUpdatedRange ||
-    payment?.sheetsUpdatedRange
-  ) {
-    return true;
-  }
-
-  return (
-    payment?.syncedToSheets === true ||
-    payment?.syncedToTt === true
+      payment?.ttUpdatedRange ||
+      payment?.sheetsUpdatedRange
   );
 }
 

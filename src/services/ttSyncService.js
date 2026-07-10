@@ -5,6 +5,10 @@ import {
 
 import app from "./firebase";
 
+import {
+  paymentNeedsTtAppend,
+} from "../domain/payment/paymentTtExportState";
+
 const functions = getFunctions(app);
 
 export async function triggerTtSheetsSyncNow() {
@@ -22,8 +26,6 @@ export function countUnsyncedPayments(
   payments = []
 ) {
   return payments.filter(
-    (payment) =>
-      !payment.deletedAt &&
-      payment.syncedToSheets !== true
+    paymentNeedsTtAppend
   ).length;
 }

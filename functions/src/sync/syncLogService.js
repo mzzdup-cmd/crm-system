@@ -56,6 +56,10 @@ async function markPaymentSynced(paymentId, meta = {}) {
         meta.updatedRange || null,
       ttRowNumber:
         meta.rowNumber || null,
+      lastTtSyncSkipReason:
+        admin.firestore.FieldValue.delete(),
+      lastTtSyncSkippedAt:
+        admin.firestore.FieldValue.delete(),
     });
 }
 

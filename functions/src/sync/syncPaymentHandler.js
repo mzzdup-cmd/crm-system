@@ -19,6 +19,11 @@ const {
   markPaymentSynced,
 } = require("./syncLogService");
 
+const {
+  paymentHasTtRowMetadata,
+  paymentNeedsTtAppend,
+} = require("./paymentTtExportState");
+
 function getDb() {
   return admin.firestore();
 }
@@ -69,22 +74,27 @@ async function syncPaymentToSheets(paymentId, paymentData) {
   };
 
   if (payment.syncedToSheets === true) {
-    await createSyncLog({
-      paymentId,
-      status: SYNC_LOG_STATUS.SKIPPED,
-      reason: "already_synced_flag",
-    });
+    if (paymentHasTtRowMetadata(payment)) {
+      await createSyncLog({
+        paymentId,
+        status: SYNC_LOG_STATUS.SKIPPED,
+        reason: "already_synced_flag",
+      });
 
-    return {
-      status: SYNC_LOG_STATUS.SKIPPED,
-      paymentId,
-    };
+      return {
+        status: SYNC_LOG_STATUS.SKIPPED,
+        paymentId,
+      };
+    }
   }
 
   const existingSuccessLog =
     await getSyncLogByPaymentId(paymentId);
 
-  if (existingSuccessLog) {
+  if (
+    existingSuccessLog &&
+    paymentHasTtRowMetadata(payment)
+  ) {
     await getDb()
       .collection("payments")
       .doc(paymentId)
@@ -196,9 +206,16 @@ async function syncPaymentToSheets(paymentId, paymentData) {
 async function backfillUnsyncedPayments(limit = 200) {
   const snapshot = await getDb()
     .collection("payments")
-    .where("syncedToSheets", "==", false)
-    .limit(limit)
+    .limit(limit * 3)
     .get();
+
+  const pending = snapshot.docs
+    .map((docSnap) => ({
+      id: docSnap.id,
+      ...docSnap.data(),
+    }))
+    .filter(paymentNeedsTtAppend)
+    .slice(0, limit);
 
   const results = {
     processed: 0,
@@ -208,13 +225,13 @@ async function backfillUnsyncedPayments(limit = 200) {
     errors: [],
   };
 
-  for (const docSnap of snapshot.docs) {
+  for (const docSnap of pending) {
     results.processed += 1;
 
     try {
       const result = await syncPaymentToSheets(
         docSnap.id,
-        docSnap.data()
+        docSnap
       );
 
       if (result.status === SYNC_LOG_STATUS.SUCCESS) {

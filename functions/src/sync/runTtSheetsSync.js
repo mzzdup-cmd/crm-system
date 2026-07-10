@@ -35,6 +35,10 @@ const {
   clearTtRowForRecord,
 } = require("./deleteTtRowHandler");
 
+const {
+  paymentNeedsTtAppend,
+} = require("./paymentTtExportState");
+
 const STALE_VK_BATCH_LIMIT = 50;
 const TT_ROW_DELETION_BATCH_LIMIT = 30;
 
@@ -52,11 +56,7 @@ async function fetchUnsyncedPayments(limit = 500) {
       id: docSnap.id,
       ...docSnap.data(),
     }))
-    .filter(
-      (payment) =>
-        !payment.deletedAt &&
-        payment.syncedToSheets !== true
-    );
+    .filter(paymentNeedsTtAppend);
 }
 
 async function fetchClientsForPayments(
@@ -138,6 +138,10 @@ async function markPaymentSynced(
         meta.updatedRange || null,
       ttRowNumber:
         meta.rowNumber || null,
+      lastTtSyncSkipReason:
+        admin.firestore.FieldValue.delete(),
+      lastTtSyncSkippedAt:
+        admin.firestore.FieldValue.delete(),
     });
 }
 
@@ -801,6 +805,14 @@ async function runTtSheetsSync({
             status: SYNC_LOG_STATUS.SKIPPED,
             reason: skipReason,
             createdAt: Date.now(),
+          });
+
+        await getDb()
+          .collection("payments")
+          .doc(payment.id)
+          .update({
+            lastTtSyncSkipReason: skipReason,
+            lastTtSyncSkippedAt: Date.now(),
           });
 
         continue;

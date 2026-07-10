@@ -86,6 +86,19 @@ test("returns all payments for empty query", () => {
   );
 });
 
+test("matches invoice 46228595 digit search", () => {
+  assert.equal(
+    paymentMatchesSearch(
+      {
+        ...basePayment,
+        invoiceNumber: "46228595",
+      },
+      "46228595"
+    ),
+    true
+  );
+});
+
 test("does not match unrelated query", () => {
   assert.equal(
     paymentMatchesSearch(

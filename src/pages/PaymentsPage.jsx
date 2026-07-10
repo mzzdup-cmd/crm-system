@@ -35,6 +35,11 @@ import {
 } from "../domain/payment/paymentSearch";
 
 import {
+  getPaymentTtSyncStatusLabel,
+  isPaymentTtSynced,
+} from "../domain/payment/paymentTtExportState";
+
+import {
   formatMoney,
 } from "../utils/moneyFormat";
 
@@ -492,14 +497,25 @@ export default function PaymentsPage({
                         {payment.paymentDate}
                       </div>
 
-                      {payment.syncedToSheets ===
-                      true ? (
+                      {isPaymentTtSynced(
+                        payment
+                      ) ? (
                         <div className="mt-2 inline-flex text-xs text-green-300 bg-green-500/10 border border-green-500/30 px-2 py-1 rounded-full">
-                          В ТТ
+                          {getPaymentTtSyncStatusLabel(
+                            payment
+                          )}
                         </div>
                       ) : (
-                        <div className="mt-2 inline-flex text-xs text-amber-300 bg-amber-500/10 border border-amber-500/30 px-2 py-1 rounded-full">
-                          Ожидает выгрузки в ТТ
+                        <div
+                          className="mt-2 inline-flex text-xs text-amber-300 bg-amber-500/10 border border-amber-500/30 px-2 py-1 rounded-full"
+                          title={
+                            payment.lastTtSyncSkipReason ||
+                            undefined
+                          }
+                        >
+                          {getPaymentTtSyncStatusLabel(
+                            payment
+                          )}
                         </div>
                       )}
                     </div>

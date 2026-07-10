@@ -36,6 +36,10 @@ import {
 } from "../domain/schedule/scheduleLogic";
 
 import {
+  paymentNeedsTtAppend,
+} from "../domain/payment/paymentTtExportState";
+
+import {
   getManagerTrafficLoad,
   summarizeTeamLoad,
 } from "../domain/schedule/trafficLogic";
@@ -244,9 +248,7 @@ export function useDashboardRealtime() {
 
     const unsyncedTtCount = isLeadership
       ? payments.filter(
-          (payment) =>
-            !payment.deletedAt &&
-            payment.syncedToSheets !== true
+          paymentNeedsTtAppend
         ).length
       : 0;
 
