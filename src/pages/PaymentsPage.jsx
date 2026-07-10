@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 
 import { useSearchParams } from "react-router-dom";
 
@@ -29,6 +29,10 @@ import {
   canEditPaymentStartDate,
   getPaymentEditTimeLeft,
 } from "../domain/payment/paymentPermissions";
+
+import {
+  paymentMatchesSearch,
+} from "../domain/payment/paymentSearch";
 
 import {
   formatMoney,
@@ -116,6 +120,9 @@ export default function PaymentsPage({
   const [saving, setSaving] =
     useState(false);
 
+  const [search, setSearch] =
+    useState("");
+
   const actor = userData
     ? {
         ...userData,
@@ -129,6 +136,20 @@ export default function PaymentsPage({
 
   const paymentList =
     payments || [];
+
+  const filteredPayments = useMemo(
+    () =>
+      paymentList.filter((payment) =>
+        paymentMatchesSearch(
+          payment,
+          search
+        )
+      ),
+    [paymentList, search]
+  );
+
+  const hasSearch =
+    search.trim().length > 0;
 
   useEffect(() => {
     const editId =
@@ -331,8 +352,28 @@ export default function PaymentsPage({
           subtitle={
             loading
               ? "Загрузка..."
-              : `${paymentList.length} записей`
+              : hasSearch
+                ? `${filteredPayments.length} из ${paymentList.length}`
+                : `${paymentList.length} записей`
           }
+        />
+      )}
+
+      {!loading && !error && (
+        <input
+          type="search"
+          placeholder="Поиск по счёту, клиенту, сумме..."
+          value={search}
+          onChange={(event) =>
+            setSearch(
+              event.target.value
+            )
+          }
+          className="
+            w-full bg-slate-900 p-4 rounded-2xl
+            border border-slate-800
+            focus:border-cyan-500/50 outline-none
+          "
         />
       )}
 
@@ -360,9 +401,24 @@ export default function PaymentsPage({
 
       {!loading &&
         !error &&
-        paymentList.length > 0 && (
+        paymentList.length > 0 &&
+        filteredPayments.length === 0 && (
+          <EmptyState
+            icon="🔍"
+            title="Ничего не найдено"
+            description={
+              hasSearch
+                ? "Попробуйте другой номер счёта или имя клиента."
+                : "Оформите первую оплату через «Новая оплата»."
+            }
+          />
+        )}
+
+      {!loading &&
+        !error &&
+        filteredPayments.length > 0 && (
           <div className="grid gap-4">
-            {paymentList.map((payment) => {
+            {filteredPayments.map((payment) => {
               const editable =
                 canEditPayment(
                   payment,
@@ -438,7 +494,7 @@ export default function PaymentsPage({
                     </div>
                   </div>
 
-                  <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
+                  <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 text-sm">
                     <div className="bg-slate-800/60 p-3 rounded-xl">
                       <div className="text-slate-400">
                         Тип сделки
@@ -454,6 +510,16 @@ export default function PaymentsPage({
                       </div>
                       <div className="mt-1">
                         {payment.paymentSystem ||
+                          "—"}
+                      </div>
+                    </div>
+
+                    <div className="bg-slate-800/60 p-3 rounded-xl">
+                      <div className="text-slate-400">
+                        Счёт
+                      </div>
+                      <div className="mt-1 break-all">
+                        {payment.invoiceNumber ||
                           "—"}
                       </div>
                     </div>
