@@ -65,6 +65,15 @@ async function main() {
       admin.firestore.FieldValue.delete(),
     ttUpdatedRange:
       admin.firestore.FieldValue.delete(),
+    sheetsUpdatedRange:
+      admin.firestore.FieldValue.delete(),
+    ttRowNumber:
+      admin.firestore.FieldValue.delete(),
+    ttRowResyncPending: false,
+    lastTtSyncSkipReason:
+      admin.firestore.FieldValue.delete(),
+    lastTtSyncSkippedAt:
+      admin.firestore.FieldValue.delete(),
   });
 
   console.log(

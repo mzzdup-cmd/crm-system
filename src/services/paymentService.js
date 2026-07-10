@@ -9,6 +9,7 @@ import {
   where,
   orderBy,
   limit,
+  deleteField,
 } from "firebase/firestore";
 
 import { db } from "./firebase";
@@ -62,6 +63,7 @@ import {
 import {
   isOptionalStartDateDealType,
   isTopupBbDealType,
+  isTopupDealType,
   needsBudgetFieldForExistingDeal,
 } from "../constants/dealTypes";
 import {
@@ -199,7 +201,57 @@ function shouldQueueTtRowResync(
     return false;
   }
 
-  return paymentHasExportedTtRow(payment);
+  if (!paymentHasExportedTtRow(payment)) {
+    return false;
+  }
+
+  if (
+    isTopupDealType(payment.dealType) &&
+    !payment.ttSpreadsheetId
+  ) {
+    return false;
+  }
+
+  return true;
+}
+
+function shouldResetPaymentForTtAppend(payment) {
+  if (
+    isTopupDealType(payment.dealType)
+  ) {
+    return (
+      payment.syncedToSheets === true &&
+      (
+        !paymentHasExportedTtRow(payment) ||
+        !payment.ttSpreadsheetId
+      )
+    );
+  }
+
+  return (
+    payment.syncedToSheets === true &&
+    !paymentHasExportedTtRow(payment)
+  );
+}
+
+function buildBorrowedTopupTtResetFields(
+  payment
+) {
+  if (
+    !isTopupDealType(payment.dealType) ||
+    !paymentHasExportedTtRow(payment) ||
+    payment.ttSpreadsheetId
+  ) {
+    return {};
+  }
+
+  return {
+    ttRowNumber: deleteField(),
+    ttUpdatedRange: deleteField(),
+    sheetsUpdatedRange: deleteField(),
+    ttSpreadsheetId: deleteField(),
+    ttRowResyncPending: false,
+  };
 }
 
 async function fetchAllPaymentDocs() {
@@ -764,12 +816,15 @@ export async function updatePayment({
   ) {
     payload.ttRowResyncPending = true;
   } else if (
-    !isStartDateOnlyUpdate &&
-    !isCuratorStartDateOnlyUpdate &&
-    payment.syncedToSheets === true &&
-    !hasTtRow
+    shouldResetPaymentForTtAppend(payment)
   ) {
     payload.syncedToSheets = false;
+    Object.assign(
+      payload,
+      buildBorrowedTopupTtResetFields(
+        payment
+      )
+    );
   }
 
   if (updates.course !== undefined) {

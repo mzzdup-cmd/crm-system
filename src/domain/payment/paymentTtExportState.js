@@ -1,9 +1,25 @@
+import {
+  isTopupDealType,
+} from "../../constants/dealTypes.js";
+
 export function paymentHasTtRowMetadata(payment) {
   return Boolean(
     payment?.ttRowNumber ||
       payment?.ttUpdatedRange ||
       payment?.sheetsUpdatedRange
   );
+}
+
+function topupNeedsOwnTtAppend(payment) {
+  if (!isTopupDealType(payment.dealType)) {
+    return false;
+  }
+
+  if (!paymentHasTtRowMetadata(payment)) {
+    return payment?.syncedToSheets === true;
+  }
+
+  return !payment.ttSpreadsheetId;
 }
 
 export function paymentNeedsTtAppend(payment) {
@@ -15,7 +31,31 @@ export function paymentNeedsTtAppend(payment) {
     return true;
   }
 
-  return !paymentHasTtRowMetadata(payment);
+  if (!paymentHasTtRowMetadata(payment)) {
+    return true;
+  }
+
+  if (topupNeedsOwnTtAppend(payment)) {
+    return true;
+  }
+
+  return false;
+}
+
+function paymentHasQueuedTtResync(payment) {
+  if (payment?.ttRowResyncPending !== true) {
+    return false;
+  }
+
+  if (!paymentHasTtRowMetadata(payment)) {
+    return false;
+  }
+
+  if (topupNeedsOwnTtAppend(payment)) {
+    return false;
+  }
+
+  return true;
 }
 
 const SKIP_REASON_LABELS = {
@@ -47,10 +87,17 @@ export function getPaymentTtSyncStatusLabel(
       return "Ошибка синхронизации — повторная выгрузка";
     }
 
+    if (
+      payment?.syncedToSheets === true &&
+      topupNeedsOwnTtAppend(payment)
+    ) {
+      return "Ошибка синхронизации — повторная выгрузка";
+    }
+
     return "Ожидает выгрузки в ТТ";
   }
 
-  if (payment?.ttRowResyncPending === true) {
+  if (paymentHasQueuedTtResync(payment)) {
     return "Обновление строки в ТТ";
   }
 

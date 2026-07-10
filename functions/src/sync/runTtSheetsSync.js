@@ -36,7 +36,10 @@ const {
 } = require("./deleteTtRowHandler");
 
 const {
+  buildPaymentsByClient,
+  paymentCanProcessTtResync,
   paymentNeedsTtAppend,
+  shouldRecoverMisroutedTopup,
 } = require("./paymentTtExportState");
 
 const STALE_VK_BATCH_LIMIT = 50;
@@ -46,7 +49,10 @@ function getDb() {
   return admin.firestore();
 }
 
-async function fetchUnsyncedPayments(limit = 500) {
+async function fetchUnsyncedPayments(
+  paymentsByClient = null,
+  limit = 500
+) {
   const snapshot = await getDb()
     .collection("payments")
     .get();
@@ -56,7 +62,59 @@ async function fetchUnsyncedPayments(limit = 500) {
       id: docSnap.id,
       ...docSnap.data(),
     }))
-    .filter(paymentNeedsTtAppend);
+    .filter((payment) =>
+      paymentNeedsTtAppend(
+        payment,
+        paymentsByClient
+      )
+    )
+    .slice(0, limit);
+}
+
+async function recoverMisroutedTopupPayments(
+  allPayments = []
+) {
+  const paymentsByClient =
+    buildPaymentsByClient(allPayments);
+  const recoveredIds = [];
+
+  for (const payment of allPayments) {
+    if (
+      !shouldRecoverMisroutedTopup(
+        payment,
+        paymentsByClient
+      )
+    ) {
+      continue;
+    }
+
+    await getDb()
+      .collection("payments")
+      .doc(payment.id)
+      .update({
+        syncedToSheets: false,
+        syncedToTt: false,
+        ttRowResyncPending: false,
+        ttRowNumber:
+          admin.firestore.FieldValue.delete(),
+        ttUpdatedRange:
+          admin.firestore.FieldValue.delete(),
+        sheetsUpdatedRange:
+          admin.firestore.FieldValue.delete(),
+        ttSpreadsheetId:
+          admin.firestore.FieldValue.delete(),
+        syncedAt:
+          admin.firestore.FieldValue.delete(),
+        lastTtSyncSkipReason:
+          admin.firestore.FieldValue.delete(),
+        lastTtSyncSkippedAt:
+          admin.firestore.FieldValue.delete(),
+      });
+
+    recoveredIds.push(payment.id);
+  }
+
+  return recoveredIds;
 }
 
 async function fetchClientsForPayments(
@@ -446,7 +504,9 @@ async function processStartDateResyncs({
   }
 }
 
-async function fetchTtRowResyncPayments() {
+async function fetchTtRowResyncPayments(
+  paymentsByClient = {}
+) {
   const snapshot = await getDb()
     .collection("payments")
     .where(
@@ -464,7 +524,10 @@ async function fetchTtRowResyncPayments() {
     .filter(
       (payment) =>
         !payment.deletedAt &&
-        parseTtRowNumber(payment)
+        paymentCanProcessTtResync(
+          payment,
+          paymentsByClient
+        )
     );
 }
 
@@ -472,9 +535,12 @@ async function processTtRowResyncs({
   clientsById,
   cycleMap,
   summary,
+  paymentsByClient = {},
 }) {
   const payments =
-    await fetchTtRowResyncPayments();
+    await fetchTtRowResyncPayments(
+      paymentsByClient
+    );
 
   for (const payment of payments) {
     summary.processed += 1;
@@ -704,11 +770,23 @@ async function runTtSheetsSync({
 
     await processTtRowDeletions(summary);
 
-    const [payments, allPayments] =
-      await Promise.all([
-        fetchUnsyncedPayments(),
-        fetchAllActivePayments(),
-      ]);
+    const allPayments =
+      await fetchAllActivePayments();
+
+    await recoverMisroutedTopupPayments(
+      allPayments
+    );
+
+    const activePayments =
+      await fetchAllActivePayments();
+
+    const paymentsByClient =
+      buildPaymentsByClient(activePayments);
+
+    const payments =
+      await fetchUnsyncedPayments(
+        paymentsByClient
+      );
 
     const resyncPayments =
       await fetchStartDateResyncPayments();
@@ -717,7 +795,7 @@ async function runTtSheetsSync({
       await fetchVkResyncPayments();
 
     const syncedForVkCheck =
-      allPayments.filter(
+      activePayments.filter(
         (payment) =>
           payment.syncedToSheets === true &&
           payment.clientId &&
@@ -733,7 +811,7 @@ async function runTtSheetsSync({
       ]);
 
     const cycleMap =
-      buildPaymentCycleMap(allPayments);
+      buildPaymentCycleMap(activePayments);
 
     const staleVkRows =
       findStaleVkTtRows(
@@ -751,6 +829,7 @@ async function runTtSheetsSync({
       clientsById,
       cycleMap,
       summary,
+      paymentsByClient,
     });
 
     await processVkResyncs({
@@ -984,4 +1063,5 @@ async function runTtSheetsSync({
 module.exports = {
   runTtSheetsSync,
   fetchUnsyncedPayments,
+  recoverMisroutedTopupPayments,
 };
