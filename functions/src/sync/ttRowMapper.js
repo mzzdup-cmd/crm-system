@@ -10,20 +10,10 @@ const MANAGER_NAMES = {
   violeta_petrova: "Виолетта Петрова",
 };
 
-const LEGACY_MANAGER_ALIASES = {
-  Катя: "katya_bakaeva",
-  Руслан: "ruslan_romanyuk",
-  "Руслан Р": "ruslan_romanyuk",
-  Полина: "polina_penkova",
-  "Сергей Г": "sergey_grebenshchikov",
-  "Денис М": "denis_manuilov",
-  "Андрей В": "andrey_volkov",
-  "Александр С": "alexander_simanov",
-  "Виолетта П": "violeta_petrova",
-  "Полина Пламадяла": "polina_plamadya",
-  polina_plamadyala: "polina_plamadya",
-  vilu_petrova: "violeta_petrova",
-};
+const {
+  canonicalManagerId,
+  LEGACY_MANAGER_ALIASES,
+} = require("./canonicalManagerId");
 
 const {
   isOptionalStartDateDeal,
@@ -94,18 +84,14 @@ function formatDateRu(value) {
 
 function resolveManagerId(payment, client) {
   if (payment?.managerId) {
-    const id = payment.managerId;
-
-    return (
-      LEGACY_MANAGER_ALIASES[id] || id
+    return canonicalManagerId(
+      payment.managerId
     );
   }
 
   if (client?.managerId) {
-    const id = client.managerId;
-
-    return (
-      LEGACY_MANAGER_ALIASES[id] || id
+    return canonicalManagerId(
+      client.managerId
     );
   }
 
@@ -117,7 +103,9 @@ function resolveManagerId(payment, client) {
   }
 
   if (LEGACY_MANAGER_ALIASES[name]) {
-    return LEGACY_MANAGER_ALIASES[name];
+    return canonicalManagerId(
+      LEGACY_MANAGER_ALIASES[name]
+    );
   }
 
   const exactMatch = Object.entries(

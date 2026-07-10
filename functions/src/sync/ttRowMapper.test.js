@@ -89,6 +89,23 @@ test("new deal rows keep client budget in TT export", () => {
   assert.equal(row[5], 22000);
 });
 
+test("manager id aliases resolve to configured TT sheet owner", () => {
+  const {
+    resolveManagerId,
+  } = require("./ttRowMapper");
+
+  assert.equal(
+    resolveManagerId(
+      {
+        managerId: "ruslan",
+        manager: "Руслан",
+      },
+      {}
+    ),
+    "ruslan_romanyuk"
+  );
+});
+
 test("ae courses export with latin labels in TT", () => {
   const aeRow = mapPaymentToTtRow({
     payment: {

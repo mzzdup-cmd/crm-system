@@ -806,6 +806,16 @@ export default function NewPaymentPage() {
 
     if (client) {
       applyClientSource(client);
+
+      const clientManager =
+        client.manager ||
+        getManagerNameById(
+          client.managerId
+        );
+
+      if (clientManager) {
+        setManager(clientManager);
+      }
     }
   }
 

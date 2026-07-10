@@ -1,5 +1,9 @@
 const DEFAULT_TT_SHEET_TAB = "TT";
 
+const {
+  canonicalManagerId,
+} = require("./canonicalManagerId");
+
 const PRODUCTION_MANAGER_TT_SHEETS = require(
   "./managerTtSpreadsheets.json"
 );
@@ -8,6 +12,14 @@ const PRODUCTION_MANAGER_TT_SHEETS = require(
 const MANAGER_ID_ALIASES = {
   polina_plamadyala: "polina_plamadya",
   vilu_petrova: "violeta_petrova",
+  vilu: "violeta_petrova",
+  violeta: "violeta_petrova",
+  denis: "denis_manuilov",
+  ruslan: "ruslan_romanyuk",
+  alexander: "alexander_simanov",
+  sergey: "sergey_grebenshchikov",
+  andrey: "andrey_volkov",
+  katya: "katya_bakaeva",
 };
 
 function normalizeSheetConfig(
@@ -62,19 +74,22 @@ function getManagerTtSheetsConfig() {
 }
 
 function resolveManagerConfigKey(managerId) {
-  if (!managerId) {
+  const canonicalId =
+    canonicalManagerId(managerId);
+
+  if (!canonicalId) {
     return null;
   }
 
   const config =
     getManagerTtSheetsConfig();
 
-  if (config[managerId]) {
-    return managerId;
+  if (config[canonicalId]) {
+    return canonicalId;
   }
 
   const alias =
-    MANAGER_ID_ALIASES[managerId];
+    MANAGER_ID_ALIASES[canonicalId];
 
   if (alias && config[alias]) {
     return alias;

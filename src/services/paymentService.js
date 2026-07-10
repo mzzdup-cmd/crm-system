@@ -932,9 +932,28 @@ export async function addPaymentRecord({
   const managerFields = userData
     ? resolveManagerFieldsForWrite(
         userData,
-        manager
+        client?.manager || manager
       )
-    : normalizeManagerFields({ manager });
+    : normalizeManagerFields({
+        manager: client?.manager || manager,
+        managerId: client?.managerId,
+      });
+
+  if (client?.managerId) {
+    const clientManagerFields =
+      normalizeManagerFields({
+        managerId: client.managerId,
+        manager:
+          client.manager ||
+          managerFields.manager,
+      });
+
+    managerFields.managerId =
+      clientManagerFields.managerId;
+    managerFields.manager =
+      clientManagerFields.manager ||
+      managerFields.manager;
+  }
 
   const resolvedSourceName =
     sourceName ||
@@ -955,6 +974,7 @@ export async function addPaymentRecord({
   const paymentPayload = normalizePaymentPayload({
     clientId: client?.id ?? null,
     clientName: client?.name || "",
+    dialogLink: client?.dialogLink || "",
     course: client?.course || "",
     tariff: client?.tariff || "",
     dealType,

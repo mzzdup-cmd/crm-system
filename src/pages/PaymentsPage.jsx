@@ -491,6 +491,17 @@ export default function PaymentsPage({
                       <div className="text-slate-400 mt-1 text-sm">
                         {payment.paymentDate}
                       </div>
+
+                      {payment.syncedToSheets ===
+                      true ? (
+                        <div className="mt-2 inline-flex text-xs text-green-300 bg-green-500/10 border border-green-500/30 px-2 py-1 rounded-full">
+                          В ТТ
+                        </div>
+                      ) : (
+                        <div className="mt-2 inline-flex text-xs text-amber-300 bg-amber-500/10 border border-amber-500/30 px-2 py-1 rounded-full">
+                          Ожидает выгрузки в ТТ
+                        </div>
+                      )}
                     </div>
                   </div>
 
