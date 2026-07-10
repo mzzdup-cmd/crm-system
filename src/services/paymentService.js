@@ -67,6 +67,9 @@ import {
 import {
   BB_BOOKING_STAGE,
 } from "../domain/client/bbBookingLogic";
+import {
+  dialogLinksMatch,
+} from "../domain/client/dialogLinkUtils";
 import { updateClient, getClientById } from "./clientService";
 import {
   maybeNotifyMissingStartDate,
@@ -1141,43 +1144,34 @@ export async function findLegacySubscriber({
   const payments =
     await getPaymentsForUser(userData);
 
-  const legacyPayments = payments
-    .filter(
-      (payment) => payment.isLegacyClient
-    )
+  const matchingPayments = payments
+    .filter((payment) => {
+      if (normalizedId) {
+        const storedId =
+          payment.legacyClientBsId ||
+          payment.clientNote ||
+          "";
+
+        if (
+          storedId.trim() === normalizedId
+        ) {
+          return true;
+        }
+      }
+
+      if (normalizedLink) {
+        return dialogLinksMatch(
+          payment.dialogLink,
+          normalizedLink
+        );
+      }
+
+      return false;
+    })
     .sort(
       (a, b) =>
         Number(b.createdAt || 0) -
         Number(a.createdAt || 0)
-    );
-
-  const matchesLegacyPayment = (
-    payment
-  ) => {
-    if (normalizedId) {
-      const storedId =
-        payment.legacyClientBsId ||
-        payment.clientNote ||
-        "";
-
-      if (storedId.trim() === normalizedId) {
-        return true;
-      }
-    }
-
-    if (normalizedLink) {
-      return (
-        (payment.dialogLink || "").trim() ===
-        normalizedLink
-      );
-    }
-
-    return false;
-  };
-
-  const matchingPayments =
-    legacyPayments.filter(
-      matchesLegacyPayment
     );
 
   if (!matchingPayments.length) {

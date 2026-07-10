@@ -88,3 +88,31 @@ test("new deal rows keep client budget in TT export", () => {
   assert.equal(row[4], 6000);
   assert.equal(row[5], 22000);
 });
+
+test("ae courses export with latin labels in TT", () => {
+  const aeRow = mapPaymentToTtRow({
+    payment: {
+      ...basePayment,
+      dealType: "Новая",
+      course: "АЕ",
+    },
+    client: {},
+    cycle: 1,
+  });
+
+  const externAeRow = mapPaymentToTtRow({
+    payment: {
+      ...basePayment,
+      dealType: "Новая",
+      course: "Экстерн АЕ",
+    },
+    client: {},
+    cycle: 1,
+  });
+
+  assert.equal(aeRow[11], "Ae");
+  assert.equal(
+    externAeRow[11],
+    "Extern Ae"
+  );
+});

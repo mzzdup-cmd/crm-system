@@ -28,6 +28,10 @@ import {
 import {
   canAccessClient,
 } from "../domain/auth/permissionHelpers";
+import {
+  dialogLinksMatch,
+  getDialogLinkLookupVariants,
+} from "../domain/client/dialogLinkUtils";
 import { resolveNextPaymentDate } from "../domain/client/clientDates";
 import { getClientStatus, getRemain } from "../domain/client/clientStatus";
 import { resolveMissingVkRemindersForClient } from "./missingVkReminderService";
@@ -144,27 +148,102 @@ export async function findClientByDialogLink(
   }
 
   try {
-    const clientsQuery = query(
-      collection(db, "clients"),
-      where("dialogLink", "==", dialogLink)
-    );
+    const variants =
+      getDialogLinkLookupVariants(
+        dialogLink
+      );
 
-    const snapshot = await getDocs(clientsQuery);
+    for (const variant of variants) {
+      const clientsQuery = query(
+        collection(db, "clients"),
+        where(
+          "dialogLink",
+          "==",
+          variant
+        )
+      );
 
-    if (snapshot.empty) {
-      return null;
+      const snapshot =
+        await getDocs(clientsQuery);
+
+      if (!snapshot.empty) {
+        const client = mapClientDoc(
+          snapshot.docs[0]
+        );
+
+        if (
+          userData &&
+          !canAccessClient(
+            userData,
+            client
+          )
+        ) {
+          return null;
+        }
+
+        return client;
+      }
     }
 
-    const client = mapClientDoc(snapshot.docs[0]);
+    for (const variant of variants) {
+      const paymentsQuery = query(
+        collection(db, "payments"),
+        where(
+          "dialogLink",
+          "==",
+          variant
+        )
+      );
 
-    if (
-      userData &&
-      !canAccessClient(userData, client)
-    ) {
-      return null;
+      const paymentsSnapshot =
+        await getDocs(paymentsQuery);
+
+      for (const paymentDoc of paymentsSnapshot.docs) {
+        const paymentData =
+          paymentDoc.data();
+
+        if (
+          paymentData.deletedAt ||
+          !paymentData.clientId
+        ) {
+          continue;
+        }
+
+        const client =
+          await getClientById(
+            paymentData.clientId
+          );
+
+        if (!client) {
+          continue;
+        }
+
+        if (
+          userData &&
+          !canAccessClient(
+            userData,
+            client
+          )
+        ) {
+          continue;
+        }
+
+        if (
+          dialogLinksMatch(
+            client.dialogLink,
+            dialogLink
+          ) ||
+          dialogLinksMatch(
+            paymentData.dialogLink,
+            dialogLink
+          )
+        ) {
+          return client;
+        }
+      }
     }
 
-    return client;
+    return null;
   } catch (error) {
     console.warn(
       "Client lookup by dialog link failed:",

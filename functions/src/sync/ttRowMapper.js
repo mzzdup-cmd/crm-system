@@ -30,6 +30,10 @@ const {
   isTopupDeal,
 } = require("./dealTypeHelpers");
 
+const {
+  formatCourseForTt,
+} = require("./courseTtExport");
+
 function getStartDate(dateString) {
   if (!dateString) {
     return "";
@@ -195,7 +199,9 @@ function mapPaymentToTtRow({
       client.source ||
       "",
     Number(cycle || 1),
-    payment.course || client.course || "",
+    formatCourseForTt(
+      payment.course || client.course || ""
+    ),
     payment.paymentSystem || "",
     client.email || "",
     payment.tariff || client.tariff || "",

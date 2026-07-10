@@ -41,6 +41,12 @@ from "../vk/VkLinkInput";
 import CuratorStartDateField
 from "./CuratorStartDateField";
 
+import TrafficSourceSelect
+from "../traffic/TrafficSourceSelect";
+
+import { useTrafficSources }
+from "../../hooks/useTrafficSources";
+
 const inputClass =
   "mt-1 w-full bg-slate-800 p-3.5 rounded-xl";
 
@@ -66,6 +72,11 @@ function buildFormFromPayment(payment) {
     tariff: payment.tariff ?? "",
     budget: "",
     vkLink: payment.vkLink ?? "",
+    sourceId: payment.sourceId ?? "",
+    sourceName:
+      payment.sourceName ??
+      payment.source ??
+      "",
   };
 }
 
@@ -83,6 +94,12 @@ export default function PaymentEditModal({
     useState(null);
   const [confirmOpen, setConfirmOpen] =
     useState(false);
+
+  const {
+    sources: trafficSources,
+    loading: trafficSourcesLoading,
+    hasFirestoreSources,
+  } = useTrafficSources();
 
   useEffect(() => {
     if (!payment) {
@@ -123,6 +140,15 @@ export default function PaymentEditModal({
             vkLink:
               clientData.vkLink ??
               current.vkLink ??
+              "",
+            sourceId:
+              current.sourceId ||
+              clientData.sourceId ||
+              "",
+            sourceName:
+              current.sourceName ||
+              clientData.sourceName ||
+              clientData.source ||
               "",
           };
         });
@@ -190,6 +216,9 @@ export default function PaymentEditModal({
           form.curatorStartDate,
         course: form.course,
         tariff: form.tariff,
+        sourceId: form.sourceId || null,
+        sourceName:
+          form.sourceName?.trim() || "",
       },
       clientUpdates: {
         budget: parseMoneyNumber(
@@ -198,6 +227,9 @@ export default function PaymentEditModal({
         course: form.course,
         tariff: form.tariff,
         vkLink: (form.vkLink ?? "").trim(),
+        sourceId: form.sourceId || null,
+        sourceName:
+          form.sourceName?.trim() || "",
       },
     };
   }
@@ -456,6 +488,35 @@ export default function PaymentEditModal({
                   </option>
                 ))}
               </select>
+            </label>
+
+            <label className="block">
+              <span className="text-sm text-slate-400">
+                Тег (откуда пришёл)
+              </span>
+              <TrafficSourceSelect
+                sources={trafficSources}
+                sourceId={form.sourceId}
+                sourceName={form.sourceName}
+                loading={trafficSourcesLoading}
+                hasFirestoreSources={
+                  hasFirestoreSources
+                }
+                disabled={!editable}
+                placeholder="Traffic / источник"
+                onChange={({
+                  sourceId,
+                  sourceName,
+                }) => {
+                  setForm((current) => ({
+                    ...current,
+                    sourceId:
+                      sourceId || "",
+                    sourceName:
+                      sourceName || "",
+                  }));
+                }}
+              />
             </label>
 
             <label className="block">
