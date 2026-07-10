@@ -113,6 +113,6 @@ test("ae courses export with latin labels in TT", () => {
   assert.equal(aeRow[11], "Ae");
   assert.equal(
     externAeRow[11],
-    "Extern Ae"
+    "Экстерн Ae"
   );
 });

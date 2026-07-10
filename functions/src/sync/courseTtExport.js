@@ -1,8 +1,3 @@
-const COURSE_TT_EXPORT_LABELS = {
-  АЕ: "Ae",
-  "Экстерн АЕ": "Extern Ae",
-};
-
 function formatCourseForTt(course) {
   const value = String(course || "").trim();
 
@@ -10,13 +5,10 @@ function formatCourseForTt(course) {
     return "";
   }
 
-  return (
-    COURSE_TT_EXPORT_LABELS[value] ||
-    value
-  );
+  // Only «Ae» is Latin in TT; «Экстерн» stays Russian.
+  return value.replace(/А[Ее]/g, "Ae");
 }
 
 module.exports = {
   formatCourseForTt,
-  COURSE_TT_EXPORT_LABELS,
 };
