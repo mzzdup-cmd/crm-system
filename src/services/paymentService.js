@@ -169,6 +169,44 @@ function sortPaymentsDesc(payments) {
   );
 }
 
+function paymentHasExportedTtRow(payment) {
+  if (
+    payment?.ttRowNumber ||
+    payment?.ttUpdatedRange ||
+    payment?.sheetsUpdatedRange
+  ) {
+    return true;
+  }
+
+  return (
+    payment?.syncedToSheets === true ||
+    payment?.syncedToTt === true
+  );
+}
+
+function shouldQueueTtRowResync(
+  payment,
+  updates,
+  {
+    shouldResyncStartDate = false,
+    isStartDateOnlyUpdate = false,
+    isCuratorStartDateOnlyUpdate = false,
+  } = {}
+) {
+  if (
+    isStartDateOnlyUpdate ||
+    isCuratorStartDateOnlyUpdate
+  ) {
+    return false;
+  }
+
+  if (shouldResyncStartDate) {
+    return false;
+  }
+
+  return paymentHasExportedTtRow(payment);
+}
+
 async function fetchAllPaymentDocs() {
   const snapshot = await getDocs(
     collection(db, "payments")
@@ -489,9 +527,8 @@ export async function updatePaymentStartDate({
     );
   }
 
-  const hasTtRow = Boolean(
-    payment.ttRowNumber ||
-      payment.ttUpdatedRange
+  const hasTtRow = paymentHasExportedTtRow(
+    payment
   );
   const startDateChanged =
     (startDate || "") !==
@@ -659,9 +696,8 @@ export async function updatePayment({
     isOptionalStartDateDealType(
       payment.dealType
     );
-  const hasTtRow = Boolean(
-    payment.ttRowNumber ||
-      payment.ttUpdatedRange
+  const hasTtRow = paymentHasExportedTtRow(
+    payment
   );
   const startDateChanged =
     updates.startDate !==
@@ -721,18 +757,22 @@ export async function updatePayment({
   if (shouldResyncStartDate) {
     payload.ttStartDateResyncPending = true;
   } else if (
-    isStartDateOnlyUpdate ||
-    isCuratorStartDateOnlyUpdate
-  ) {
-    // schedule-only edits — TT row unchanged
-  } else if (
-    payment.syncedToSheets === true &&
-    hasTtRow
+    shouldQueueTtRowResync(
+      payment,
+      updates,
+      {
+        shouldResyncStartDate,
+        isStartDateOnlyUpdate,
+        isCuratorStartDateOnlyUpdate,
+      }
+    )
   ) {
     payload.ttRowResyncPending = true;
   } else if (
     !isStartDateOnlyUpdate &&
-    !isCuratorStartDateOnlyUpdate
+    !isCuratorStartDateOnlyUpdate &&
+    payment.syncedToSheets === true &&
+    !hasTtRow
   ) {
     payload.syncedToSheets = false;
   }

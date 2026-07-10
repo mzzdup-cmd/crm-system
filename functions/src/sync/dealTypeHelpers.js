@@ -36,7 +36,9 @@ function parseTtRowNumber(payment) {
   }
 
   const range = String(
-    payment?.ttUpdatedRange || ""
+    payment?.ttUpdatedRange ||
+      payment?.sheetsUpdatedRange ||
+      ""
   );
 
   const match = range.match(

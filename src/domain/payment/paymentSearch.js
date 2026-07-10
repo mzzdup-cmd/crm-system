@@ -10,6 +10,63 @@ function normalizeInvoiceQuery(value) {
     .toLowerCase();
 }
 
+function normalizeInvoiceDigits(value) {
+  return String(value || "").replace(/\D/g, "");
+}
+
+function resolveInvoiceValues(payment) {
+  return [
+    payment?.invoiceNumber,
+    payment?.invoice,
+    payment?.account,
+    payment?.accountNumber,
+  ].filter(Boolean);
+}
+
+function extractDialogId(value) {
+  const match = String(value || "").match(
+    /dialogId=(\d+)/i
+  );
+
+  return match?.[1] || "";
+}
+
+function invoiceMatchesQuery(
+  payment,
+  invoiceQuery,
+  digitQuery
+) {
+  const invoiceValues =
+    resolveInvoiceValues(payment);
+
+  if (!invoiceValues.length) {
+    return false;
+  }
+
+  return invoiceValues.some((value) => {
+    const normalized =
+      normalizeInvoiceQuery(value);
+
+    if (
+      invoiceQuery &&
+      normalized.includes(invoiceQuery)
+    ) {
+      return true;
+    }
+
+    if (
+      digitQuery.length >= 4 &&
+      normalizeInvoiceDigits(value).includes(
+        digitQuery
+      )
+    ) {
+      return true;
+    }
+
+    return false;
+  });
+}
+
 export function paymentMatchesSearch(
   payment,
   query
@@ -23,15 +80,15 @@ export function paymentMatchesSearch(
 
   const invoiceQuery =
     normalizeInvoiceQuery(query);
-
-  const invoiceNumber =
-    normalizeInvoiceQuery(
-      payment?.invoiceNumber
-    );
+  const digitQuery =
+    normalizeInvoiceDigits(query);
 
   if (
-    invoiceQuery &&
-    invoiceNumber.includes(invoiceQuery)
+    invoiceMatchesQuery(
+      payment,
+      invoiceQuery,
+      digitQuery
+    )
   ) {
     return true;
   }
@@ -47,12 +104,25 @@ export function paymentMatchesSearch(
     payment?.comment,
     payment?.amount,
     payment?.paymentDate,
+    ...resolveInvoiceValues(payment),
+    extractDialogId(payment?.dialogLink),
   ]
     .filter(Boolean)
     .join(" ")
     .toLowerCase();
 
-  return haystack.includes(
-    normalizedQuery
-  );
+  if (haystack.includes(normalizedQuery)) {
+    return true;
+  }
+
+  if (
+    digitQuery.length >= 4 &&
+    normalizeInvoiceDigits(haystack).includes(
+      digitQuery
+    )
+  ) {
+    return true;
+  }
+
+  return false;
 }
