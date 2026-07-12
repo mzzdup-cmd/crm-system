@@ -102,6 +102,19 @@ export function parsePaymentDate(payment) {
   }
 
   if (
+    typeof raw === "object"
+    && raw !== null
+  ) {
+    if (typeof raw.toDate === "function") {
+      return raw.toDate();
+    }
+
+    if (typeof raw.seconds === "number") {
+      return new Date(raw.seconds * 1000);
+    }
+  }
+
+  if (
     typeof raw === "string"
     && /^\d{4}-\d{2}-\d{2}$/.test(raw)
   ) {
@@ -111,7 +124,11 @@ export function parsePaymentDate(payment) {
     return new Date(year, month - 1, day);
   }
 
-  return new Date(raw);
+  const parsed = new Date(raw);
+
+  return Number.isNaN(parsed.getTime())
+    ? null
+    : parsed;
 }
 
 export function isWithinRange(

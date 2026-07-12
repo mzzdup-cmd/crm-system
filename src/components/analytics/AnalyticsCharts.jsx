@@ -1,5 +1,6 @@
 import {
   useEffect,
+  useRef,
   useState,
 } from "react";
 
@@ -72,43 +73,58 @@ function ChartFrame({
   renderKey = "chart",
   children,
 }) {
-  const [ready, setReady] =
-    useState(false);
+  const containerRef = useRef(null);
+  const [size, setSize] = useState({
+    width: 0,
+    height,
+  });
 
   useEffect(() => {
-    setReady(false);
+    const node = containerRef.current;
 
-    let frameId = 0;
-    let timeoutId = 0;
+    if (!node || isEmpty) {
+      return undefined;
+    }
 
-    frameId = window.requestAnimationFrame(
-      () => {
-        timeoutId = window.setTimeout(
-          () => {
-            setReady(true);
-          },
-          0
-        );
-      }
+    const updateSize = () => {
+      setSize({
+        width: node.clientWidth,
+        height:
+          node.clientHeight || height,
+      });
+    };
+
+    updateSize();
+
+    const observer = new ResizeObserver(
+      updateSize
     );
 
+    observer.observe(node);
+
     return () => {
-      window.cancelAnimationFrame(frameId);
-      window.clearTimeout(timeoutId);
+      observer.disconnect();
     };
-  }, [renderKey, isEmpty]);
+  }, [renderKey, isEmpty, height]);
+
+  const canRender =
+    size.width > 0 && size.height > 0;
 
   return (
     <div
+      ref={containerRef}
       className="w-full min-w-0"
-      style={{ height }}
+      style={{
+        height,
+        minHeight: height,
+      }}
     >
       {isEmpty ? (
         <ChartEmpty message={emptyMessage} />
-      ) : ready ? (
+      ) : canRender ? (
         <ResponsiveContainer
-          width="100%"
-          height="100%"
+          width={size.width}
+          height={size.height}
           minWidth={0}
         >
           {children}

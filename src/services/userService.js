@@ -89,11 +89,19 @@ async function repairProvisionProfile(
       template.managerId;
   }
 
-  await setDoc(
-    doc(db, "users", uid),
-    patch,
-    { merge: true }
-  );
+  try {
+    await setDoc(
+      doc(db, "users", uid),
+      patch,
+      { merge: true }
+    );
+  } catch (error) {
+    console.warn(
+      "[userService] provision profile repair skipped:",
+      error
+    );
+    return raw;
+  }
 
   const refreshed = await getDoc(
     doc(db, "users", uid)

@@ -397,6 +397,26 @@ service cloud.firestore {
           == resource.data.email;
     }
 
+    function isSelfProvisionRoleRepair() {
+      return isSignedIn()
+        && request.auth.uid == uid
+        && request.auth.token.email != null
+        && request.resource.data.email
+          == request.auth.token.email
+        && request.resource.data.name is string
+        && request.resource.data.updatedAt is int
+        && (
+          (
+            isProvisionedRop()
+            && request.resource.data.role == 'rop'
+          )
+          || (
+            isProvisionedAdmin()
+            && request.resource.data.role == 'admin'
+          )
+        );
+    }
+
     match /users/{uid} {
       allow read: if isSignedIn()
         && (
@@ -409,7 +429,8 @@ service cloud.firestore {
         || isSelfUserBootstrapCreate();
 
       allow update: if isAdmin()
-        || isSelfUserProfileTouch();
+        || isSelfUserProfileTouch()
+        || isSelfProvisionRoleRepair();
 
       allow delete: if isAdmin();
     }

@@ -22,12 +22,40 @@ import {
   expandManagerIdAliases,
 } from "./managerMigration";
 
+function getProvisionRoleForUser(userData) {
+  return getProvisionProfileForEmail(
+    userData?.email
+  )?.role;
+}
+
+function hasProvisionRole(
+  userData,
+  role
+) {
+  return (
+    getProvisionRoleForUser(userData)
+    === role
+  );
+}
+
 export function isAdmin(userData) {
-  return userData?.role === ROLES.ADMIN;
+  return (
+    userData?.role === ROLES.ADMIN
+    || hasProvisionRole(
+      userData,
+      ROLES.ADMIN
+    )
+  );
 }
 
 export function isRop(userData) {
-  return userData?.role === ROLES.ROP;
+  return (
+    userData?.role === ROLES.ROP
+    || hasProvisionRole(
+      userData,
+      ROLES.ROP
+    )
+  );
 }
 
 export function isManager(userData) {
@@ -355,14 +383,12 @@ export function normalizeUserRole(userData) {
   }
 
   const provisionRole =
-    getProvisionProfileForEmail(
-      userData.email
-    )?.role;
+    getProvisionRoleForUser(userData);
 
-  const role = isValidRoleValue(userData.role)
-    ? userData.role
-    : isValidRoleValue(provisionRole)
-      ? provisionRole
+  const role = isValidRoleValue(provisionRole)
+    ? provisionRole
+    : isValidRoleValue(userData.role)
+      ? userData.role
       : ROLES.MANAGER;
 
   const firestoreManagerId =
