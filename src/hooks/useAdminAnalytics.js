@@ -1,16 +1,22 @@
 import {
+  useCallback,
   useEffect,
   useState,
 } from "react";
 
+import { useAuth } from "../context/AuthContext";
+
 import {
   getAdminAnalytics,
   ANALYTICS_PERIODS,
+  clearAnalyticsCache,
 } from "../services/analyticsService";
 
 export function useAdminAnalytics(
   initialPeriod = ANALYTICS_PERIODS.MONTH
 ) {
+  const { userData } = useAuth();
+
   const [period, setPeriod] =
     useState(initialPeriod);
 
@@ -22,30 +28,53 @@ export function useAdminAnalytics(
   const [loading, setLoading] =
     useState(true);
 
+  const loadAnalytics = useCallback(
+    async () => {
+      if (!userData) {
+        return;
+      }
+
+      setLoading(true);
+
+      try {
+        const report =
+          await getAdminAnalytics({
+            userData,
+            period,
+            customRange,
+          });
+
+        setData(report);
+      } catch (error) {
+        console.error(
+          "[useAdminAnalytics] load failed:",
+          error
+        );
+        setData(null);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [
+      userData,
+      period,
+      customRange,
+    ]
+  );
+
   useEffect(() => {
-    loadAnalytics();
-  }, [period, customRange]);
-
-  async function loadAnalytics() {
-    setLoading(true);
-
-    try {
-      const report =
-        await getAdminAnalytics({
-          period,
-          customRange,
-        });
-
-      setData(report);
-    } catch (error) {
-      console.error(
-        "[useAdminAnalytics] load failed:",
-        error
-      );
+    if (!userData) {
+      setLoading(true);
       setData(null);
-    } finally {
-      setLoading(false);
+      return;
     }
+
+    loadAnalytics();
+  }, [loadAnalytics, userData]);
+
+  function reload() {
+    clearAnalyticsCache();
+    return loadAnalytics();
   }
 
   return {
@@ -55,6 +84,6 @@ export function useAdminAnalytics(
     setPeriod,
     customRange,
     setCustomRange,
-    reload: loadAnalytics,
+    reload,
   };
 }

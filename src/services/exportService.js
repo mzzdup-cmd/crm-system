@@ -417,11 +417,13 @@ export async function exportPendingSales({
 }
 
 export async function exportMmAnalytics({
+  userData = null,
   period = ANALYTICS_PERIODS.MONTH,
   customRange = {},
   format = "xlsx",
 }) {
   const report = await getAdminAnalytics({
+    userData,
     period,
     customRange,
   });

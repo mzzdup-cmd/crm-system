@@ -20,16 +20,39 @@ service cloud.firestore {
         );
     }
 
+    function authEmailLower() {
+      return isSignedIn()
+        && request.auth.token.email != null
+        ? request.auth.token.email.lower()
+        : '';
+    }
+
+    function isProvisionedAdmin() {
+      return authEmailLower()
+        == 'admin@crm-school.ru';
+    }
+
+    function isProvisionedRop() {
+      return authEmailLower()
+        == 'rop@crm-school.ru';
+    }
+
     function isAdmin() {
-      return hasUserProfile()
-        && userDoc().keys().hasAny(['role'])
-        && userDoc().role == 'admin';
+      return isProvisionedAdmin()
+        || (
+          hasUserProfile()
+          && userDoc().keys().hasAny(['role'])
+          && userDoc().role == 'admin'
+        );
     }
 
     function isRop() {
-      return hasUserProfile()
-        && userDoc().keys().hasAny(['role'])
-        && userDoc().role == 'rop';
+      return isProvisionedRop()
+        || (
+          hasUserProfile()
+          && userDoc().keys().hasAny(['role'])
+          && userDoc().role == 'rop'
+        );
     }
 
     function isLeadership() {

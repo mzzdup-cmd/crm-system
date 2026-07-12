@@ -1,4 +1,9 @@
 import {
+  useEffect,
+  useState,
+} from "react";
+
+import {
   ResponsiveContainer,
   LineChart,
   Line,
@@ -19,6 +24,20 @@ import {
   PIE_COLORS,
   CHART_THEME,
 } from "../../constants/analytics";
+
+function buildChartRenderKey(data, valueKey = "value") {
+  if (!Array.isArray(data) || !data.length) {
+    return "empty";
+  }
+
+  const total = data.reduce(
+    (sum, item) =>
+      sum + Number(item?.[valueKey] || 0),
+    0
+  );
+
+  return `${data.length}:${total}`;
+}
 
 const CHART_HEIGHT = 280;
 
@@ -50,8 +69,35 @@ function ChartFrame({
   height = CHART_HEIGHT,
   isEmpty,
   emptyMessage,
+  renderKey = "chart",
   children,
 }) {
+  const [ready, setReady] =
+    useState(false);
+
+  useEffect(() => {
+    setReady(false);
+
+    let frameId = 0;
+    let timeoutId = 0;
+
+    frameId = window.requestAnimationFrame(
+      () => {
+        timeoutId = window.setTimeout(
+          () => {
+            setReady(true);
+          },
+          0
+        );
+      }
+    );
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+      window.clearTimeout(timeoutId);
+    };
+  }, [renderKey, isEmpty]);
+
   return (
     <div
       className="w-full min-w-0"
@@ -59,7 +105,7 @@ function ChartFrame({
     >
       {isEmpty ? (
         <ChartEmpty message={emptyMessage} />
-      ) : (
+      ) : ready ? (
         <ResponsiveContainer
           width="100%"
           height="100%"
@@ -67,6 +113,8 @@ function ChartFrame({
         >
           {children}
         </ResponsiveContainer>
+      ) : (
+        <div className="h-full w-full animate-pulse rounded-xl bg-slate-800/40" />
       )}
     </div>
   );
@@ -129,6 +177,10 @@ export function RevenueLineChart({ data }) {
     <ChartFrame
       isEmpty={isEmpty}
       emptyMessage="Нет оплат за выбранный период"
+      renderKey={buildChartRenderKey(
+        data,
+        "revenue"
+      )}
     >
       <LineChart data={data}>
         <CartesianGrid
@@ -166,6 +218,10 @@ export function ManagerBarChart({ data }) {
     <ChartFrame
       isEmpty={isEmpty}
       emptyMessage="Нет выручки по менеджерам"
+      renderKey={buildChartRenderKey(
+        data,
+        "revenue"
+      )}
     >
       <BarChart data={data}>
         <CartesianGrid
@@ -201,6 +257,10 @@ export function DealsPieChart({ data }) {
     <ChartFrame
       isEmpty={isEmpty}
       emptyMessage="Нет сделок за период"
+      renderKey={buildChartRenderKey(
+        data,
+        "value"
+      )}
     >
       <PieChart>
         <Pie
@@ -246,6 +306,10 @@ export function TrafficLoadChart({ data }) {
     <ChartFrame
       isEmpty={isEmpty}
       emptyMessage="Трафик не распределён"
+      renderKey={buildChartRenderKey(
+        data,
+        "load"
+      )}
     >
       <BarChart data={data}>
         <CartesianGrid
@@ -281,6 +345,10 @@ export function SubscriptionChart({ data }) {
     <ChartFrame
       isEmpty={isEmpty}
       emptyMessage="Нет подписок и просрочек"
+      renderKey={buildChartRenderKey(
+        data,
+        "value"
+      )}
     >
       <PieChart>
         <Pie
@@ -314,11 +382,19 @@ export function ManagerKpiChart({ data }) {
         || Number(item?.upsells || 0) > 0
     );
 
+  const renderKey = data
+    .map(
+      (item) =>
+        `${item.name}:${item.newDeals}:${item.topups}:${item.upsells}`
+    )
+    .join("|");
+
   return (
     <ChartFrame
       height={300}
       isEmpty={isEmpty}
       emptyMessage="Нет KPI по менеджерам"
+      renderKey={renderKey || "empty"}
     >
       <BarChart data={data}>
         <CartesianGrid

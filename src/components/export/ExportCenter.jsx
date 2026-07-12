@@ -2,6 +2,8 @@ import {
   useState,
 } from "react";
 
+import { useAuth } from "../../context/AuthContext";
+
 import {
   ANALYTICS_PERIODS,
   exportSalesCsv,
@@ -93,6 +95,8 @@ function ExportButton({
 }
 
 export default function ExportCenter() {
+  const { userData } = useAuth();
+
   const [period, setPeriod] = useState(
     ANALYTICS_PERIODS.MONTH
   );
@@ -302,6 +306,7 @@ export default function ExportCenter() {
           onClick={() =>
             runExport("mm-xlsx", () =>
               exportMmAnalytics({
+                userData,
                 period,
                 customRange,
                 format: "xlsx",

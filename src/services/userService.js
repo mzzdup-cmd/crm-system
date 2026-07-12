@@ -6,6 +6,7 @@ import {
   getDocs,
   query,
   where,
+  deleteField,
 } from "firebase/firestore";
 
 import { db } from "./firebase";
@@ -40,6 +41,71 @@ function mapUserDoc(snapshot) {
   );
 }
 
+async function repairProvisionProfile(
+  uid,
+  raw
+) {
+  const template =
+    getProvisionProfileForEmail(
+      raw?.email
+    );
+
+  if (!template || !raw?.email) {
+    return raw;
+  }
+
+  const isLeadershipProfile =
+    template.role === "admin" ||
+    template.role === "rop";
+  const roleMismatch =
+    raw.role !== template.role;
+  const hasStaleManagerId =
+    isLeadershipProfile &&
+    Boolean(raw.managerId);
+
+  if (
+    !roleMismatch &&
+    !hasStaleManagerId
+  ) {
+    return raw;
+  }
+
+  const patch = {
+    role: template.role,
+    name:
+      raw.name ||
+      template.name ||
+      "",
+    updatedAt: Date.now(),
+  };
+
+  if (isLeadershipProfile) {
+    patch.managerId = deleteField();
+  } else if (
+    template.managerId &&
+    !raw.managerId
+  ) {
+    patch.managerId =
+      template.managerId;
+  }
+
+  await setDoc(
+    doc(db, "users", uid),
+    patch,
+    { merge: true }
+  );
+
+  const refreshed = await getDoc(
+    doc(db, "users", uid)
+  );
+
+  if (!refreshed.exists()) {
+    return raw;
+  }
+
+  return refreshed.data();
+}
+
 export async function getUserData(uid) {
 
   const userRef = doc(db, "users", uid);
@@ -47,12 +113,12 @@ export async function getUserData(uid) {
   const snapshot = await getDoc(userRef);
 
   if (snapshot.exists()) {
-
-    return normalizeUserData(
+    const raw = await repairProvisionProfile(
       uid,
       snapshot.data()
     );
 
+    return normalizeUserData(uid, raw);
   }
 
   return null;
