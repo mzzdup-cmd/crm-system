@@ -1,5 +1,4 @@
 import {
-  CALENDAR_EVENT_TYPES,
   CALENDAR_MAJOR_ALERT_TYPES,
   CALENDAR_TYPE_LABELS,
 } from "../../constants/calendar.js";
