@@ -1,7 +1,5 @@
 import {
   MANAGERS,
-  getManagerById,
-  getManagerByName,
   getManagerNameById,
 } from "../../constants/managers";
 
@@ -25,6 +23,7 @@ import {
 } from "../payment/paymentPermissions";
 
 import {
+  resolveCanonicalManagerKey,
   expandManagerIdAliases,
   resolveManagerIdFromLegacy,
 } from "../auth/managerMigration";
@@ -145,8 +144,10 @@ export function buildManagerStatsFromPayments(
   filterActivePayments(payments).forEach(
     (payment) => {
       const managerKey =
-        payment.managerId ||
-        payment.manager;
+        resolveCanonicalManagerKey(
+          payment.managerId ||
+            payment.manager
+        );
 
       if (!managerKey) {
         return;
@@ -258,21 +259,9 @@ export function buildPersonalMonthKpi({
 }
 
 function normalizeManagerKey(managerKey) {
-  if (!managerKey) {
-    return null;
-  }
-
-  if (getManagerById(managerKey)) {
-    return managerKey;
-  }
-
-  const byName = getManagerByName(managerKey);
-
-  if (byName) {
-    return byName.id;
-  }
-
-  return managerKey;
+  return resolveCanonicalManagerKey(
+    managerKey
+  );
 }
 
 export function buildMonthLeaderboard(

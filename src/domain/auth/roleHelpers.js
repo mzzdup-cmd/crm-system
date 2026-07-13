@@ -6,10 +6,12 @@ import { auth } from "../../services/firebase.js";
 import {
   resolveManagerIdFromLegacy,
   resolveManagerIdFromEmail,
+  normalizeManagerFields,
+  expandManagerIdAliases,
+  canonicalManagerId,
 } from "./managerMigration";
 import {
   getManagerNameById,
-  getManagerById,
 } from "../../constants/managers";
 import {
   getFirestoreManagerIdByEmail,
@@ -17,10 +19,6 @@ import {
 import {
   getProvisionProfileForEmail,
 } from "../../constants/provisionProfiles";
-import {
-  normalizeManagerFields,
-  expandManagerIdAliases,
-} from "./managerMigration";
 
 function getProvisionRoleForUser(userData) {
   return getProvisionProfileForEmail(
@@ -96,34 +94,6 @@ export function getRoleLabel(userData) {
   );
 }
 
-function canonicalManagerId(managerId) {
-  switch (managerId) {
-    case "polina_plamadyala":
-      return "polina_plamadya";
-    case "vilu_petrova":
-      return "violeta_petrova";
-    case "denis":
-      return "denis_manuilov";
-    case "ruslan":
-      return "ruslan_romanyuk";
-    case "alexander":
-      return "alexander_simanov";
-    case "sergey":
-      return "sergey_grebenshchikov";
-    case "andrey":
-      return "andrey_volkov";
-    case "katya":
-      return "katya_bakaeva";
-    case "vilu":
-    case "violeta":
-      return "violeta_petrova";
-    case "Денис М":
-      return "denis_manuilov";
-    default:
-      return managerId;
-  }
-}
-
 function resolveManagerIdFromDisplayName(name) {
   switch (name) {
     case "Катя":
@@ -196,7 +166,7 @@ function managerIdFromAuthEmail(authEmail) {
     case "vilu_petrova":
     case "violeta":
     case "violeta_petrova":
-      return "vilu_petrova";
+      return "violeta_petrova";
     default:
       return null;
   }
@@ -255,11 +225,8 @@ export function getCurrentManagerId(userData) {
       )
     : null;
 
-  if (
-    fromDoc &&
-    getManagerById(fromDoc)
-  ) {
-    return fromDoc;
+  if (fromDoc) {
+    return canonicalManagerId(fromDoc);
   }
 
   if (userData.role === ROLES.MANAGER) {
@@ -270,7 +237,9 @@ export function getCurrentManagerId(userData) {
         );
 
       if (fromName) {
-        return fromName;
+        return canonicalManagerId(
+          fromName
+        );
       }
     }
 
@@ -281,13 +250,15 @@ export function getCurrentManagerId(userData) {
         );
 
       if (fromEmail) {
-        return fromEmail;
+        return canonicalManagerId(
+          fromEmail
+        );
       }
     }
   }
 
   if (userData.managerId) {
-    return (
+    return canonicalManagerId(
       resolveManagerIdFromLegacy(
         userData.managerId
       ) || userData.managerId
@@ -398,21 +369,34 @@ export function normalizeUserRole(userData) {
   let name = userData.name || "";
 
   if (managerId) {
-    managerId =
-      resolveManagerIdFromLegacy(managerId) ||
-      managerId;
+    managerId = canonicalManagerId(
+      resolveManagerIdFromLegacy(
+        managerId
+      ) || managerId
+    );
   }
 
   if (role === ROLES.MANAGER) {
     if (!managerId && name) {
-      managerId =
+      const resolved =
         resolveManagerIdFromLegacy(name);
+
+      if (resolved) {
+        managerId =
+          canonicalManagerId(resolved);
+      }
     }
 
     if (!managerId && userData.email) {
-      managerId = resolveManagerIdFromEmail(
-        userData.email
-      );
+      const fromEmail =
+        resolveManagerIdFromEmail(
+          userData.email
+        );
+
+      if (fromEmail) {
+        managerId =
+          canonicalManagerId(fromEmail);
+      }
     }
 
     if (managerId && !name) {
@@ -458,7 +442,8 @@ export function resolveOwnershipManagerFieldsForWrite(
 
   if (managerId) {
     return {
-      managerId,
+      managerId:
+        canonicalManagerId(managerId),
       manager:
         getManagerNameById(managerId) ||
         userData?.name?.trim() ||

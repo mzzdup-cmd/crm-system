@@ -8,6 +8,10 @@ import {
   getManagerNameById,
 } from "../../constants/managers";
 
+import {
+  resolveCanonicalManagerKey,
+} from "../auth/managerMigration";
+
 export function analyzeSubscriptions(
   clients
 ) {
@@ -46,9 +50,10 @@ export function aggregateOverdueByManager(
     )
     .forEach((client) => {
       const key =
-        client.managerId ||
-        client.manager ||
-        "unknown";
+        resolveCanonicalManagerKey(
+          client.managerId ||
+            client.manager
+        ) || "unknown";
 
       if (!stats[key]) {
         stats[key] = {

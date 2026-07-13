@@ -2,6 +2,10 @@ import {
   getManagerNameById,
 } from "../../constants/managers";
 
+import {
+  resolveCanonicalManagerKey,
+} from "../auth/managerMigration";
+
 export function aggregateRevenue(
   payments
 ) {
@@ -20,16 +24,17 @@ export function aggregateByManager(
 
   payments.forEach((payment) => {
     const key =
-      payment.managerId ||
-      payment.manager ||
-      "unknown";
+      resolveCanonicalManagerKey(
+        payment.managerId ||
+          payment.manager
+      ) || "unknown";
 
     if (!stats[key]) {
       stats[key] = {
         managerKey: key,
         name:
-          payment.manager ||
           getManagerNameById(key) ||
+          payment.manager ||
           key,
         revenue: 0,
         deals: 0,
@@ -132,11 +137,10 @@ export function buildRevenueLineData(
 export function buildManagerBarData(
   managerStats
 ) {
-  return managerStats
-    .slice(0, 10)
-    .map((item) => ({
-      name: item.name.split(" ")[0],
-      revenue: item.revenue,
-      deals: item.deals,
-    }));
+  return managerStats.map((item) => ({
+    name: item.name.split(" ")[0],
+    fullName: item.name,
+    revenue: item.revenue,
+    deals: item.deals,
+  }));
 }

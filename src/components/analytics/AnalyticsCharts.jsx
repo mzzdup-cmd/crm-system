@@ -42,6 +42,14 @@ function buildChartRenderKey(data, valueKey = "value") {
 
 const CHART_HEIGHT = 280;
 
+const MANAGER_AXIS_PROPS = {
+  interval: 0,
+  angle: -35,
+  textAnchor: "end",
+  height: 72,
+  tick: { fontSize: 11 },
+};
+
 function ChartEmpty({
   message = "Нет данных за период",
 }) {
@@ -141,6 +149,9 @@ function ChartTooltip({ active, payload, label }) {
     return null;
   }
 
+  const fullName =
+    payload[0]?.payload?.fullName;
+
   return (
     <div
       className="rounded-xl p-3 text-sm"
@@ -151,7 +162,7 @@ function ChartTooltip({ active, payload, label }) {
     >
       <div className="text-slate-300 mb-1">
 
-        {label}
+        {fullName || label}
 
       </div>
 
@@ -247,6 +258,7 @@ export function ManagerBarChart({ data }) {
         <XAxis
           dataKey="name"
           stroke={CHART_THEME.axis}
+          {...MANAGER_AXIS_PROPS}
         />
         <YAxis
           stroke={CHART_THEME.axis}
@@ -335,6 +347,7 @@ export function TrafficLoadChart({ data }) {
         <XAxis
           dataKey="name"
           stroke={CHART_THEME.axis}
+          {...MANAGER_AXIS_PROPS}
         />
         <YAxis
           stroke={CHART_THEME.axis}
@@ -420,6 +433,7 @@ export function ManagerKpiChart({ data }) {
         <XAxis
           dataKey="name"
           stroke={CHART_THEME.axis}
+          {...MANAGER_AXIS_PROPS}
         />
         <YAxis
           stroke={CHART_THEME.axis}

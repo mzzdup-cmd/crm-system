@@ -11,6 +11,10 @@ import {
   getManagerNameById,
 } from "../../constants/managers";
 
+import {
+  resolveCanonicalManagerKey,
+} from "../auth/managerMigration";
+
 export function buildManagerKpiStats(
   payments,
   clientsById = {}
@@ -19,9 +23,10 @@ export function buildManagerKpiStats(
 
   payments.forEach((payment) => {
     const key =
-      payment.managerId ||
-      payment.manager ||
-      "unknown";
+      resolveCanonicalManagerKey(
+        payment.managerId ||
+          payment.manager
+      ) || "unknown";
 
     if (!stats[key]) {
       stats[key] = {
@@ -117,13 +122,12 @@ export function getTopManager(
 export function buildKpiChartData(
   managerKpiStats
 ) {
-  return managerKpiStats
-    .slice(0, 8)
-    .map((item) => ({
-      name: item.name.split(" ")[0],
-      revenue: item.revenue,
-      newDeals: item.newDeals,
-      topups: item.topups,
-      upsells: item.upsells,
-    }));
+  return managerKpiStats.map((item) => ({
+    name: item.name.split(" ")[0],
+    fullName: item.name,
+    revenue: item.revenue,
+    newDeals: item.newDeals,
+    topups: item.topups,
+    upsells: item.upsells,
+  }));
 }

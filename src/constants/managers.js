@@ -14,16 +14,32 @@ export const MANAGER_NAMES = MANAGERS.map(
   (manager) => manager.name
 );
 
+/** Display lookup — keep in sync with managerMigration.canonicalManagerId(). */
+function lookupManagerId(id) {
+  switch (id) {
+    case "vilu_petrova":
+    case "vilu":
+    case "violeta":
+    case "violeta_petrova":
+      return "violeta_petrova";
+    case "polina_plamadyala":
+      return "polina_plamadya";
+    default:
+      return id;
+  }
+}
+
 export function getManagerById(id) {
-  if (id === "vilu_petrova") {
-    return {
-      id: "vilu_petrova",
-      name: "Виолетта Петрова",
-    };
+  if (!id) {
+    return null;
   }
 
-  return MANAGERS.find(
-    (manager) => manager.id === id
+  return (
+    MANAGERS.find(
+      (manager) =>
+        manager.id ===
+        lookupManagerId(id)
+    ) ?? null
   );
 }
 

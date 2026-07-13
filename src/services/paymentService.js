@@ -18,6 +18,7 @@ import {
 } from "./ttRowDeletionQueueService";
 import {
   normalizeManagerFields,
+  resolveCanonicalManagerKey,
 } from "../domain/auth/managerMigration";
 import {
   isLeadership,
@@ -1528,8 +1529,10 @@ export function buildManagersStats(payments) {
     }
 
     const managerKey =
-      payment.managerId ||
-      payment.manager;
+      resolveCanonicalManagerKey(
+        payment.managerId ||
+          payment.manager
+      );
 
     if (!managerKey) {
       return;

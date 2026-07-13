@@ -2,7 +2,7 @@ import {
   getManagerById,
   getManagerByName,
   MANAGERS,
-} from "../../constants/managers";
+} from "../../constants/managers.js";
 
 /**
  * Legacy display names used before managerId normalization.
@@ -18,10 +18,10 @@ export const MANAGER_EMAIL_LOCAL_IDS = {
   "polina.p": "polina_penkova",
   "polina.pl": "polina_plamadya",
   katya: "katya_bakaeva",
-  vilu: "vilu_petrova",
-  vilu_petrova: "vilu_petrova",
-  violeta: "vilu_petrova",
-  violeta_petrova: "vilu_petrova",
+  vilu: "violeta_petrova",
+  vilu_petrova: "violeta_petrova",
+  violeta: "violeta_petrova",
+  violeta_petrova: "violeta_petrova",
 };
 
 export const LEGACY_MANAGER_ALIASES = {
@@ -37,15 +37,15 @@ export const LEGACY_MANAGER_ALIASES = {
   "Полина Пламадяла": "polina_plamadya",
   /** Typos in Firestore users docs */
   polina_plamadyala: "polina_plamadya",
-  vilu_petrova: "vilu_petrova",
+  vilu_petrova: "violeta_petrova",
   denis: "denis_manuilov",
   ruslan: "ruslan_romanyuk",
   alexander: "alexander_simanov",
   sergey: "sergey_grebenshchikov",
   andrey: "andrey_volkov",
   katya: "katya_bakaeva",
-  vilu: "vilu_petrova",
-  violeta: "vilu_petrova",
+  vilu: "violeta_petrova",
+  violeta: "violeta_petrova",
 };
 
 export function resolveManagerIdFromEmail(email) {
@@ -58,23 +58,36 @@ export function resolveManagerIdFromEmail(email) {
   return MANAGER_EMAIL_LOCAL_IDS[local] ?? null;
 }
 
+function resolveLegacyAliasOnly(value) {
+  return (
+    LEGACY_MANAGER_ALIASES[value] ||
+    value
+  );
+}
+
 export function resolveManagerIdFromLegacy(value) {
   if (!value) {
     return null;
   }
 
-  if (getManagerById(value)) {
-    return value;
-  }
-
-  if (LEGACY_MANAGER_ALIASES[value]) {
-    return LEGACY_MANAGER_ALIASES[value];
-  }
-
   const byName = getManagerByName(value);
 
   if (byName) {
-    return byName.id;
+    return canonicalManagerId(byName.id);
+  }
+
+  const byId = MANAGERS.find(
+    (manager) => manager.id === value
+  );
+
+  if (byId) {
+    return canonicalManagerId(byId.id);
+  }
+
+  if (LEGACY_MANAGER_ALIASES[value]) {
+    return canonicalManagerId(
+      LEGACY_MANAGER_ALIASES[value]
+    );
   }
 
   const partialMatch = MANAGERS.find(
@@ -84,7 +97,36 @@ export function resolveManagerIdFromLegacy(value) {
       )
   );
 
-  return partialMatch?.id ?? null;
+  if (partialMatch) {
+    return canonicalManagerId(
+      partialMatch.id
+    );
+  }
+
+  const aliased =
+    resolveLegacyAliasOnly(value);
+
+  if (aliased !== value) {
+    return canonicalManagerId(aliased);
+  }
+
+  return null;
+}
+
+/** Canonical manager id for aggregation keys (id, alias, or display name). */
+export function resolveCanonicalManagerKey(
+  managerKey
+) {
+  if (!managerKey) {
+    return null;
+  }
+
+  return (
+    resolveManagerIdFromLegacy(
+      managerKey
+    ) ||
+    canonicalManagerId(managerKey)
+  );
 }
 
 export function resolveManagerFromLegacy(value) {
@@ -98,10 +140,13 @@ export function resolveManagerFromLegacy(value) {
     };
   }
 
-  const manager = getManagerById(managerId);
+  const canonicalId =
+    canonicalManagerId(managerId);
+  const manager =
+    getManagerById(canonicalId);
 
   return {
-    managerId,
+    managerId: canonicalId,
     manager: manager?.name || value,
   };
 }
@@ -111,7 +156,10 @@ export function normalizeManagerFields(data = {}) {
     const resolvedId =
       resolveManagerIdFromLegacy(
         data.managerId
-      ) || data.managerId;
+      ) ||
+      canonicalManagerId(
+        data.managerId
+      );
     const manager =
       getManagerById(resolvedId);
 
@@ -125,9 +173,19 @@ export function normalizeManagerFields(data = {}) {
   }
 
   if (data.manager) {
-    return resolveManagerFromLegacy(
-      data.manager
-    );
+    const resolved =
+      resolveManagerFromLegacy(
+        data.manager
+      );
+
+    return {
+      managerId: resolved.managerId
+        ? canonicalManagerId(
+            resolved.managerId
+          )
+        : null,
+      manager: resolved.manager,
+    };
   }
 
   return {
@@ -143,8 +201,7 @@ export function canonicalManagerId(managerId) {
   }
 
   const resolved =
-    resolveManagerIdFromLegacy(managerId) ||
-    managerId;
+    resolveLegacyAliasOnly(managerId);
 
   switch (resolved) {
     case "polina_plamadyala":

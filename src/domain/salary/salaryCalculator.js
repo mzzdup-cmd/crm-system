@@ -5,6 +5,14 @@ import {
   NIGHT_SHIFT_BONUS,
 } from "../../constants/salary";
 
+import {
+  resolveCanonicalManagerKey,
+} from "../auth/managerMigration";
+
+import {
+  getManagerNameById,
+} from "../../constants/managers";
+
 export function calculateRevenueBonus(revenue) {
   for (const bonus of REVENUE_BONUSES) {
     if (revenue >= bonus.threshold) {
@@ -73,7 +81,10 @@ export function buildManagerSalaryStats({
     }
 
     const managerKey =
-      payment.managerId || payment.manager;
+      resolveCanonicalManagerKey(
+        payment.managerId ||
+          payment.manager
+      );
 
     if (!managerKey) {
       return;
@@ -91,7 +102,9 @@ export function buildManagerSalaryStats({
     }
 
     const managerKey =
-      shift.managerId || shift.manager;
+      resolveCanonicalManagerKey(
+        shift.managerId || shift.manager
+      );
 
     if (!managerKey) {
       return;
@@ -108,7 +121,9 @@ export function buildManagerSalaryStats({
     }
 
     const managerKey =
-      bonus.managerId || bonus.manager;
+      resolveCanonicalManagerKey(
+        bonus.managerId || bonus.manager
+      );
 
     if (!managerKey) {
       return;
@@ -157,6 +172,7 @@ export function buildSalaryReport({
 
     const displayName =
       managerNames[stats.managerKey] ||
+      getManagerNameById(stats.managerKey) ||
       stats.managerKey;
 
     return {
