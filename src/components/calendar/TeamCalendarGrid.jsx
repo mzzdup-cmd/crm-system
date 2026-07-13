@@ -7,7 +7,7 @@ from "./CalendarDayCell";
 
 export default function TeamCalendarGrid({
   monthGrid,
-  eventsByDate,
+  schedulesByDate = {},
   onSelectDay,
   onSwipe,
 }) {
@@ -52,8 +52,8 @@ export default function TeamCalendarGrid({
           <CalendarDayCell
             key={cell.date}
             cell={cell}
-            events={
-              eventsByDate[cell.date] || []
+            schedule={
+              schedulesByDate[cell.date] || null
             }
             onSelect={onSelectDay}
           />

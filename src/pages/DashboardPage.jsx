@@ -64,6 +64,16 @@ import {
 } from "../constants/schedule";
 
 import {
+  getTodayReplacementSummary,
+  splitShiftIntoSlots,
+  QUINTET_MANAGER_IDS,
+} from "../domain/calendar/replacementLogic";
+
+import {
+  updateManagerShiftSlot,
+} from "../services/scheduleService";
+
+import {
   getCuratorStartsTodayItems,
   getPlannedTopupsSummary,
   countTodayPaymentsForUser,
@@ -71,6 +81,78 @@ import {
 
 import PageErrorBoundary
 from "../components/ui/PageErrorBoundary";
+
+function TodayReplacementBanner({
+  replacement,
+  today,
+  managerId,
+  slotCount = 4,
+  onSlotSaved,
+}) {
+  const [saving, setSaving] = useState(false);
+  const slotOptions = splitShiftIntoSlots(slotCount);
+
+  async function handleSlotSelect(start, end) {
+    setSaving(true);
+
+    try {
+      await updateManagerShiftSlot({
+        date: today,
+        managerId,
+        start,
+        end,
+      });
+      onSlotSaved?.();
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <section className="bg-violet-500/15 border border-violet-500/40 p-5 md:p-6 rounded-2xl space-y-3">
+      <div className="text-lg font-bold text-violet-200">
+        Сегодня вы работаете за {replacement.names}
+      </div>
+      <div className="text-violet-100/90">
+        Часы смены: {replacement.hours}
+      </div>
+
+      {replacement.splitCover && (
+        <div className="space-y-2">
+          <div className="text-sm text-violet-200/80">
+            Выберите свой временной слот:
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {slotOptions.map((slot) => (
+              <button
+                key={`${slot.start}-${slot.end}`}
+                type="button"
+                disabled={saving}
+                onClick={() =>
+                  handleSlotSelect(
+                    slot.start,
+                    slot.end
+                  )
+                }
+                className={`
+                  px-3 py-1.5 rounded-lg text-sm border transition-colors
+                  ${
+                    replacement.shiftStart === slot.start &&
+                    replacement.shiftEnd === slot.end
+                      ? "bg-violet-500/40 border-violet-300 text-white"
+                      : "bg-slate-900/60 border-violet-500/30 text-violet-100 hover:bg-violet-500/20"
+                  }
+                `}
+              >
+                {slot.start}–{slot.end}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
 
 function StatCard({
   label,
@@ -456,6 +538,7 @@ function DashboardPageContent() {
     isLeadership,
     displayName,
     canAccessPayment,
+    managerId,
   } = usePermissions();
 
   const {
@@ -551,6 +634,28 @@ function DashboardPageContent() {
       canAccessPayment,
     ]
   );
+
+  const todayReplacement = useMemo(
+    () =>
+      getTodayReplacementSummary(
+        summary.shiftInfo
+      ),
+    [summary.shiftInfo]
+  );
+
+  const quintetSlotCount = useMemo(() => {
+    const offDays =
+      schedule?.offDays || [];
+    const quintetOff = offDays.filter((id) =>
+      QUINTET_MANAGER_IDS.includes(id)
+    );
+
+    return Math.max(
+      QUINTET_MANAGER_IDS.length -
+        quintetOff.length,
+      1
+    );
+  }, [schedule]);
 
   if (initialLoading) {
     return (
@@ -723,6 +828,15 @@ function DashboardPageContent() {
         isManager && !isLeadership && (
 
           <section className="bg-slate-900 p-5 md:p-6 rounded-2xl space-y-6">
+
+            {todayReplacement && managerId && (
+              <TodayReplacementBanner
+                replacement={todayReplacement}
+                today={today}
+                managerId={managerId}
+                slotCount={quintetSlotCount}
+              />
+            )}
 
             <div>
 
@@ -903,7 +1017,9 @@ function DashboardPageContent() {
                 value={
                   summary.shiftInfo?.isOff
                     ? "Выходной"
-                    : `${SHIFT_START}–${SHIFT_END}`
+                    : todayReplacement
+                      ? todayReplacement.hours
+                      : `${SHIFT_START}–${SHIFT_END}`
                 }
               />
 
@@ -1074,10 +1190,11 @@ function DashboardPageContent() {
               <StatCard
                 label="Работаете за"
                 value={
-                  summary.shiftInfo?.coveringFor
-                    ? getManagerNameById(summary.shiftInfo.coveringFor)
+                  todayReplacement
+                    ? todayReplacement.names
                     : "—"
                 }
+                color="text-violet-300"
               />
 
               <StatCard

@@ -145,6 +145,15 @@ export function useTeamCalendar(
     monthRange.endDate,
   ]);
 
+  const schedulesByDate = useMemo(
+    () =>
+      schedules.reduce((acc, schedule) => {
+        acc[schedule.date] = schedule;
+        return acc;
+      }, {}),
+    [schedules]
+  );
+
   const events = useMemo(
     () =>
       aggregateCalendarEvents({
@@ -240,6 +249,7 @@ export function useTeamCalendar(
     monthGrid,
     events,
     eventsByDate,
+    schedulesByDate,
     getDayEvents: (dateKey) =>
       getEventsForDate(events, dateKey),
     insights,

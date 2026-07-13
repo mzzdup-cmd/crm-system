@@ -19,6 +19,10 @@ import {
   DELIVERY_CHANNELS,
 } from "../constants/notifications";
 
+import {
+  getManagerNameById,
+} from "../constants/managers";
+
 function mapNotificationDoc(snapshot) {
   return {
     id: snapshot.id,
@@ -276,16 +280,40 @@ export async function notifySubstitutionReminder({
   userId,
   date,
   coveringFor,
+  shiftStart,
+  shiftEnd,
 }) {
+  const names = String(coveringFor || "")
+    .split(",")
+    .map((id) =>
+      getManagerNameById(id.trim())
+    )
+    .filter(Boolean)
+    .join(", ");
+
+  const timeLabel =
+    shiftStart && shiftEnd
+      ? `${shiftStart}–${shiftEnd} MSK`
+      : "";
+
+  const body = timeLabel
+    ? `Вы работаете за ${names} · ${timeLabel}`
+    : `Вы работаете за ${names}`;
+
   return createNotificationIfMissing({
     userId,
-    dedupKey: `substitution_${date}`,
+    dedupKey: `substitution_${date}_${userId}`,
     type: "substitution_reminder",
     title: "Напоминание о замене",
-    body: `Сегодня вы работаете за коллегу`,
+    body,
     link: "/",
     priority: "medium",
-    data: { date, coveringFor },
+    data: {
+      date,
+      coveringFor,
+      shiftStart,
+      shiftEnd,
+    },
     channels: ["in_app"],
   });
 }

@@ -1,11 +1,15 @@
 import {
   SHIFT_START,
   SHIFT_END,
-  PERMANENT_SUBSTITUTION_PAIRS,
   GROUP_OFFDAY_MANAGER_IDS,
 } from "../../constants/schedule";
 
 import { MANAGERS } from "../../constants/managers";
+
+import {
+  computeReplacements,
+  getPairPartner as getReplacementPairPartner,
+} from "../calendar/replacementLogic";
 
 export function getTodayDateString(
   date = new Date()
@@ -15,18 +19,12 @@ export function getTodayDateString(
     .split("T")[0];
 }
 
-export function getSubstitutionPartner(managerId) {
-  for (const [first, second] of PERMANENT_SUBSTITUTION_PAIRS) {
-    if (first === managerId) {
-      return second;
-    }
-
-    if (second === managerId) {
-      return first;
-    }
-  }
-
-  return null;
+export function getSubstitutionPartner(
+  managerId
+) {
+  return getReplacementPairPartner(
+    managerId
+  );
 }
 
 export function buildDefaultShifts(
@@ -51,44 +49,13 @@ export function buildDefaultShifts(
 export function applyPermanentSubstitutions({
   offDays = [],
   shifts = {},
+  manualAssignments = {},
 }) {
-  const updatedShifts = { ...shifts };
-  const substitutions = [];
-
-  offDays.forEach((offManagerId) => {
-    const partnerId =
-      getSubstitutionPartner(offManagerId);
-
-    if (!partnerId) {
-      return;
-    }
-
-    if (updatedShifts[offManagerId]) {
-      updatedShifts[offManagerId] = {
-        ...updatedShifts[offManagerId],
-        active: false,
-      };
-    }
-
-    if (updatedShifts[partnerId]) {
-      updatedShifts[partnerId] = {
-        ...updatedShifts[partnerId],
-        active: true,
-        coveringFor: offManagerId,
-      };
-    }
-
-    substitutions.push({
-      from: offManagerId,
-      to: partnerId,
-      type: "permanent_pair",
-    });
+  return computeReplacements({
+    offDays,
+    manualAssignments,
+    existingShifts: shifts,
   });
-
-  return {
-    shifts: updatedShifts,
-    substitutions,
-  };
 }
 
 export function computeGroupTrafficDistribution(
@@ -131,14 +98,25 @@ export function computeGroupTrafficDistribution(
   return distribution;
 }
 
-export function buildScheduleDocument(date, options = {}) {
+export function buildScheduleDocument(
+  date,
+  options = {}
+) {
   const offDays = options.offDays || [];
-  const baseShifts = buildDefaultShifts();
-  const { shifts, substitutions } =
-    applyPermanentSubstitutions({
-      offDays,
-      shifts: baseShifts,
-    });
+  const manualAssignments =
+    options.manualAssignments || {};
+  const existingShifts =
+    options.existingShifts ||
+    buildDefaultShifts();
+  const {
+    shifts,
+    substitutions,
+    pendingManualAssignments,
+  } = applyPermanentSubstitutions({
+    offDays,
+    shifts: existingShifts,
+    manualAssignments,
+  });
 
   const trafficDistribution =
     computeGroupTrafficDistribution(offDays);
@@ -148,6 +126,8 @@ export function buildScheduleDocument(date, options = {}) {
     shifts,
     offDays,
     substitutions,
+    manualAssignments,
+    pendingManualAssignments,
     trafficDistribution,
     updatedAt: Date.now(),
   };
@@ -167,12 +147,14 @@ export function resolveEffectiveSchedule(
     return schedule;
   }
 
-  const { shifts, substitutions } =
+  const { shifts, substitutions, pendingManualAssignments } =
     applyPermanentSubstitutions({
       offDays,
       shifts:
         schedule.shifts ||
         buildDefaultShifts(),
+      manualAssignments:
+        schedule.manualAssignments || {},
     });
 
   return {
@@ -180,6 +162,7 @@ export function resolveEffectiveSchedule(
     date: schedule.date || date,
     shifts,
     substitutions,
+    pendingManualAssignments,
   };
 }
 

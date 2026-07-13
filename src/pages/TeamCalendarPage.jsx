@@ -26,7 +26,7 @@ export default function TeamCalendarPage() {
   const {
     monthTitle,
     monthGrid,
-    eventsByDate,
+    schedulesByDate,
     getDayEvents,
     insights,
     loading,
@@ -178,7 +178,7 @@ export default function TeamCalendarPage() {
 
       <TeamCalendarGrid
         monthGrid={monthGrid}
-        eventsByDate={eventsByDate}
+        schedulesByDate={schedulesByDate}
         onSelectDay={setSelectedDate}
         onSwipe={(direction) => {
           if (direction === "prev") {
@@ -194,6 +194,11 @@ export default function TeamCalendarPage() {
       <CalendarDayModal
         open={Boolean(selectedDate)}
         dateKey={selectedDate}
+        schedule={
+          selectedDate
+            ? schedulesByDate[selectedDate] || null
+            : null
+        }
         events={
           selectedDate
             ? getDayEvents(selectedDate)

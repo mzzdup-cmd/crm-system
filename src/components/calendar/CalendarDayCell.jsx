@@ -1,23 +1,53 @@
 import {
-  getEventStyle,
-} from "../../domain/calendar/calendarAggregator";
+  buildDayManagerRows,
+} from "../../domain/calendar/dayManagerRows";
+
+function ManagerRow({ row }) {
+  const rowClass = row.highlight
+    ? "bg-violet-500/20 border-violet-500/40 text-violet-100"
+    : "bg-slate-800/50 border-slate-700/60 text-slate-300";
+
+  return (
+    <div
+      className={`
+        flex items-center justify-between gap-1
+        rounded border px-1 py-0.5
+        text-[9px] md:text-[10px] leading-tight
+        ${rowClass}
+      `}
+      title={row.tooltip}
+    >
+      <span className="font-medium truncate shrink-0 max-w-[42%]">
+        {row.shortLabel}
+      </span>
+      <span className="truncate text-right opacity-90">
+        {row.statusLabel}
+      </span>
+    </div>
+  );
+}
 
 export default function CalendarDayCell({
   cell,
-  events = [],
+  schedule = null,
   onSelect,
 }) {
-  const preview = events.slice(0, 3);
-  const hiddenCount =
-    events.length - preview.length;
+  const rows = buildDayManagerRows({
+    date: cell.date,
+    schedule,
+  });
+
+  const highlightCount = rows.filter(
+    (row) => row.highlight
+  ).length;
 
   return (
     <button
       type="button"
       onClick={() => onSelect(cell.date)}
       className={`
-        min-h-[88px] md:min-h-[112px]
-        rounded-xl border p-2 md:p-3 text-left
+        min-h-[120px] md:min-h-[168px]
+        rounded-xl border p-1.5 md:p-2 text-left
         transition-all duration-200
         hover:border-cyan-500/40 hover:bg-slate-800/60
         ${
@@ -32,7 +62,7 @@ export default function CalendarDayCell({
         }
       `}
     >
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex items-center justify-between gap-2 mb-1">
         <span
           className={`
             text-sm md:text-base font-semibold
@@ -46,51 +76,37 @@ export default function CalendarDayCell({
           {cell.dayNumber}
         </span>
 
-        {events.length > 0 && (
-          <span className="text-[10px] md:text-xs text-slate-500">
-            {events.length}
+        {highlightCount > 0 && (
+          <span className="text-[10px] text-violet-300">
+            {highlightCount}
           </span>
         )}
       </div>
 
-      <div className="mt-2 space-y-1 hidden sm:block">
-        {preview.map((event) => {
-          const style = getEventStyle(event);
-
-          return (
-            <div
-              key={event.id}
-              className={`
-                truncate rounded-md border px-1.5 py-0.5
-                text-[10px] md:text-xs
-                ${style.chip}
-              `}
-              title={event.title}
-            >
-              {event.title}
-            </div>
-          );
-        })}
-
-        {hiddenCount > 0 && (
-          <div className="text-[10px] text-slate-500">
-            +{hiddenCount} ещё
-          </div>
-        )}
+      <div className="space-y-0.5 hidden sm:block">
+        {rows.map((row) => (
+          <ManagerRow
+            key={row.managerId}
+            row={row}
+          />
+        ))}
       </div>
 
-      <div className="mt-2 flex flex-wrap gap-1 sm:hidden">
-        {preview.map((event) => {
-          const style = getEventStyle(event);
-
-          return (
-            <span
-              key={event.id}
-              className={`w-2 h-2 rounded-full ${style.dot}`}
-              title={event.title}
-            />
-          );
-        })}
+      <div className="mt-1 flex flex-wrap gap-0.5 sm:hidden">
+        {rows.map((row) => (
+          <span
+            key={row.managerId}
+            className={`
+              w-1.5 h-1.5 rounded-full
+              ${
+                row.highlight
+                  ? "bg-violet-400"
+                  : "bg-slate-600"
+              }
+            `}
+            title={row.tooltip}
+          />
+        ))}
       </div>
     </button>
   );

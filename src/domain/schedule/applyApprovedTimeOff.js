@@ -17,6 +17,10 @@ import {
   mergeOffDays,
 } from "./timeOffDates";
 
+import {
+  syncSubstitutionNotifications,
+} from "../../services/reminderSyncService";
+
 async function applyOffDayForDate(
   date,
   managerId
@@ -33,7 +37,8 @@ async function applyOffDayForDate(
   const schedule =
     await updateScheduleOffDays(
       date,
-      offDays
+      offDays,
+      { existing }
     );
 
   const traffic =
@@ -44,6 +49,10 @@ async function applyOffDayForDate(
     schedule,
     Number(traffic?.trafficAmount || 0)
   );
+
+  await syncSubstitutionNotifications({
+    schedule,
+  });
 
   return schedule;
 }

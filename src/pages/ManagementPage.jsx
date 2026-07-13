@@ -17,6 +17,7 @@ import {
 
 import {
   updateScheduleOffDays,
+  updateManualAssignments,
 } from "../services/scheduleService";
 
 import {
@@ -31,6 +32,7 @@ import {
 import {
   syncScheduleNotifications,
   syncTrafficOverloadNotifications,
+  syncSubstitutionNotifications,
 } from "../services/reminderSyncService";
 
 import {
@@ -108,6 +110,12 @@ export default function ManagementPage() {
   const [saving, setSaving] =
     useState(false);
 
+  const [manualAssignments, setManualAssignments] =
+    useState({});
+
+  const [savingManual, setSavingManual] =
+    useState(false);
+
   const [pendingTtCount, setPendingTtCount] =
     useState(0);
 
@@ -139,10 +147,14 @@ export default function ManagementPage() {
     if (liveSchedule) {
       setSchedule(liveSchedule);
       setOffDays(liveSchedule.offDays || []);
+      setManualAssignments(
+        liveSchedule.manualAssignments || {}
+      );
     } else {
       const built = buildScheduleDocument(date);
       setSchedule(built);
       setOffDays([]);
+      setManualAssignments({});
     }
   }, [liveSchedule, date]);
 
@@ -181,7 +193,11 @@ export default function ManagementPage() {
     const savedSchedule =
       await updateScheduleOffDays(
         date,
-        offDays
+        offDays,
+        {
+          manualAssignments,
+          existing: prevSchedule,
+        }
       );
 
     const savedTraffic =
@@ -206,6 +222,31 @@ export default function ManagementPage() {
 
     alert("График и traffic сохранены");
   }
+
+  async function saveManualAssignments() {
+    setSavingManual(true);
+
+    try {
+      const savedSchedule =
+        await updateManualAssignments(
+          date,
+          manualAssignments
+        );
+
+      setSchedule(savedSchedule);
+
+      await syncSubstitutionNotifications({
+        schedule: savedSchedule,
+      });
+
+      alert("Ручные замены сохранены");
+    } finally {
+      setSavingManual(false);
+    }
+  }
+
+  const pendingManual =
+    schedule?.pendingManualAssignments || [];
 
   if (initialLoading) {
     return (
@@ -311,6 +352,73 @@ export default function ManagementPage() {
             </button>
           </div>
 
+          {pendingManual.length > 0 && (
+            <div className="bg-amber-500/10 border border-amber-500/30 p-6 rounded-2xl space-y-4">
+              <h2 className="text-2xl font-bold text-amber-200">
+                Ручное назначение замен (РОП)
+              </h2>
+              <p className="text-sm text-amber-100/80">
+                Оба члена пары в выходной — назначьте, кто кого заменяет.
+              </p>
+
+              {pendingManual.map((item) => (
+                <div
+                  key={item.offManagerId}
+                  className="bg-slate-900/70 p-4 rounded-xl flex flex-wrap items-center gap-3"
+                >
+                  <span className="font-medium">
+                    {item.offManagerName} →
+                  </span>
+                  <select
+                    value={
+                      manualAssignments[
+                        item.offManagerId
+                      ] || ""
+                    }
+                    onChange={(event) => {
+                      setManualAssignments(
+                        (current) => ({
+                          ...current,
+                          [item.offManagerId]:
+                            event.target.value,
+                        })
+                      );
+                    }}
+                    className="bg-slate-800 p-2 rounded-lg min-w-[200px]"
+                  >
+                    <option value="">
+                      Выберите замену
+                    </option>
+                    {MANAGERS.filter(
+                      (manager) =>
+                        !offDays.includes(
+                          manager.id
+                        )
+                    ).map((manager) => (
+                      <option
+                        key={manager.id}
+                        value={manager.id}
+                      >
+                        {manager.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ))}
+
+              <button
+                type="button"
+                onClick={saveManualAssignments}
+                disabled={savingManual}
+                className="px-4 py-2 rounded-xl bg-amber-500 text-slate-950 font-bold disabled:opacity-50"
+              >
+                {savingManual
+                  ? "Сохранение..."
+                  : "Сохранить ручные замены"}
+              </button>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
             <div className="bg-slate-900 p-6 rounded-2xl">
               <h2 className="text-2xl font-bold mb-4">
@@ -321,12 +429,17 @@ export default function ManagementPage() {
                 {(schedule?.substitutions || [])
                   .map((item) => (
                     <div
-                      key={`${item.from}-${item.to}`}
+                      key={`${item.from}-${item.to}-${item.start || ""}`}
                       className="bg-slate-800 p-4 rounded-xl"
                     >
                       {getManagerNameById(item.to)}
                       {" работает за "}
                       {getManagerNameById(item.from)}
+                      {item.start && item.end && (
+                        <span className="block text-sm text-slate-400 mt-1">
+                          {item.start}–{item.end} MSK
+                        </span>
+                      )}
                     </div>
                   ))}
 

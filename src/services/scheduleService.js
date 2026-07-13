@@ -57,12 +57,79 @@ export async function saveSchedule(date, payload) {
 
 export async function updateScheduleOffDays(
   date,
-  offDays
+  offDays,
+  options = {}
 ) {
-  const schedule =
-    buildScheduleDocument(date, {
+  const existing =
+    options.existing ||
+    (await getScheduleByDate(date));
+
+  const schedule = buildScheduleDocument(
+    date,
+    {
       offDays,
-    });
+      manualAssignments:
+        options.manualAssignments ??
+        existing?.manualAssignments ??
+        {},
+      existingShifts:
+        existing?.shifts ?? {},
+    }
+  );
+
+  return saveSchedule(date, schedule);
+}
+
+export async function updateManualAssignments(
+  date,
+  manualAssignments
+) {
+  const existing =
+    (await getScheduleByDate(date)) ||
+    buildScheduleDocument(date);
+
+  const schedule = buildScheduleDocument(
+    date,
+    {
+      offDays: existing.offDays || [],
+      manualAssignments,
+      existingShifts:
+        existing.shifts || {},
+    }
+  );
+
+  return saveSchedule(date, schedule);
+}
+
+export async function updateManagerShiftSlot({
+  date,
+  managerId,
+  start,
+  end,
+}) {
+  const existing =
+    (await getScheduleByDate(date)) ||
+    buildScheduleDocument(date);
+
+  const shifts = {
+    ...(existing.shifts || {}),
+    [managerId]: {
+      ...(existing.shifts?.[managerId] || {}),
+      start,
+      end,
+      splitCover: true,
+    },
+  };
+
+  const schedule = buildScheduleDocument(
+    date,
+    {
+      offDays: existing.offDays || [],
+      manualAssignments:
+        existing.manualAssignments || {},
+      existingShifts: shifts,
+    }
+  );
 
   return saveSchedule(date, schedule);
 }

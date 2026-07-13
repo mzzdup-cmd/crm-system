@@ -1,6 +1,9 @@
 import {
+  buildDayManagerRows,
+} from "../../domain/calendar/dayManagerRows";
+
+import {
   getEventStyle,
-  getManagerInitials,
 } from "../../domain/calendar/calendarAggregator";
 
 import {
@@ -27,6 +30,7 @@ function formatEventPeriod(event) {
 export default function CalendarDayModal({
   open,
   dateKey,
+  schedule = null,
   events = [],
   isLeadership,
   onClose,
@@ -36,6 +40,15 @@ export default function CalendarDayModal({
   if (!open || !dateKey) {
     return null;
   }
+
+  const rows = buildDayManagerRows({
+    date: dateKey,
+    schedule,
+  });
+
+  const customEvents = events.filter(
+    (event) => event.editable
+  );
 
   return (
     <div
@@ -59,9 +72,7 @@ export default function CalendarDayModal({
               {formatDisplayDate(dateKey)}
             </h2>
             <p className="text-slate-400 text-sm mt-1">
-              {events.length
-                ? `${events.length} событий`
-                : "Событий нет"}
+              Расписание команды
             </p>
           </div>
 
@@ -74,65 +85,70 @@ export default function CalendarDayModal({
           </button>
         </div>
 
-        <div className="space-y-3">
-          {events.length === 0 && (
-            <p className="text-slate-500 text-sm">
-              На этот день пока ничего не запланировано.
-            </p>
-          )}
+        <div className="space-y-1.5 mb-6">
+          {rows.map((row) => (
+            <div
+              key={row.managerId}
+              className={`
+                flex items-center justify-between gap-3
+                rounded-xl border px-3 py-2 text-sm
+                ${
+                  row.highlight
+                    ? "bg-violet-500/15 border-violet-500/40 text-violet-100"
+                    : "bg-slate-800/60 border-slate-700 text-slate-200"
+                }
+              `}
+              title={row.tooltip}
+            >
+              <span className="font-medium">
+                {row.name}
+              </span>
+              <span className="text-xs text-right opacity-90">
+                {row.statusLabel}
+                {row.isCovering &&
+                  row.shiftStart &&
+                  row.shiftEnd && (
+                    <span className="block mt-0.5">
+                      {row.shiftStart}–{row.shiftEnd} MSK
+                    </span>
+                  )}
+              </span>
+            </div>
+          ))}
+        </div>
 
-          {events.map((event) => {
-            const style = getEventStyle(event);
+        {customEvents.length > 0 && (
+          <div className="space-y-3 border-t border-slate-800 pt-4">
+            <h3 className="text-sm font-semibold text-slate-400">
+              События
+            </h3>
 
-            return (
-              <div
-                key={event.id}
-                className={`
-                  rounded-xl border p-4
-                  ${style.chip}
-                `}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <div className="font-semibold">
-                      {event.title}
-                    </div>
+            {customEvents.map((event) => {
+              const style = getEventStyle(event);
 
-                    <div className="text-xs mt-1 opacity-80">
-                      {CALENDAR_TYPE_LABELS[event.type] ||
-                        "Событие"}
-                      {formatEventPeriod(event) && (
-                        <span className="block mt-0.5">
-                          {formatEventPeriod(event)}
-                        </span>
-                      )}
-                    </div>
+              return (
+                <div
+                  key={event.id}
+                  className={`
+                    rounded-xl border p-4
+                    ${style.chip}
+                  `}
+                >
+                  <div className="font-semibold">
+                    {event.title}
+                  </div>
 
-                    {event.description && (
-                      <p className="text-sm mt-2 opacity-90">
-                        {event.description}
-                      </p>
+                  <div className="text-xs mt-1 opacity-80">
+                    {CALENDAR_TYPE_LABELS[event.type] ||
+                      "Событие"}
+                    {formatEventPeriod(event) && (
+                      <span className="block mt-0.5">
+                        {formatEventPeriod(event)}
+                      </span>
                     )}
                   </div>
 
-                  {event.managerId && (
-                    <div
-                      className="
-                        w-9 h-9 rounded-full bg-slate-950/40
-                        flex items-center justify-center
-                        text-xs font-bold
-                      "
-                      title={event.managerId}
-                    >
-                      {getManagerInitials(
-                        event.managerId
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                {isLeadership &&
-                  event.editable && (
+                  {isLeadership && (
                     <div className="mt-3 flex gap-2">
                       <button
                         type="button"
@@ -162,10 +178,11 @@ export default function CalendarDayModal({
                       </button>
                     </div>
                   )}
-              </div>
-            );
-          })}
-        </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );

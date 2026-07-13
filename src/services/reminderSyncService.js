@@ -22,6 +22,10 @@ import {
 } from "../constants/managers";
 
 import {
+  getCoveringManagerIds,
+} from "../domain/calendar/replacementLogic";
+
+import {
   getUsersByRole,
   getUsersByManagerIds,
 } from "./userService";
@@ -107,6 +111,53 @@ export async function syncScheduleNotifications({
         channels: ["in_app"],
       })
     )
+  );
+
+  await syncSubstitutionNotifications({
+    schedule,
+  });
+}
+
+export async function syncSubstitutionNotifications({
+  schedule,
+}) {
+  if (!schedule?.shifts) {
+    return;
+  }
+
+  const date =
+    schedule.date || getTodayDateString();
+  const coveringIds =
+    getCoveringManagerIds(schedule);
+
+  if (!coveringIds.length) {
+    return;
+  }
+
+  const users = await getUsersByManagerIds(
+    coveringIds
+  );
+
+  await Promise.all(
+    users.map((user) => {
+      const shiftInfo = getManagerShiftInfo(
+        schedule,
+        user.managerId
+      );
+
+      if (!shiftInfo?.coveringFor) {
+        return null;
+      }
+
+      return notifySubstitutionReminder({
+        userId: user.uid,
+        date,
+        coveringFor:
+          shiftInfo.coveringFor,
+        shiftStart: shiftInfo.shift?.start,
+        shiftEnd: shiftInfo.shift?.end,
+      });
+    })
   );
 }
 
@@ -217,6 +268,8 @@ export async function syncManagerShiftNotifications({
     userId: userData.uid,
     date,
     coveringFor: shiftInfo.coveringFor,
+    shiftStart: shiftInfo.shift?.start,
+    shiftEnd: shiftInfo.shift?.end,
   });
 }
 
