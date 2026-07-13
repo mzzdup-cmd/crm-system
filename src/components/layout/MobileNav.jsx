@@ -12,8 +12,8 @@ function mobileNavClass({ isActive }) {
     flex-1 py-2 px-1 text-xs transition-colors
     ${
       isActive
-        ? "text-cyan-400"
-        : "text-slate-400"
+        ? "text-brand"
+        : "text-neutral-400"
     }
   `;
 }
@@ -25,7 +25,7 @@ export default function MobileNav({
     <nav
       className="
         lg:hidden fixed bottom-0 inset-x-0 z-40
-        bg-slate-950/95 backdrop-blur border-t border-slate-800
+        bg-surface-deep/95 backdrop-blur border-t border-neutral-800
         safe-area-bottom
       "
     >

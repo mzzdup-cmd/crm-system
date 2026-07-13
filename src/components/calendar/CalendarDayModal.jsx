@@ -1,6 +1,6 @@
 import {
-  buildDayManagerRows,
-} from "../../domain/calendar/dayManagerRows";
+  buildDayCalendarLines,
+} from "../../domain/calendar/buildDayCalendarLines";
 
 import {
   getEventStyle,
@@ -41,24 +41,31 @@ export default function CalendarDayModal({
     return null;
   }
 
-  const rows = buildDayManagerRows({
+  const lines = buildDayCalendarLines({
     date: dateKey,
     schedule,
+    events,
   });
 
   const customEvents = events.filter(
-    (event) => event.editable
+    (event) =>
+      event.editable &&
+      !lines.some(
+        (line) =>
+          line.kind === "alert" &&
+          line.label === event.title
+      )
   );
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/60 p-0 md:p-4"
+      className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/70 p-0 md:p-4"
       onClick={onClose}
     >
       <div
         className="
           w-full md:max-w-lg
-          bg-slate-900 border border-slate-700
+          bg-surface border border-neutral-800
           rounded-t-3xl md:rounded-2xl
           p-5 md:p-6 max-h-[85vh] overflow-y-auto
         "
@@ -71,56 +78,55 @@ export default function CalendarDayModal({
             <h2 className="text-xl font-bold">
               {formatDisplayDate(dateKey)}
             </h2>
-            <p className="text-slate-400 text-sm mt-1">
-              Расписание команды
+            <p className="text-neutral-400 text-sm mt-1">
+              {lines.length === 0
+                ? "Событий нет"
+                : "События дня"}
             </p>
           </div>
 
           <button
             type="button"
             onClick={onClose}
-            className="text-slate-400 hover:text-white"
+            className="text-neutral-400 hover:text-white"
           >
             ✕
           </button>
         </div>
 
-        <div className="space-y-1.5 mb-6">
-          {rows.map((row) => (
-            <div
-              key={row.managerId}
-              className={`
-                flex items-center justify-between gap-3
-                rounded-xl border px-3 py-2 text-sm
-                ${
-                  row.highlight
-                    ? "bg-violet-500/15 border-violet-500/40 text-violet-100"
-                    : "bg-slate-800/60 border-slate-700 text-slate-200"
-                }
-              `}
-              title={row.tooltip}
-            >
-              <span className="font-medium">
-                {row.name}
-              </span>
-              <span className="text-xs text-right opacity-90">
-                {row.statusLabel}
-                {row.isCovering &&
-                  row.shiftStart &&
-                  row.shiftEnd && (
-                    <span className="block mt-0.5">
-                      {row.shiftStart}–{row.shiftEnd} MSK
-                    </span>
+        {lines.length > 0 && (
+          <div className="space-y-2 mb-6">
+            {lines.map((line) => (
+              <div
+                key={line.id}
+                className={`
+                  rounded-xl border px-3 py-2 text-sm
+                  ${
+                    line.kind === "alert"
+                      ? "border-red-500/50 bg-red-500/10 text-red-100"
+                      : "border-neutral-700 bg-surface-raised text-neutral-200"
+                  }
+                `}
+                title={line.tooltip}
+              >
+                <div className="font-medium">
+                  {line.label}
+                </div>
+                {line.kind === "off" &&
+                  line.tooltip && (
+                    <div className="text-xs text-neutral-400 mt-1">
+                      {line.tooltip}
+                    </div>
                   )}
-              </span>
-            </div>
-          ))}
-        </div>
+              </div>
+            ))}
+          </div>
+        )}
 
         {customEvents.length > 0 && (
-          <div className="space-y-3 border-t border-slate-800 pt-4">
-            <h3 className="text-sm font-semibold text-slate-400">
-              События
+          <div className="space-y-3 border-t border-neutral-800 pt-4">
+            <h3 className="text-sm font-semibold text-neutral-400">
+              Другие события
             </h3>
 
             {customEvents.map((event) => {
@@ -157,7 +163,7 @@ export default function CalendarDayModal({
                         }
                         className="
                           px-3 py-1.5 rounded-lg text-xs
-                          bg-slate-800 hover:bg-slate-700
+                          bg-surface-raised hover:bg-surface-hover
                         "
                       >
                         Редактировать

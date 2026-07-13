@@ -33,7 +33,7 @@ export default function TeamCalendarGrid({
 
   return (
     <div
-      className="bg-slate-900/70 border border-slate-800 rounded-2xl p-3 md:p-4"
+      className="bg-surface border border-neutral-800 rounded-2xl p-3 md:p-4"
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
@@ -41,7 +41,7 @@ export default function TeamCalendarGrid({
         {WEEKDAY_LABELS.map((label) => (
           <div
             key={label}
-            className="text-center text-xs md:text-sm text-slate-500 font-medium py-1"
+            className="text-center text-xs md:text-sm text-neutral-500 font-medium py-1"
           >
             {label}
           </div>

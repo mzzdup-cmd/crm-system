@@ -1,14 +1,31 @@
 @import "tailwindcss";
 
+@theme {
+  --color-brand: #d4ff00;
+  --color-brand-fg: #0a0a0a;
+  --color-brand-muted: #b8e600;
+  --color-brand-dim: #8fa300;
+  --color-surface: #111111;
+  --color-surface-deep: #0a0a0a;
+  --color-surface-raised: #1a1a1a;
+  --color-surface-hover: #222222;
+  --font-sans: Manrope, Inter, system-ui, sans-serif;
+}
+
 :root {
   color-scheme: dark;
+  --crm-bg: #0a0a0a;
+  --crm-surface: #111111;
+  --crm-lime: #d4ff00;
+  --crm-lime-muted: #b8e600;
+  --crm-border: #262626;
 }
 
 body {
   margin: 0;
-  background: #020617;
-  color: white;
-  font-family: Inter, Arial, sans-serif;
+  background: var(--crm-bg);
+  color: #ffffff;
+  font-family: Manrope, Inter, system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
@@ -38,7 +55,7 @@ body {
 
 @media (hover: hover) {
   a, button {
-    transition: background-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
+    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
   }
 }
 
@@ -51,6 +68,11 @@ body {
 
 .recharts-wrapper {
   max-width: 100%;
+}
+
+.recharts-cartesian-axis-tick-value {
+  fill: #a3a3a3 !important;
+  font-family: Manrope, Inter, sans-serif !important;
 }
 
 .animate-fade-in {
@@ -73,4 +95,14 @@ body {
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+
+.crm-btn-primary {
+  background: var(--crm-lime);
+  color: var(--crm-bg);
+  font-weight: 600;
+}
+
+.crm-btn-primary:hover {
+  background: var(--crm-lime-muted);
 }

@@ -2,14 +2,14 @@ import {
   SHIFT_START,
   SHIFT_END,
   GROUP_OFFDAY_MANAGER_IDS,
-} from "../../constants/schedule";
+} from "../../constants/schedule.js";
 
-import { MANAGERS } from "../../constants/managers";
+import { MANAGERS } from "../../constants/managers.js";
 
 import {
   computeReplacements,
   getPairPartner as getReplacementPairPartner,
-} from "../calendar/replacementLogic";
+} from "../calendar/replacementLogic.js";
 
 export function getTodayDateString(
   date = new Date()

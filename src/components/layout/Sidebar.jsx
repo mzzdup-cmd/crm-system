@@ -7,8 +7,8 @@ function navClassName({ isActive }) {
     block px-4 py-3 rounded-xl transition-all duration-200
     ${
       isActive
-        ? "bg-cyan-500/20 text-cyan-300 font-bold"
-        : "text-slate-300 hover:bg-slate-800 hover:text-white"
+        ? "bg-brand/15 text-brand font-bold"
+        : "text-neutral-300 hover:bg-surface-hover hover:text-white"
     }
   `;
 }
@@ -25,34 +25,33 @@ export default function Sidebar({
   return (
     <aside
       className={`
-        bg-slate-950 border-r border-slate-800
+        bg-surface-deep border-r border-neutral-800
         flex flex-col h-full
         ${className}
       `}
     >
 
-      <div className="p-6 border-b border-slate-800 overflow-visible relative z-20">
+      <div className="p-6 border-b border-neutral-800 overflow-visible relative z-20">
 
         <div className="flex items-start justify-between gap-3">
 
           <div>
 
-            <h1 className="text-2xl lg:text-3xl font-bold">
-
-              CRM School
-
+            <h1 className="text-2xl lg:text-3xl font-bold tracking-tight">
+              CRM{" "}
+              <span className="text-brand">School</span>
             </h1>
 
             {
 
               displayName && (
 
-                <div className="text-slate-400 mt-3 text-sm">
+                <div className="text-neutral-400 mt-3 text-sm">
 
                   {displayName}
 
                   {roleLabel && (
-                    <span className="ml-2 text-cyan-400">
+                    <span className="ml-2 text-brand">
                       {roleLabel}
                     </span>
                   )}
@@ -103,7 +102,7 @@ export default function Sidebar({
 
       </nav>
 
-      <div className="p-4 border-t border-slate-800">
+      <div className="p-4 border-t border-neutral-800">
 
         <button
           onClick={onLogout}

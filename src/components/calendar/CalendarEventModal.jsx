@@ -94,7 +94,7 @@ export default function CalendarEventModal({
     >
       <form
         className="
-          w-full max-w-lg bg-slate-900 border border-slate-700
+          w-full max-w-lg bg-surface border border-neutral-700
           rounded-2xl p-6 space-y-4
         "
         onClick={(event) => {
@@ -118,7 +118,7 @@ export default function CalendarEventModal({
               setTitle(event.target.value)
             }
             required
-            className="w-full bg-slate-800 rounded-xl px-3 py-2"
+            className="w-full bg-surface-raised rounded-xl px-3 py-2 border border-neutral-800"
             placeholder="Созвон команды"
           />
         </label>
@@ -133,7 +133,7 @@ export default function CalendarEventModal({
               setDescription(event.target.value)
             }
             rows={3}
-            className="w-full bg-slate-800 rounded-xl px-3 py-2"
+            className="w-full bg-surface-raised rounded-xl px-3 py-2 border border-neutral-800"
             placeholder="Дополнительные детали"
           />
         </label>
@@ -148,7 +148,7 @@ export default function CalendarEventModal({
               onChange={(event) =>
                 setType(event.target.value)
               }
-              className="w-full bg-slate-800 rounded-xl px-3 py-2"
+              className="w-full bg-surface-raised rounded-xl px-3 py-2 border border-neutral-800"
             >
               {TYPE_OPTIONS.map((option) => (
                 <option
@@ -170,7 +170,7 @@ export default function CalendarEventModal({
               onChange={(event) =>
                 setImportance(event.target.value)
               }
-              className="w-full bg-slate-800 rounded-xl px-3 py-2"
+              className="w-full bg-surface-raised rounded-xl px-3 py-2 border border-neutral-800"
             >
               <option value={CALENDAR_IMPORTANCE.NORMAL}>
                 Обычное
@@ -194,7 +194,7 @@ export default function CalendarEventModal({
                 setStartDate(event.target.value)
               }
               required
-              className="w-full bg-slate-800 rounded-xl px-3 py-2"
+              className="w-full bg-surface-raised rounded-xl px-3 py-2 border border-neutral-800"
             />
           </label>
 
@@ -208,7 +208,7 @@ export default function CalendarEventModal({
               onChange={(event) =>
                 setEndDate(event.target.value)
               }
-              className="w-full bg-slate-800 rounded-xl px-3 py-2"
+              className="w-full bg-surface-raised rounded-xl px-3 py-2 border border-neutral-800"
             />
           </label>
         </div>
@@ -225,7 +225,7 @@ export default function CalendarEventModal({
           <button
             type="submit"
             disabled={loading}
-            className="px-4 py-2 rounded-xl bg-cyan-500 text-white disabled:opacity-50"
+            className="px-4 py-2 rounded-xl crm-btn-primary disabled:opacity-50"
           >
             {loading ? "Сохранение..." : "Сохранить"}
           </button>

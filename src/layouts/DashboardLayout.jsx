@@ -83,7 +83,7 @@ export default function DashboardLayout({ children }) {
 
   return (
 
-    <div className="min-h-screen bg-slate-950">
+    <div className="min-h-screen bg-surface-deep">
 
       <div className="flex min-h-screen">
 
@@ -154,8 +154,8 @@ export default function DashboardLayout({ children }) {
           <header
             className="
               sticky top-0 z-30
-              bg-slate-950/90 backdrop-blur
-              border-b border-slate-800
+              bg-surface-deep/90 backdrop-blur
+              border-b border-neutral-800
               px-4 py-3 md:px-6
               flex items-center justify-between
               lg:hidden
@@ -194,7 +194,7 @@ export default function DashboardLayout({ children }) {
               type="button"
               className="
                 hidden md:inline-flex lg:hidden
-                px-4 py-2 rounded-xl bg-slate-800
+                px-4 py-2 rounded-xl bg-surface-raised
               "
               onClick={() =>
                 setSidebarOpen(true)

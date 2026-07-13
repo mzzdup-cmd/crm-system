@@ -128,7 +128,7 @@ export default function TeamCalendarPage() {
                 setEditingEvent(null);
                 setEventModalOpen(true);
               }}
-              className="px-4 py-2 rounded-xl bg-cyan-500 text-white hover:bg-cyan-400 transition-colors"
+              className="px-4 py-2 rounded-xl crm-btn-primary transition-colors"
             >
               + Событие
             </button>
@@ -136,7 +136,7 @@ export default function TeamCalendarPage() {
 
           <Link
             to="/time-off"
-            className="px-4 py-2 rounded-xl bg-slate-800 text-slate-200 hover:bg-slate-700 transition-colors"
+            className="px-4 py-2 rounded-xl bg-surface-raised text-neutral-200 hover:bg-surface-hover transition-colors"
           >
             Запросы отсутствия
           </Link>
@@ -148,7 +148,7 @@ export default function TeamCalendarPage() {
           <button
             type="button"
             onClick={goToPreviousMonth}
-            className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700"
+            className="px-3 py-2 rounded-xl bg-surface-raised hover:bg-surface-hover"
           >
             ←
           </button>
@@ -160,7 +160,7 @@ export default function TeamCalendarPage() {
           <button
             type="button"
             onClick={goToNextMonth}
-            className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700"
+            className="px-3 py-2 rounded-xl bg-surface-raised hover:bg-surface-hover"
           >
             →
           </button>
