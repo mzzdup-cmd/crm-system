@@ -27,6 +27,7 @@ export default function TeamCalendarPage() {
     monthTitle,
     monthGrid,
     schedulesByDate,
+    eventsByDate,
     getDayEvents,
     insights,
     loading,
@@ -179,6 +180,7 @@ export default function TeamCalendarPage() {
       <TeamCalendarGrid
         monthGrid={monthGrid}
         schedulesByDate={schedulesByDate}
+        eventsByDate={eventsByDate}
         onSelectDay={setSelectedDate}
         onSwipe={(direction) => {
           if (direction === "prev") {

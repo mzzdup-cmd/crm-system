@@ -2,11 +2,20 @@ export const CALENDAR_EVENT_TYPES = {
   DAY_OFF: "day_off",
   VACATION: "vacation",
   SUBSTITUTION: "substitution",
-  ANNOUNCEMENT: "announcement",
+  TRAFFIC: "traffic",
+  UPSELL: "upsell",
   MAILING: "mailing",
+  ANNOUNCEMENT: "announcement",
   MEETING: "meeting",
   CUSTOM: "custom",
 };
+
+/** Главные оповещения — вся ячейка даты подсвечивается красным. */
+export const CALENDAR_MAJOR_ALERT_TYPES = [
+  CALENDAR_EVENT_TYPES.TRAFFIC,
+  CALENDAR_EVENT_TYPES.UPSELL,
+  CALENDAR_EVENT_TYPES.MAILING,
+];
 
 export const CALENDAR_IMPORTANCE = {
   NORMAL: "normal",
@@ -17,8 +26,10 @@ export const CALENDAR_TYPE_LABELS = {
   day_off: "Выходной",
   vacation: "Отпуск",
   substitution: "Замена",
-  announcement: "Объявление",
+  traffic: "Трафик",
+  upsell: "Апсейл",
   mailing: "Рассылка",
+  announcement: "Объявление",
   meeting: "Созвон",
   custom: "Событие",
 };
@@ -40,9 +51,17 @@ export const CALENDAR_TYPE_STYLES = {
     chip: "bg-yellow-500/20 text-yellow-100 border-yellow-500/40",
     dot: "bg-yellow-400",
   },
+  traffic: {
+    chip: "bg-red-500/25 text-red-100 border-red-500/50",
+    dot: "bg-red-400",
+  },
+  upsell: {
+    chip: "bg-red-500/25 text-red-100 border-red-500/50",
+    dot: "bg-red-400",
+  },
   mailing: {
-    chip: "bg-yellow-500/20 text-yellow-100 border-yellow-500/40",
-    dot: "bg-amber-400",
+    chip: "bg-red-500/25 text-red-100 border-red-500/50",
+    dot: "bg-red-400",
   },
   announcement: {
     chip: "bg-yellow-500/20 text-yellow-100 border-yellow-500/40",

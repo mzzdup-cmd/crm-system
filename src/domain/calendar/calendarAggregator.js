@@ -5,6 +5,10 @@ import {
 } from "../../constants/calendar";
 
 import {
+  isMajorCalendarAlert,
+} from "./calendarAlerts.js";
+
+import {
   getManagerNameById,
 } from "../../constants/managers";
 
@@ -32,6 +36,10 @@ export function getManagerInitials(
 }
 
 export function getEventStyle(event) {
+  if (isMajorCalendarAlert(event)) {
+    return CALENDAR_TYPE_STYLES.important;
+  }
+
   if (
     event.importance ===
     CALENDAR_IMPORTANCE.HIGH
