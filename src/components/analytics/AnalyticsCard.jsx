@@ -7,16 +7,16 @@ export default function AnalyticsCard({
   children,
 }) {
   return (
-    <div className="bg-slate-900 p-6 rounded-2xl border border-slate-800">
+    <div className="bg-surface p-6 rounded-2xl border border-neutral-800">
 
-      <div className="font-semibold text-slate-200">
+      <div className="font-semibold text-neutral-200">
 
         {title}
 
       </div>
 
       {hint && (
-        <div className="text-slate-500 text-xs font-normal mt-0.5">
+        <div className="text-neutral-500 text-xs font-normal mt-0.5">
           {hint}
         </div>
       )}
@@ -41,7 +41,7 @@ export default function AnalyticsCard({
 
         subtitle && (
 
-          <div className="text-slate-500 mt-2 text-sm">
+          <div className="text-neutral-500 mt-2 text-sm">
 
             {subtitle}
 

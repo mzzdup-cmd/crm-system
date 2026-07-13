@@ -38,20 +38,20 @@ export default class AppErrorBoundary extends Component {
 
     if (error) {
       return (
-        <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-red-500/30 p-6 md:p-8 rounded-2xl max-w-md w-full space-y-4 text-center">
+        <div className="min-h-screen bg-surface-deep flex items-center justify-center p-4">
+          <div className="bg-surface border border-red-500/30 p-6 md:p-8 rounded-2xl max-w-md w-full space-y-4 text-center">
             <div className="text-xl font-bold text-red-300">
               Что-то пошло не так
             </div>
 
-            <p className="text-sm text-slate-400">
+            <p className="text-sm text-neutral-400">
               Приложение столкнулось с ошибкой.
               Попробуйте обновить страницу или
               вернуться на главную.
             </p>
 
             {import.meta.env.DEV && (
-              <pre className="text-xs text-red-200/80 bg-slate-950/60 p-3 rounded-xl overflow-x-auto text-left">
+              <pre className="text-xs text-red-200/80 bg-surface-deep/60 p-3 rounded-xl overflow-x-auto text-left">
                 {error.message}
               </pre>
             )}
@@ -62,7 +62,7 @@ export default class AppErrorBoundary extends Component {
                 onClick={this.handleRetry}
                 className="
                   px-4 py-2.5 rounded-xl font-semibold text-sm
-                  bg-slate-800 hover:bg-slate-700 transition-colors
+                  bg-surface-raised hover:bg-surface-hover transition-colors
                 "
               >
                 Повторить
@@ -73,7 +73,7 @@ export default class AppErrorBoundary extends Component {
                 onClick={this.handleReload}
                 className="
                   px-4 py-2.5 rounded-xl font-semibold text-sm
-                  bg-cyan-600 hover:bg-cyan-700 transition-colors
+                  bg-brand-muted hover:bg-brand-dim transition-colors
                 "
               >
                 На главную

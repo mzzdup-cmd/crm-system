@@ -45,8 +45,8 @@ export default function BluesalesScheduleBlock({
   return (
     <div
       className="
-        mt-4 rounded-xl border border-slate-700
-        bg-slate-950/60 p-4
+        mt-4 rounded-xl border border-neutral-700
+        bg-surface-deep/60 p-4
       "
       onClick={(event) => {
         event.preventDefault();
@@ -55,10 +55,10 @@ export default function BluesalesScheduleBlock({
     >
       <div className="flex flex-wrap items-start justify-between gap-3 mb-3">
         <div>
-          <div className="font-semibold text-sm text-slate-200">
+          <div className="font-semibold text-sm text-neutral-200">
             Текст для Bluesales
           </div>
-          <div className="text-slate-500 text-xs mt-0.5">
+          <div className="text-neutral-500 text-xs mt-0.5">
             график доплат · каждые 14 дней
           </div>
         </div>
@@ -69,8 +69,8 @@ export default function BluesalesScheduleBlock({
           disabled={!schedule.text}
           className="
             px-3 py-1.5 rounded-lg text-sm font-medium
-            bg-cyan-500/20 text-cyan-300
-            hover:bg-cyan-500/30 transition-colors
+            bg-brand/15 text-brand
+            hover:bg-brand/20 transition-colors
             disabled:opacity-40 disabled:cursor-not-allowed
           "
         >
@@ -86,7 +86,7 @@ export default function BluesalesScheduleBlock({
         <pre
           className="
             whitespace-pre-wrap text-sm leading-6
-            text-slate-300 font-mono
+            text-neutral-300 font-mono
           "
         >
           {schedule.text}

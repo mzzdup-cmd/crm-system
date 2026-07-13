@@ -211,13 +211,13 @@ export default function BonusesPage({
         </h1>
       )}
 
-      <div className="bg-slate-900 p-6 rounded-2xl max-w-xl">
+      <div className="bg-surface p-6 rounded-2xl max-w-xl">
         <select
           value={manager}
           onChange={(e) =>
             setManager(e.target.value)
           }
-          className="w-full bg-slate-800 p-4 rounded-xl mb-4"
+          className="w-full bg-surface-raised p-4 rounded-xl mb-4"
         >
           <option value="">
             Менеджер
@@ -237,7 +237,7 @@ export default function BonusesPage({
           placeholder="Сумма бонуса"
           value={amount}
           onChange={setAmount}
-          className="w-full bg-slate-800 p-4 rounded-xl mb-4"
+          className="w-full bg-surface-raised p-4 rounded-xl mb-4"
         />
 
         <textarea
@@ -246,7 +246,7 @@ export default function BonusesPage({
           onChange={(e) =>
             setComment(e.target.value)
           }
-          className="w-full bg-slate-800 p-4 rounded-xl mb-4"
+          className="w-full bg-surface-raised p-4 rounded-xl mb-4"
         />
 
         <button
@@ -269,7 +269,7 @@ export default function BonusesPage({
           <div
             key={bonus.id}
             className="
-              bg-slate-900 p-4 rounded-2xl
+              bg-surface p-4 rounded-2xl
               flex flex-col sm:flex-row
               sm:justify-between gap-4
             "
@@ -281,7 +281,7 @@ export default function BonusesPage({
                 )}
               </div>
 
-              <div className="text-slate-400 mt-2">
+              <div className="text-neutral-400 mt-2">
                 {bonus.comment ||
                   "Без комментария"}
               </div>
@@ -309,7 +309,7 @@ export default function BonusesPage({
                 }
                 className="
                   px-3 py-2 rounded-xl
-                  bg-slate-800 hover:bg-slate-700
+                  bg-surface-raised hover:bg-surface-hover
                   text-sm
                 "
               >
@@ -344,7 +344,7 @@ export default function BonusesPage({
         >
           <div
             className="
-              bg-slate-900 border border-slate-700
+              bg-surface border border-neutral-700
               rounded-2xl p-6 max-w-md w-full
             "
           >
@@ -362,7 +362,7 @@ export default function BonusesPage({
                 })
               }
               className="
-                w-full bg-slate-800
+                w-full bg-surface-raised
                 p-3 rounded-xl mb-4
               "
             >
@@ -385,7 +385,7 @@ export default function BonusesPage({
                 })
               }
               className="
-                w-full bg-slate-800
+                w-full bg-surface-raised
                 p-3 rounded-xl mb-4
               "
             />
@@ -400,7 +400,7 @@ export default function BonusesPage({
                 })
               }
               className="
-                w-full bg-slate-800
+                w-full bg-surface-raised
                 p-3 rounded-xl mb-6
               "
             />
@@ -413,7 +413,7 @@ export default function BonusesPage({
                 }
                 className="
                   px-4 py-2 rounded-xl
-                  bg-slate-800
+                  bg-surface-raised
                 "
               >
                 Отмена

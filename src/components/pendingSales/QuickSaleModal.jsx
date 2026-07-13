@@ -213,7 +213,7 @@ export default function QuickSaleModal({
         onSubmit={handleSubmit}
         className="
           relative w-full sm:max-w-md
-          bg-slate-900 border border-slate-700
+          bg-surface border border-neutral-700
           rounded-t-3xl sm:rounded-2xl
           p-5 sm:p-6 shadow-2xl
           animate-slide-in-right
@@ -231,7 +231,7 @@ export default function QuickSaleModal({
 
             </div>
 
-            <div className="text-slate-400 text-sm mt-1">
+            <div className="text-neutral-400 text-sm mt-1">
 
               {singleTarget
                 ? "Продажа будет передана коллеге на подтверждение"
@@ -244,7 +244,7 @@ export default function QuickSaleModal({
           <button
             type="button"
             onClick={() => onClose(false)}
-            className="p-2 rounded-xl hover:bg-slate-800 text-slate-400"
+            className="p-2 rounded-xl hover:bg-surface-raised text-neutral-400"
           >
 
             ✕
@@ -259,7 +259,7 @@ export default function QuickSaleModal({
 
             <div>
 
-              <label className="text-slate-400 text-sm mb-1 block">
+              <label className="text-neutral-400 text-sm mb-1 block">
 
                 Менеджер (владелец продажи)
 
@@ -270,7 +270,7 @@ export default function QuickSaleModal({
                 onChange={(e) =>
                   setOwnerManagerId(e.target.value)
                 }
-                className="w-full bg-slate-800 p-3.5 rounded-xl"
+                className="w-full bg-surface-raised p-3.5 rounded-xl"
                 required
               >
 
@@ -305,7 +305,7 @@ export default function QuickSaleModal({
 
           <div>
 
-            <label className="text-slate-400 text-sm mb-1 block">
+            <label className="text-neutral-400 text-sm mb-1 block">
 
               Ссылка на диалог
 
@@ -320,7 +320,7 @@ export default function QuickSaleModal({
                 setDialogLink(e.target.value)
               }
               placeholder="https://..."
-              className="w-full bg-slate-800 p-3.5 rounded-xl"
+              className="w-full bg-surface-raised p-3.5 rounded-xl"
               required
             />
 
@@ -330,7 +330,7 @@ export default function QuickSaleModal({
 
             <div>
 
-              <label className="text-slate-400 text-sm mb-1 block">
+              <label className="text-neutral-400 text-sm mb-1 block">
 
                 Сумма ₽
 
@@ -341,14 +341,14 @@ export default function QuickSaleModal({
                 onChange={setAmount}
                 placeholder="15 000"
                 required
-                className="w-full bg-slate-800 p-3.5 rounded-xl"
+                className="w-full bg-surface-raised p-3.5 rounded-xl"
               />
 
             </div>
 
             <div>
 
-              <label className="text-slate-400 text-sm mb-1 block">
+              <label className="text-neutral-400 text-sm mb-1 block">
 
                 Дата оплаты
 
@@ -360,7 +360,7 @@ export default function QuickSaleModal({
                 onChange={(e) =>
                   setPaymentDate(e.target.value)
                 }
-                className="w-full bg-slate-800 p-3.5 rounded-xl"
+                className="w-full bg-surface-raised p-3.5 rounded-xl"
                 required
               />
 
@@ -372,7 +372,7 @@ export default function QuickSaleModal({
 
             <div>
 
-              <label className="text-slate-400 text-sm mb-1 block">
+              <label className="text-neutral-400 text-sm mb-1 block">
 
                 Тип сделки
 
@@ -383,7 +383,7 @@ export default function QuickSaleModal({
                 onChange={(e) =>
                   setDealTypeId(e.target.value)
                 }
-                className="w-full bg-slate-800 p-3.5 rounded-xl"
+                className="w-full bg-surface-raised p-3.5 rounded-xl"
                 required
               >
 
@@ -410,7 +410,7 @@ export default function QuickSaleModal({
 
             <div>
 
-              <label className="text-slate-400 text-sm mb-1 block">
+              <label className="text-neutral-400 text-sm mb-1 block">
 
                 Курс (необязательно)
 
@@ -421,7 +421,7 @@ export default function QuickSaleModal({
                 onChange={(e) =>
                   setCourse(e.target.value)
                 }
-                className="w-full bg-slate-800 p-3.5 rounded-xl"
+                className="w-full bg-surface-raised p-3.5 rounded-xl"
               >
 
                 <option value="">
@@ -455,7 +455,7 @@ export default function QuickSaleModal({
 
           <div>
 
-            <label className="text-slate-400 text-sm mb-1 block">
+            <label className="text-neutral-400 text-sm mb-1 block">
 
               Комментарий (необязательно)
 
@@ -468,7 +468,7 @@ export default function QuickSaleModal({
                 setComment(e.target.value)
               }
               placeholder="Кратко о сделке"
-              className="w-full bg-slate-800 p-3.5 rounded-xl"
+              className="w-full bg-surface-raised p-3.5 rounded-xl"
             />
 
           </div>
@@ -492,7 +492,7 @@ export default function QuickSaleModal({
             disabled={saving}
             className="
               w-full py-3.5 rounded-xl font-bold
-              bg-cyan-500 hover:bg-cyan-400
+              bg-brand hover:opacity-90
               disabled:opacity-50 transition-colors
             "
           >

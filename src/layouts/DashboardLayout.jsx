@@ -174,7 +174,7 @@ export default function DashboardLayout({ children }) {
 
                 displayName && (
 
-                  <div className="text-slate-400 text-xs">
+                  <div className="text-neutral-400 text-xs">
 
                     {displayName}
 

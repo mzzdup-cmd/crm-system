@@ -26,13 +26,13 @@ export default function BookingCard({
   }
 
   return (
-    <div className="bg-slate-900 p-5 md:p-6 rounded-2xl border border-amber-500/20">
+    <div className="bg-surface p-5 md:p-6 rounded-2xl border border-amber-500/20">
       <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
         <div className="flex-1 min-w-0 space-y-2">
           {booking.clientId ? (
             <Link
               to={`/client/${booking.clientId}`}
-              className="text-xl md:text-2xl font-bold hover:text-cyan-300 transition-colors"
+              className="text-xl md:text-2xl font-bold hover:text-brand transition-colors"
             >
               {booking.clientName}
             </Link>
@@ -42,7 +42,7 @@ export default function BookingCard({
             </div>
           )}
 
-          <div className="text-slate-400 text-sm">
+          <div className="text-neutral-400 text-sm">
             {booking.course
               ? `${booking.course} · `
               : ""}
@@ -51,7 +51,7 @@ export default function BookingCard({
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm pt-2">
             <div>
-              <div className="text-slate-500">
+              <div className="text-neutral-500">
                 Дата брони
               </div>
               <div className="font-medium mt-0.5">
@@ -62,7 +62,7 @@ export default function BookingCard({
             </div>
 
             <div>
-              <div className="text-slate-500">
+              <div className="text-neutral-500">
                 Планируемый старт
               </div>
               <div className="font-medium mt-0.5">
@@ -73,7 +73,7 @@ export default function BookingCard({
             </div>
 
             <div>
-              <div className="text-slate-500">
+              <div className="text-neutral-500">
                 Сумма ББ
               </div>
               <div className="font-medium text-amber-300 mt-0.5">
@@ -85,7 +85,7 @@ export default function BookingCard({
 
             {booking.budget > 0 && (
               <div>
-                <div className="text-slate-500">
+                <div className="text-neutral-500">
                   Тариф
                 </div>
                 <div className="font-medium mt-0.5">
@@ -105,7 +105,7 @@ export default function BookingCard({
                   href={booking.dialogLink}
                   target="_blank"
                   rel="noreferrer"
-                  className="text-cyan-400 hover:underline"
+                  className="text-brand hover:underline"
                 >
                   Диалог
                 </a>
@@ -115,7 +115,7 @@ export default function BookingCard({
                   href={booking.vkLink}
                   target="_blank"
                   rel="noreferrer"
-                  className="text-cyan-400 hover:underline"
+                  className="text-brand hover:underline"
                 >
                   VK
                 </a>
@@ -138,7 +138,7 @@ export default function BookingCard({
         </button>
       </div>
 
-      <pre className="mt-4 p-3 rounded-xl bg-slate-950/80 text-xs text-slate-300 whitespace-pre-wrap font-sans">
+      <pre className="mt-4 p-3 rounded-xl bg-surface-deep/80 text-xs text-neutral-300 whitespace-pre-wrap font-sans">
         {booking.copyText}
       </pre>
     </div>

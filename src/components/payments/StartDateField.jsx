@@ -25,7 +25,7 @@ function formatDisplayDate(value) {
 }
 
 const inputClass =
-  "mt-1 w-full bg-slate-800 p-3.5 rounded-xl";
+  "mt-1 w-full bg-surface-raised p-3.5 rounded-xl";
 
 export default function StartDateField({
   dealTypeId,
@@ -52,7 +52,7 @@ export default function StartDateField({
   if (isBb) {
     return (
       <label className="block">
-        <span className="text-sm text-slate-400">
+        <span className="text-sm text-neutral-400">
           Дата старта
           {!isOptionalStartDate && " *"}
         </span>
@@ -67,7 +67,7 @@ export default function StartDateField({
           }
           className={inputClass}
         />
-        <p className="text-xs text-slate-500 mt-1">
+        <p className="text-xs text-neutral-500 mt-1">
           {isOptionalStartDate
             ? "Можно указать позже — напоминание появится на главной (как с VK)."
             : "Для ББ старт может быть любой датой, не только понедельником потока"}
@@ -78,7 +78,7 @@ export default function StartDateField({
 
   if (!paymentDate) {
     return (
-      <p className="text-sm text-slate-500">
+      <p className="text-sm text-neutral-500">
         Сначала укажите дату оплаты — поток
         подберётся автоматически
       </p>
@@ -109,7 +109,7 @@ export default function StartDateField({
 
   return (
     <label className="block">
-      <span className="text-sm text-slate-400">
+      <span className="text-sm text-neutral-400">
         Поток
         {!isOptionalStartDate && " *"}
       </span>
@@ -144,7 +144,7 @@ export default function StartDateField({
       </select>
 
       {activeStream && (
-        <p className="text-sm text-cyan-400/90 mt-2">
+        <p className="text-sm text-brand/90 mt-2">
           Клиент относится к потоку с{" "}
           {formatDisplayDate(activeStream)}
         </p>
@@ -157,13 +157,13 @@ export default function StartDateField({
             : "Для старого клиента из таблицы — поток из Google ТТ (колонка «Когда старт»), не от текущей даты оплаты."}
         </p>
       ) : isOptionalStartDate ? (
-        <p className="text-xs text-slate-500 mt-1">
+        <p className="text-xs text-neutral-500 mt-1">
           Для рассылки дату старта часто узнают позже — можно
           сохранить без потока и дозаполнить в «Продажи →
           Оплаты».
         </p>
       ) : (
-        <p className="text-xs text-slate-500 mt-1">
+        <p className="text-xs text-neutral-500 mt-1">
           startDate = понедельник потока.
           Дата оплаты ({formatDisplayDate(
             paymentDate

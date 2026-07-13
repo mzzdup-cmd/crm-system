@@ -30,7 +30,7 @@ export default class WidgetErrorBoundary extends Component {
       return (
         <div
           className={`
-            bg-slate-900 border border-red-500/20
+            bg-surface border border-red-500/20
             p-4 rounded-2xl text-sm
             ${className}
           `}
@@ -38,7 +38,7 @@ export default class WidgetErrorBoundary extends Component {
           <div className="text-red-300 font-semibold">
             {title} не загрузился
           </div>
-          <p className="text-slate-500 mt-1">
+          <p className="text-neutral-500 mt-1">
             Остальной dashboard доступен
           </p>
         </div>

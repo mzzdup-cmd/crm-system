@@ -36,12 +36,12 @@ export const CALENDAR_TYPE_LABELS = {
 
 export const CALENDAR_TYPE_STYLES = {
   day_off: {
-    chip: "bg-slate-500/20 text-slate-200 border-slate-500/40",
-    dot: "bg-slate-400",
+    chip: "bg-neutral-500/20 text-neutral-200 border-neutral-500/40",
+    dot: "bg-neutral-400",
   },
   vacation: {
-    chip: "bg-blue-500/20 text-blue-200 border-blue-500/40",
-    dot: "bg-blue-400",
+    chip: "bg-brand/15 text-brand border-brand/40",
+    dot: "bg-brand",
   },
   substitution: {
     chip: "bg-purple-500/20 text-purple-200 border-purple-500/40",
@@ -68,8 +68,8 @@ export const CALENDAR_TYPE_STYLES = {
     dot: "bg-yellow-400",
   },
   custom: {
-    chip: "bg-cyan-500/20 text-cyan-100 border-cyan-500/40",
-    dot: "bg-cyan-400",
+    chip: "bg-brand/15 text-brand border-brand/40",
+    dot: "bg-brand",
   },
   important: {
     chip: "bg-red-500/20 text-red-200 border-red-500/40",

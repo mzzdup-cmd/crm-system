@@ -140,7 +140,7 @@ function TodayReplacementBanner({
                     replacement.shiftStart === slot.start &&
                     replacement.shiftEnd === slot.end
                       ? "bg-violet-500/40 border-violet-300 text-white"
-                      : "bg-slate-900/60 border-violet-500/30 text-violet-100 hover:bg-violet-500/20"
+                      : "bg-surface/60 border-violet-500/30 text-violet-100 hover:bg-violet-500/20"
                   }
                 `}
               >
@@ -164,20 +164,20 @@ function StatCard({
   return (
     <div
       className={`
-        bg-slate-900 p-5 md:p-6 rounded-2xl
+        bg-surface p-5 md:p-6 rounded-2xl
         transition-transform duration-200
         hover:scale-[1.01]
         ${className}
       `}
     >
-      <div className="font-semibold text-slate-200 text-sm">
+      <div className="font-semibold text-neutral-200 text-sm">
 
         {label}
 
       </div>
 
       {hint && (
-        <div className="text-slate-500 text-xs font-normal mt-0.5">
+        <div className="text-neutral-500 text-xs font-normal mt-0.5">
           {hint}
         </div>
       )}
@@ -198,12 +198,12 @@ function formatMoney(value) {
 
 function PersonalKpiCard({ kpi }) {
   return (
-    <section className="bg-slate-900 p-5 md:p-6 rounded-2xl space-y-4">
+    <section className="bg-surface p-5 md:p-6 rounded-2xl space-y-4">
       <div>
         <h2 className="text-xl font-bold">
           Мои KPI · {kpi.range.label.toLowerCase()}
         </h2>
-        <p className="text-slate-400 text-sm mt-1">
+        <p className="text-neutral-400 text-sm mt-1">
           Все типы оплат: новые, доплаты, апсейлы, возвраты, legacy
         </p>
       </div>
@@ -218,7 +218,7 @@ function PersonalKpiCard({ kpi }) {
         <StatCard
           label="Средний чек"
           value={formatMoney(kpi.averageCheck)}
-          color="text-cyan-400"
+          color="text-brand"
         />
 
         <StatCard
@@ -256,7 +256,7 @@ function AbsenceDateChip({
   const toneClass =
     tone === "vacation"
       ? "border-violet-500/40 bg-violet-500/10"
-      : "border-slate-700 bg-slate-800/80";
+      : "border-neutral-700 bg-surface-raised/80";
 
   return (
     <div
@@ -267,11 +267,11 @@ function AbsenceDateChip({
         ${toneClass}
       `}
     >
-      <span className="text-sm font-semibold text-slate-100 leading-tight">
+      <span className="text-sm font-semibold text-neutral-100 leading-tight">
         {title}
       </span>
       {subtitle && (
-        <span className="text-xs text-slate-400 mt-0.5 capitalize">
+        <span className="text-xs text-neutral-400 mt-0.5 capitalize">
           {subtitle}
         </span>
       )}
@@ -307,14 +307,14 @@ function OperationalRequestsCard({ summary }) {
     [];
 
   return (
-    <section className="bg-slate-900 p-5 md:p-6 rounded-2xl space-y-4">
+    <section className="bg-surface p-5 md:p-6 rounded-2xl space-y-4">
       <div className="flex items-center justify-between gap-3">
         <h2 className="text-lg font-bold">
           Отсутствия
         </h2>
         <Link
           to="/time-off"
-          className="text-sm text-cyan-400 hover:underline"
+          className="text-sm text-brand hover:underline"
         >
           Запросы →
         </Link>
@@ -335,8 +335,8 @@ function OperationalRequestsCard({ summary }) {
           }
         />
 
-        <div className="bg-slate-900 p-5 md:p-6 rounded-2xl">
-          <div className="font-semibold text-slate-200 text-sm">
+        <div className="bg-surface p-5 md:p-6 rounded-2xl">
+          <div className="font-semibold text-neutral-200 text-sm">
             Отпуск
           </div>
           <div className="mt-3">
@@ -347,15 +347,15 @@ function OperationalRequestsCard({ summary }) {
                 subtitle={vacationChip.subtitle}
               />
             ) : (
-              <span className="text-2xl font-bold text-slate-500">
+              <span className="text-2xl font-bold text-neutral-500">
                 —
               </span>
             )}
           </div>
         </div>
 
-        <div className="bg-slate-900 p-5 md:p-6 rounded-2xl">
-          <div className="font-semibold text-slate-200 text-sm">
+        <div className="bg-surface p-5 md:p-6 rounded-2xl">
+          <div className="font-semibold text-neutral-200 text-sm">
             Ближайшие выходные
           </div>
           <div className="mt-3 flex flex-wrap gap-2">
@@ -368,7 +368,7 @@ function OperationalRequestsCard({ summary }) {
                 />
               ))
             ) : (
-              <span className="text-2xl font-bold text-slate-500">
+              <span className="text-2xl font-bold text-neutral-500">
                 —
               </span>
             )}
@@ -381,14 +381,14 @@ function OperationalRequestsCard({ summary }) {
 
 function AdminOperationalCard({ summary }) {
   return (
-    <section className="bg-slate-900 p-5 md:p-6 rounded-2xl space-y-4">
+    <section className="bg-surface p-5 md:p-6 rounded-2xl space-y-4">
       <div className="flex items-center justify-between gap-3">
         <h2 className="text-lg font-bold">
           Отсутствия команды
         </h2>
         <Link
           to="/time-off"
-          className="text-sm text-cyan-400 hover:underline"
+          className="text-sm text-brand hover:underline"
         >
           Все запросы →
         </Link>
@@ -433,7 +433,7 @@ function AdminOperationalCard({ summary }) {
             Пересекающиеся отсутствия
           </div>
           {summary.overlappingAbsences.slice(0, 5).map((item) => (
-            <div key={item.date} className="text-slate-300">
+            <div key={item.date} className="text-neutral-300">
               {item.date}:{" "}
               {item.managerIds
                 .map((id) =>
@@ -450,12 +450,12 @@ function AdminOperationalCard({ summary }) {
           {summary.approvedVacations.slice(0, 4).map((item) => (
             <div
               key={item.id}
-              className="bg-slate-800/60 p-3 rounded-xl flex justify-between gap-3"
+              className="bg-surface-raised/60 p-3 rounded-xl flex justify-between gap-3"
             >
               <span>
                 {item.manager} · {item.startDate} — {item.endDate}
               </span>
-              <span className="text-slate-500 shrink-0">
+              <span className="text-neutral-500 shrink-0">
                 {item.daysCount} дн.
               </span>
             </div>
@@ -482,7 +482,7 @@ function MotivationalLeaderBlock({
     <section
       className="
         p-5 md:p-6 rounded-2xl
-        bg-gradient-to-r from-violet-500/15 to-cyan-500/10
+        bg-gradient-to-r from-violet-500/15 to-brand/10
         border border-violet-500/30
         space-y-2
       "
@@ -492,7 +492,7 @@ function MotivationalLeaderBlock({
           <div className="text-lg font-bold text-green-300">
             Поздравляю, вы лидер!
           </div>
-          <div className="text-slate-300">
+          <div className="text-neutral-300">
             У вас самая большая выручка:{" "}
             <strong className="text-green-300">
               {formatMoney(myRevenue)}
@@ -506,7 +506,7 @@ function MotivationalLeaderBlock({
           </div>
         </>
       ) : (
-        <div className="text-slate-300">
+        <div className="text-neutral-300">
           Ваша выручка:{" "}
           <strong className="text-green-300">
             {formatMoney(myRevenue)}
@@ -677,7 +677,7 @@ function DashboardPageContent() {
         subtitle={
           <>
             <span>{today}</span>
-            <span className="text-slate-500 text-sm font-normal ml-2">
+            <span className="text-neutral-500 text-sm font-normal ml-2">
               сводка дня
             </span>
             <RealtimeIndicator connected={connected} />
@@ -691,7 +691,7 @@ function DashboardPageContent() {
               onClick={() => setQuickSaleOpen(true)}
               className="
                 px-4 py-2.5 rounded-xl font-bold text-sm
-                bg-cyan-500 hover:bg-cyan-400 transition-colors
+                bg-brand hover:opacity-90 transition-colors
               "
             >
 
@@ -711,9 +711,9 @@ function DashboardPageContent() {
             to="/pending-sales"
             className="
               block p-5 rounded-2xl
-              bg-gradient-to-r from-cyan-500/20 to-green-500/10
-              border border-cyan-500/40
-              hover:border-cyan-400/60 transition-all
+              bg-gradient-to-r from-brand/20 to-green-500/10
+              border border-brand/40
+              hover:border-brand/60 transition-all
             "
           >
 
@@ -721,7 +721,7 @@ function DashboardPageContent() {
 
               <div>
 
-                <div className="text-lg font-bold text-cyan-300">
+                <div className="text-lg font-bold text-brand">
 
                   {
 
@@ -733,7 +733,7 @@ function DashboardPageContent() {
 
                 </div>
 
-                <div className="text-slate-400 text-sm mt-1">
+                <div className="text-neutral-400 text-sm mt-1">
 
                   Подтвердите и оформите оплату →
 
@@ -741,7 +741,7 @@ function DashboardPageContent() {
 
               </div>
 
-              <div className="text-3xl font-bold text-cyan-400">
+              <div className="text-3xl font-bold text-brand">
 
                 {pendingCount}
 
@@ -780,7 +780,7 @@ function DashboardPageContent() {
 
                 </div>
 
-                <div className="text-slate-400 text-sm mt-1">
+                <div className="text-neutral-400 text-sm mt-1">
 
                   Выходные и отпуска →
 
@@ -827,7 +827,7 @@ function DashboardPageContent() {
 
         isManager && !isLeadership && (
 
-          <section className="bg-slate-900 p-5 md:p-6 rounded-2xl space-y-6">
+          <section className="bg-surface p-5 md:p-6 rounded-2xl space-y-6">
 
             {todayReplacement && managerId && (
               <TodayReplacementBanner
@@ -846,7 +846,7 @@ function DashboardPageContent() {
 
               </div>
 
-              <div className="text-slate-400 mt-1 text-sm">
+              <div className="text-neutral-400 mt-1 text-sm">
 
                 Ваши задачи на сегодня
 
@@ -861,7 +861,7 @@ function DashboardPageContent() {
                   label="Не заполнен VK"
                   value={missingVkCount}
                   color="text-amber-400"
-                  className="h-full hover:bg-slate-800 transition-colors"
+                  className="h-full hover:bg-surface-raised transition-colors"
                 />
               </Link>
 
@@ -870,8 +870,8 @@ function DashboardPageContent() {
                   label="Черновики продаж"
                   hint="ожидают проведения"
                   value={pendingCount}
-                  color="text-cyan-400"
-                  className="h-full hover:bg-slate-800 transition-colors"
+                  color="text-brand"
+                  className="h-full hover:bg-surface-raised transition-colors"
                 />
               </Link>
 
@@ -883,7 +883,7 @@ function DashboardPageContent() {
                       .length
                   }
                   color="text-red-400"
-                  className="h-full hover:bg-slate-800 transition-colors"
+                  className="h-full hover:bg-surface-raised transition-colors"
                 />
               </Link>
 
@@ -895,7 +895,7 @@ function DashboardPageContent() {
                     curatorStartsToday.length
                   }
                   color="text-purple-400"
-                  className="h-full hover:bg-slate-800 transition-colors"
+                  className="h-full hover:bg-surface-raised transition-colors"
                 />
               </Link>
 
@@ -910,8 +910,8 @@ function DashboardPageContent() {
                   value={formatMoney(
                     plannedTopups.monthRemain
                   )}
-                  color="text-cyan-300"
-                  className="h-full hover:bg-slate-800 transition-colors"
+                  color="text-brand"
+                  className="h-full hover:bg-surface-raised transition-colors"
                 />
               </Link>
 
@@ -922,8 +922,8 @@ function DashboardPageContent() {
                   value={formatMoney(
                     plannedTopups.totalRemain
                   )}
-                  color="text-cyan-400"
-                  className="h-full hover:bg-slate-800 transition-colors"
+                  color="text-brand"
+                  className="h-full hover:bg-surface-raised transition-colors"
                 />
               </Link>
 
@@ -936,7 +936,7 @@ function DashboardPageContent() {
                     "—"
                   }
                   color="text-amber-300"
-                  className="h-full hover:bg-slate-800 transition-colors"
+                  className="h-full hover:bg-surface-raised transition-colors"
                 />
               </Link>
 
@@ -945,14 +945,14 @@ function DashboardPageContent() {
                   label="Сегодняшние оплаты"
                   value={todayPaymentsCount}
                   color="text-green-400"
-                  className="h-full hover:bg-slate-800 transition-colors"
+                  className="h-full hover:bg-surface-raised transition-colors"
                 />
               </Link>
 
             </div>
 
             {curatorStartsToday.length > 0 && (
-              <div className="bg-slate-800/60 p-4 rounded-xl">
+              <div className="bg-surface-raised/60 p-4 rounded-xl">
                 <div className="text-purple-300 font-bold mb-3">
                   Старт сегодня ({today})
                 </div>
@@ -970,7 +970,7 @@ function DashboardPageContent() {
                             ? ` · ${item.course}`
                             : ""}
                         </div>
-                        <div className="flex flex-wrap gap-x-3 gap-y-1 text-slate-400">
+                        <div className="flex flex-wrap gap-x-3 gap-y-1 text-neutral-400">
                           {item.dialogLink && (
                             <a
                               href={
@@ -978,7 +978,7 @@ function DashboardPageContent() {
                               }
                               target="_blank"
                               rel="noreferrer"
-                              className="text-cyan-400 hover:underline"
+                              className="text-brand hover:underline"
                             >
                               Диалог
                             </a>
@@ -990,7 +990,7 @@ function DashboardPageContent() {
                               }
                               target="_blank"
                               rel="noreferrer"
-                              className="text-cyan-400 hover:underline"
+                              className="text-brand hover:underline"
                             >
                               VK
                             </a>
@@ -1031,7 +1031,7 @@ function DashboardPageContent() {
                     ? `${Math.round(summary.trafficLoad.share * 100)}%`
                     : "—"
                 }
-                color="text-cyan-400"
+                color="text-brand"
               />
 
               <StatCard
@@ -1058,7 +1058,7 @@ function DashboardPageContent() {
 
                     summary.tasks.dueToday.length > 0 && (
 
-                      <div className="bg-slate-800/60 p-4 rounded-xl">
+                      <div className="bg-surface-raised/60 p-4 rounded-xl">
 
                         <div className="text-yellow-400 font-bold mb-3">
 
@@ -1075,7 +1075,7 @@ function DashboardPageContent() {
                               <Link
                                 key={client.id}
                                 to={`/client/${client.id}`}
-                                className="block text-sm hover:text-cyan-300"
+                                className="block text-sm hover:text-brand"
                               >
 
                                 {client.name || client.course} · {client.debt} ₽
@@ -1098,9 +1098,9 @@ function DashboardPageContent() {
 
                     summary.tasks.dueTomorrow.length > 0 && (
 
-                      <div className="bg-slate-800/60 p-4 rounded-xl">
+                      <div className="bg-surface-raised/60 p-4 rounded-xl">
 
-                        <div className="text-slate-300 font-bold mb-3">
+                        <div className="text-neutral-300 font-bold mb-3">
 
                           Оплата завтра
 
@@ -1115,7 +1115,7 @@ function DashboardPageContent() {
                               <Link
                                 key={client.id}
                                 to={`/client/${client.id}`}
-                                className="block text-sm hover:text-cyan-300"
+                                className="block text-sm hover:text-brand"
                               >
 
                                 {client.name || client.course} · {client.debt} ₽
@@ -1200,7 +1200,7 @@ function DashboardPageContent() {
               <StatCard
                 label="Активных подписок"
                 value={summary.activeSubscriptions.length}
-                color="text-cyan-400"
+                color="text-brand"
               />
 
             </div>
@@ -1229,7 +1229,7 @@ function DashboardPageContent() {
 
         isLeadership && (
 
-          <section className="bg-slate-900 p-5 md:p-6 rounded-2xl space-y-4">
+          <section className="bg-surface p-5 md:p-6 rounded-2xl space-y-4">
 
             <div className="flex items-center justify-between">
 
@@ -1241,7 +1241,7 @@ function DashboardPageContent() {
 
               <Link
                 to="/management"
-                className="text-sm text-cyan-400 hover:text-cyan-300"
+                className="text-sm text-brand hover:text-brand"
               >
 
                 Управление →
@@ -1261,7 +1261,7 @@ function DashboardPageContent() {
               <StatCard
                 label="Активных менеджеров"
                 value={summary.activeManagers.length}
-                color="text-cyan-400"
+                color="text-brand"
               />
 
               <StatCard
@@ -1280,7 +1280,7 @@ function DashboardPageContent() {
                       ? "text-amber-400"
                       : "text-green-400"
                   }
-                  className="h-full hover:bg-slate-800 transition-colors"
+                  className="h-full hover:bg-surface-raised transition-colors"
                 />
               </Link>
 
@@ -1298,7 +1298,7 @@ function DashboardPageContent() {
 
                       <div
                         key={item.managerId}
-                        className="bg-slate-800 p-3 rounded-xl flex justify-between text-sm"
+                        className="bg-surface-raised p-3 rounded-xl flex justify-between text-sm"
                       >
 
                         <span>
@@ -1307,7 +1307,7 @@ function DashboardPageContent() {
 
                         </span>
 
-                        <span className="text-cyan-400">
+                        <span className="text-brand">
 
                           {Math.round(item.share * 100)}%
 
@@ -1358,7 +1358,7 @@ function DashboardPageContent() {
         <StatCard
           label="Средний чек"
           value={formatMoney(summary.averageCheck)}
-          color="text-cyan-400"
+          color="text-brand"
         />
 
       </div>
@@ -1398,9 +1398,9 @@ function DashboardPageContent() {
                       key={client.id}
                       to={`/client/${client.id}`}
                       className="
-                        block bg-slate-900 p-4 rounded-2xl
+                        block bg-surface p-4 rounded-2xl
                         flex justify-between items-center
-                        hover:bg-slate-800 transition-colors
+                        hover:bg-surface-raised transition-colors
                       "
                     >
 
@@ -1412,7 +1412,7 @@ function DashboardPageContent() {
 
                         </div>
 
-                        <div className="text-slate-400 text-sm mt-1">
+                        <div className="text-neutral-400 text-sm mt-1">
 
                           {client.course} · {client.manager}
 
@@ -1428,7 +1428,7 @@ function DashboardPageContent() {
 
                         </div>
 
-                        <div className="text-sm text-slate-400 mt-1">
+                        <div className="text-sm text-neutral-400 mt-1">
 
                           {getRemain(client)} ₽
 
@@ -1484,8 +1484,8 @@ function DashboardPageContent() {
                     <div
                       key={payment.id}
                       className="
-                        bg-slate-900 p-4 rounded-2xl
-                        hover:bg-slate-800/80 transition-colors
+                        bg-surface p-4 rounded-2xl
+                        hover:bg-surface-raised/80 transition-colors
                       "
                     >
 
@@ -1495,7 +1495,7 @@ function DashboardPageContent() {
 
                       </div>
 
-                      <div className="text-slate-400 mt-1 text-sm">
+                      <div className="text-neutral-400 mt-1 text-sm">
 
                         {payment.dealType} — {payment.amount} ₽
 
@@ -1534,9 +1534,9 @@ function DashboardPageContent() {
               <div
                 key={stats.managerKey}
                 className="
-                  bg-slate-900 p-5 rounded-2xl
+                  bg-surface p-5 rounded-2xl
                   flex justify-between items-center
-                  hover:bg-slate-800/80 transition-colors
+                  hover:bg-surface-raised/80 transition-colors
                 "
               >
 
@@ -1563,7 +1563,7 @@ function DashboardPageContent() {
 
                     </div>
 
-                    <div className="text-slate-400 text-sm">
+                    <div className="text-neutral-400 text-sm">
 
                       Сделок: {stats.deals}
 

@@ -31,7 +31,7 @@ function renderInline(text) {
           href={linkMatch[2]}
           target="_blank"
           rel="noreferrer"
-          className="text-cyan-400 hover:underline"
+          className="text-brand hover:underline"
         >
           {linkMatch[1]}
         </a>
@@ -85,7 +85,7 @@ export default function SimpleMarkdown({
   const lines = String(content).split("\n");
 
   return (
-    <div className="space-y-2 text-sm leading-relaxed text-slate-200">
+    <div className="space-y-2 text-sm leading-relaxed text-neutral-200">
       {lines.map((line, index) => {
         const trimmed = line.trim();
 
@@ -132,7 +132,7 @@ export default function SimpleMarkdown({
               key={index}
               className="flex gap-2 pl-1"
             >
-              <span className="text-cyan-400">•</span>
+              <span className="text-brand">•</span>
               <span>{renderInline(trimmed.slice(2))}</span>
             </div>
           );

@@ -10,7 +10,7 @@ import {
 import { MANAGERS } from "../../constants/managers";
 
 const inputClass =
-  "w-full bg-slate-800 p-3.5 rounded-xl";
+  "w-full bg-surface-raised p-3.5 rounded-xl";
 
 export default function PaymentFormFields({
   paymentDate,
@@ -92,11 +92,11 @@ export default function PaymentFormFields({
       )}
 
       {paymentDate && (
-        <div className="bg-slate-800/60 p-4 rounded-xl">
-          <div className="text-slate-400 mb-2 text-sm">
+        <div className="bg-surface-raised/60 p-4 rounded-xl">
+          <div className="text-neutral-400 mb-2 text-sm">
             Дата старта
           </div>
-          <div className="text-lg font-bold text-cyan-400">
+          <div className="text-lg font-bold text-brand">
             {getStartDate(paymentDate)}
           </div>
         </div>
@@ -138,7 +138,7 @@ export default function PaymentFormFields({
         onClick={onSubmit}
         disabled={submitting}
         className="
-          w-full bg-green-500 hover:bg-green-600
+          w-full crm-btn-primary hover:bg-green-600
           p-4 rounded-xl font-bold
           disabled:opacity-50
         "

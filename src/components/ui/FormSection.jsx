@@ -6,14 +6,14 @@ export default function FormSection({
     <section
       className="
         space-y-3 pt-5
-        border-t border-slate-800
+        border-t border-neutral-800
         first:border-t-0 first:pt-0
       "
     >
       <h3
         className="
           text-xs font-semibold uppercase
-          tracking-wider text-cyan-400/90
+          tracking-wider text-brand/90
         "
       >
         {title}

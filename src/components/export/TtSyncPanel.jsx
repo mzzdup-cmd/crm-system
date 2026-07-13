@@ -48,14 +48,14 @@ export default function TtSyncPanel({
   }
 
   return (
-    <div className="bg-slate-900 p-5 md:p-6 rounded-2xl border border-slate-800">
+    <div className="bg-surface p-5 md:p-6 rounded-2xl border border-neutral-800">
       <div className="flex flex-wrap items-start justify-between gap-4 mb-4">
         <div>
           <h2 className="text-2xl font-bold">
             Выгрузка в ТТ
           </h2>
 
-          <p className="text-slate-400 text-sm mt-2 max-w-2xl">
+          <p className="text-neutral-400 text-sm mt-2 max-w-2xl">
             Новые оплаты из CRM автоматически добавляются
             в ТТ-таблицу каждого менеджера в{" "}
             {SYNC_SLOTS.join(", ")} МСК.
@@ -74,9 +74,9 @@ export default function TtSyncPanel({
         {SYNC_SLOTS.map((slot) => (
           <div
             key={slot}
-            className="bg-slate-800/80 p-4 rounded-xl border border-slate-700/60"
+            className="bg-surface-raised/80 p-4 rounded-xl border border-neutral-700/60"
           >
-            <div className="text-slate-500 text-xs uppercase tracking-wide">
+            <div className="text-neutral-500 text-xs uppercase tracking-wide">
               Автовыгрузка
             </div>
             <div className="text-xl font-bold mt-1">
@@ -89,7 +89,7 @@ export default function TtSyncPanel({
       {error && (
         <div className="mb-4 text-sm text-red-400 bg-red-500/10 px-4 py-3 rounded-xl border border-red-500/30">
           {error}
-          <p className="mt-2 text-slate-400">
+          <p className="mt-2 text-neutral-400">
             Если Cloud Functions не задеплоены —
             запустите вручную: GitHub → Actions →
             «CRM → TT Sheets Sync» → Run workflow.
@@ -111,7 +111,7 @@ export default function TtSyncPanel({
         disabled={loading}
         className="
           w-full sm:w-auto px-6 py-3 rounded-xl
-          bg-cyan-500 hover:bg-cyan-400
+          bg-brand hover:opacity-90
           text-white font-semibold
           disabled:opacity-50 transition-colors
         "
@@ -121,7 +121,7 @@ export default function TtSyncPanel({
           : "Выгрузить новые оплаты сейчас"}
       </button>
 
-      <p className="text-slate-500 text-xs mt-3">
+      <p className="text-neutral-500 text-xs mt-3">
         Экстренная выгрузка добавляет только оплаты
         с syncedToSheets = false. Повторно уже
         выгруженные строки не создаются.

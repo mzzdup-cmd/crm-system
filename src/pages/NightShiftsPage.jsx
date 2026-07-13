@@ -198,13 +198,13 @@ export default function NightShiftsPage({
         </h1>
       )}
 
-      <div className="bg-slate-900 p-6 rounded-2xl max-w-xl">
+      <div className="bg-surface p-6 rounded-2xl max-w-xl">
         <select
           value={manager}
           onChange={(e) =>
             setManager(e.target.value)
           }
-          className="w-full bg-slate-800 p-4 rounded-xl mb-4"
+          className="w-full bg-surface-raised p-4 rounded-xl mb-4"
         >
           <option value="">
             Менеджер
@@ -226,14 +226,14 @@ export default function NightShiftsPage({
           onChange={(e) =>
             setDate(e.target.value)
           }
-          className="w-full bg-slate-800 p-4 rounded-xl mb-4"
+          className="w-full bg-surface-raised p-4 rounded-xl mb-4"
         />
 
         <button
           onClick={addShift}
           disabled={saving}
           className="
-            w-full bg-cyan-500 hover:bg-cyan-600
+            w-full bg-brand hover:bg-brand-muted
             p-4 rounded-xl font-bold
             disabled:opacity-50
           "
@@ -249,7 +249,7 @@ export default function NightShiftsPage({
           <div
             key={shift.id}
             className="
-              bg-slate-900 p-4 rounded-2xl
+              bg-surface p-4 rounded-2xl
               flex flex-col sm:flex-row
               sm:justify-between gap-4
             "
@@ -261,13 +261,13 @@ export default function NightShiftsPage({
                 )}
               </div>
 
-              <div className="text-slate-400 mt-2">
+              <div className="text-neutral-400 mt-2">
                 {shift.date}
               </div>
             </div>
 
             <div className="flex items-center gap-4">
-              <div className="text-cyan-400 font-bold text-2xl">
+              <div className="text-brand font-bold text-2xl">
                 +{NIGHT_SHIFT_BONUS} ₽
               </div>
 
@@ -286,7 +286,7 @@ export default function NightShiftsPage({
                 }
                 className="
                   px-3 py-2 rounded-xl
-                  bg-slate-800 hover:bg-slate-700
+                  bg-surface-raised hover:bg-surface-hover
                   text-sm
                 "
               >
@@ -321,7 +321,7 @@ export default function NightShiftsPage({
         >
           <div
             className="
-              bg-slate-900 border border-slate-700
+              bg-surface border border-neutral-700
               rounded-2xl p-6 max-w-md w-full
             "
           >
@@ -339,7 +339,7 @@ export default function NightShiftsPage({
                 })
               }
               className="
-                w-full bg-slate-800
+                w-full bg-surface-raised
                 p-3 rounded-xl mb-4
               "
             >
@@ -363,7 +363,7 @@ export default function NightShiftsPage({
                 })
               }
               className="
-                w-full bg-slate-800
+                w-full bg-surface-raised
                 p-3 rounded-xl mb-6
               "
             />
@@ -376,7 +376,7 @@ export default function NightShiftsPage({
                 }
                 className="
                   px-4 py-2 rounded-xl
-                  bg-slate-800
+                  bg-surface-raised
                 "
               >
                 Отмена
@@ -388,7 +388,7 @@ export default function NightShiftsPage({
                 disabled={saving}
                 className="
                   px-4 py-2 rounded-xl
-                  bg-cyan-600 font-semibold
+                  bg-brand-muted font-semibold
                   disabled:opacity-50
                 "
               >

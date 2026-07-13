@@ -73,12 +73,12 @@ export default function NotificationDropdown({
       className="
         absolute left-full top-0 ml-2 z-[100]
         w-[min(calc(100vw-2rem),20rem)]
-        bg-slate-900 border border-slate-700
+        bg-surface border border-neutral-700
         rounded-2xl shadow-2xl
         overflow-hidden
       "
     >
-      <div className="flex items-center justify-between px-4 py-3 border-b border-slate-800">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-800">
 
         <div className="font-bold">
 
@@ -88,7 +88,7 @@ export default function NotificationDropdown({
 
             unreadCount > 0 && (
 
-              <span className="ml-2 text-cyan-400 text-sm">
+              <span className="ml-2 text-brand text-sm">
 
                 {unreadCount}
 
@@ -107,7 +107,7 @@ export default function NotificationDropdown({
             <button
               type="button"
               onClick={onMarkAllRead}
-              className="text-xs text-cyan-400 hover:text-cyan-300"
+              className="text-xs text-brand hover:text-brand"
             >
 
               Прочитать все
@@ -128,7 +128,7 @@ export default function NotificationDropdown({
 
             ? (
 
-              <div className="p-6 text-center text-slate-400 text-sm">
+              <div className="p-6 text-center text-neutral-400 text-sm">
 
                 Нет уведомлений
 
@@ -155,15 +155,15 @@ export default function NotificationDropdown({
 
       </div>
 
-      <div className="border-t border-slate-800 p-3">
+      <div className="border-t border-neutral-800 p-3">
 
         <Link
           to="/notifications"
           onClick={onClose}
           className="
             block text-center text-sm
-            text-cyan-400 hover:text-cyan-300
-            py-2 rounded-xl hover:bg-slate-800
+            text-brand hover:text-brand
+            py-2 rounded-xl hover:bg-surface-raised
           "
         >
 

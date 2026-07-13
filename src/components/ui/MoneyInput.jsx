@@ -6,7 +6,7 @@ import {
 } from "../../utils/moneyFormat";
 
 const defaultClass =
-  "w-full bg-slate-800 p-3.5 rounded-xl";
+  "w-full bg-surface-raised p-3.5 rounded-xl";
 
 export default function MoneyInput({
   value,

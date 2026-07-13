@@ -368,7 +368,7 @@ export default function ClientDetailsPage() {
 
           </h1>
 
-          <div className="text-slate-400 mt-4 text-xl">
+          <div className="text-neutral-400 mt-4 text-xl">
 
             {
 
@@ -388,7 +388,7 @@ export default function ClientDetailsPage() {
 
   }
 
-  className="bg-green-500 hover:bg-green-600 px-6 py-3 rounded-xl font-bold"
+  className="crm-btn-primary hover:opacity-90 px-6 py-3 rounded-xl font-bold"
 
 >
 
@@ -408,7 +408,7 @@ export default function ClientDetailsPage() {
 
         rel="noreferrer"
 
-        className="bg-cyan-500 hover:bg-cyan-600 px-6 py-3 rounded-xl font-bold"
+        className="bg-brand hover:bg-brand-muted px-6 py-3 rounded-xl font-bold"
 
       >
 
@@ -432,7 +432,7 @@ export default function ClientDetailsPage() {
 
         rel="noreferrer"
 
-        className="bg-blue-500 hover:bg-blue-600 px-6 py-3 rounded-xl font-bold"
+        className="bg-brand hover:bg-brand-muted px-6 py-3 rounded-xl font-bold"
 
       >
 
@@ -451,7 +451,7 @@ export default function ClientDetailsPage() {
               <div className="font-bold text-amber-300 mb-2">
                 Нужно дозаполнить VK
               </div>
-              <p className="text-sm text-slate-400 mb-4">
+              <p className="text-sm text-neutral-400 mb-4">
                 Добавьте ссылку — напоминание
                 закроется автоматически
               </p>
@@ -462,7 +462,7 @@ export default function ClientDetailsPage() {
                     onChange={setVkDraft}
                     placeholder="https://vk.com/..."
                     className="
-                      w-full bg-slate-800
+                      w-full bg-surface-raised
                       p-3 rounded-xl
                     "
                   />
@@ -492,7 +492,7 @@ export default function ClientDetailsPage() {
 
         <div className="text-right">
 
-          <div className="text-slate-400">
+          <div className="text-neutral-400">
 
             Остаток
 
@@ -510,9 +510,9 @@ export default function ClientDetailsPage() {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 md:gap-6 mt-8 md:mt-10">
 
-        <div className="bg-slate-900 p-6 rounded-2xl">
+        <div className="bg-surface p-6 rounded-2xl">
 
-          <div className="text-slate-400">
+          <div className="text-neutral-400">
 
             Бюджет
 
@@ -532,9 +532,9 @@ export default function ClientDetailsPage() {
 
         </div>
 
-        <div className="bg-slate-900 p-6 rounded-2xl">
+        <div className="bg-surface p-6 rounded-2xl">
 
-          <div className="text-slate-400">
+          <div className="text-neutral-400">
 
             Оплачено
 
@@ -554,15 +554,15 @@ export default function ClientDetailsPage() {
 
         </div>
 
-        <div className="bg-slate-900 p-6 rounded-2xl">
+        <div className="bg-surface p-6 rounded-2xl">
 
-          <div className="text-slate-400">
+          <div className="text-neutral-400">
 
             Следующая оплата
 
           </div>
 
-          <div className="text-2xl font-bold text-cyan-400 mt-2">
+          <div className="text-2xl font-bold text-brand mt-2">
 
             {
 
@@ -576,9 +576,9 @@ export default function ClientDetailsPage() {
 
         </div>
 
-        <div className="bg-slate-900 p-6 rounded-2xl">
+        <div className="bg-surface p-6 rounded-2xl">
 
-          <div className="text-slate-400">
+          <div className="text-neutral-400">
 
             Тариф
 
@@ -617,7 +617,7 @@ export default function ClientDetailsPage() {
 
                 <div
                   key={payment.id}
-                  className="bg-slate-900 p-6 rounded-2xl"
+                  className="bg-surface p-6 rounded-2xl"
                 >
 
                   <div className="flex justify-between items-center">
@@ -634,7 +634,7 @@ export default function ClientDetailsPage() {
 
                       </div>
 
-                      <div className="text-slate-400 mt-2">
+                      <div className="text-neutral-400 mt-2">
 
                         {
 
@@ -665,7 +665,7 @@ export default function ClientDetailsPage() {
 
                       </div>
 
-                      <div className="text-slate-400 mt-2">
+                      <div className="text-neutral-400 mt-2">
 
                         {
 
@@ -683,7 +683,7 @@ export default function ClientDetailsPage() {
 
                     payment.comment && (
 
-                      <div className="mt-4 bg-slate-800 p-4 rounded-xl">
+                      <div className="mt-4 bg-surface-raised p-4 rounded-xl">
 
                         {
 
@@ -711,7 +711,7 @@ export default function ClientDetailsPage() {
                         }
                         className="
                           px-4 py-2 rounded-xl
-                          bg-cyan-600 hover:bg-cyan-700
+                          bg-brand-muted hover:bg-brand-dim
                           text-sm font-semibold
                         "
                       >

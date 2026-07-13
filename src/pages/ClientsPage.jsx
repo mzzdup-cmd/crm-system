@@ -154,7 +154,7 @@ export default function ClientsPage({
           )
         }
 
-        className="w-full bg-slate-900 p-4 rounded-2xl mb-6"
+        className="w-full bg-surface p-4 rounded-2xl mb-6"
 
       />
 
@@ -170,7 +170,7 @@ export default function ClientsPage({
             )
           }
 
-          className="bg-slate-900 p-4 rounded-2xl"
+          className="bg-surface p-4 rounded-2xl"
 
         >
 
@@ -209,7 +209,7 @@ export default function ClientsPage({
             )
           }
 
-          className="bg-slate-900 p-4 rounded-2xl"
+          className="bg-surface p-4 rounded-2xl"
 
         >
 
@@ -248,7 +248,7 @@ export default function ClientsPage({
             )
           }
 
-          className="bg-slate-900 p-4 rounded-2xl"
+          className="bg-surface p-4 rounded-2xl"
 
         >
 
@@ -319,7 +319,7 @@ export default function ClientsPage({
 
                           ? "bg-yellow-500/20 border border-yellow-500"
 
-                          : "bg-slate-900"
+                          : "bg-surface"
 
                       }
 
@@ -341,7 +341,7 @@ export default function ClientsPage({
 
                         </div>
 
-                        <div className="text-slate-400 mb-1">
+                        <div className="text-neutral-400 mb-1">
 
                           {
 
@@ -351,7 +351,7 @@ export default function ClientsPage({
 
                         </div>
 
-                        <div className="text-slate-400 mb-1">
+                        <div className="text-neutral-400 mb-1">
 
                           {
 
@@ -361,7 +361,7 @@ export default function ClientsPage({
 
                         </div>
 
-                        <div className="text-slate-400 mb-1">
+                        <div className="text-neutral-400 mb-1">
 
                           {
 
@@ -371,7 +371,7 @@ export default function ClientsPage({
 
                         </div>
 
-                        <div className="text-slate-400">
+                        <div className="text-neutral-400">
 
                           {
 
@@ -431,7 +431,7 @@ export default function ClientsPage({
 
                         </div>
 
-                        <div className="text-slate-400">
+                        <div className="text-neutral-400">
 
                           Бюджет:
 
@@ -451,7 +451,7 @@ export default function ClientsPage({
 
                           client.nextPaymentDate && (
 
-                            <div className="mt-2 text-cyan-400 text-sm">
+                            <div className="mt-2 text-brand text-sm">
 
                               Следующая оплата:
 

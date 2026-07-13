@@ -81,7 +81,7 @@ export default function NotificationsPage() {
 
           </h1>
 
-          <p className="text-slate-400 mt-2 flex items-center gap-3">
+          <p className="text-neutral-400 mt-2 flex items-center gap-3">
 
             <span>
 
@@ -110,8 +110,8 @@ export default function NotificationsPage() {
               onClick={markAllRead}
               className="
                 px-4 py-2 rounded-xl
-                bg-cyan-500/20 text-cyan-300
-                hover:bg-cyan-500/30 transition-colors
+                bg-brand/15 text-brand
+                hover:bg-brand/20 transition-colors
               "
             >
 

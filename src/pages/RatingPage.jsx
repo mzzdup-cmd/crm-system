@@ -97,7 +97,7 @@ export default function RatingPage({
 
           <div
             key={manager.managerKey}
-            className="bg-slate-900 rounded-2xl p-6 flex justify-between items-center"
+            className="bg-surface rounded-2xl p-6 flex justify-between items-center"
           >
 
             <div>
@@ -112,7 +112,7 @@ export default function RatingPage({
 
               </div>
 
-              <div className="text-slate-400 mt-2">
+              <div className="text-neutral-400 mt-2">
 
                 Клиентов:
 

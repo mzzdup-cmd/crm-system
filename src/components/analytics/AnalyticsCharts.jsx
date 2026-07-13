@@ -58,16 +58,16 @@ function ChartEmpty({
       className="
         flex h-full w-full flex-col items-center
         justify-center rounded-xl border border-dashed
-        border-slate-700 bg-slate-800/30 px-4 text-center
+        border-neutral-700 bg-surface-raised/30 px-4 text-center
       "
     >
       <div className="text-2xl mb-2 opacity-70">
         📊
       </div>
-      <p className="text-slate-400 text-sm">
+      <p className="text-neutral-400 text-sm">
         {message}
       </p>
-      <p className="text-slate-500 text-xs mt-1">
+      <p className="text-neutral-500 text-xs mt-1">
         Попробуйте «Месяц» или «Неделя»
       </p>
     </div>
@@ -138,7 +138,7 @@ function ChartFrame({
           {children}
         </ResponsiveContainer>
       ) : (
-        <div className="h-full w-full animate-pulse rounded-xl bg-slate-800/40" />
+        <div className="h-full w-full animate-pulse rounded-xl bg-surface-raised/40" />
       )}
     </div>
   );
@@ -160,7 +160,7 @@ function ChartTooltip({ active, payload, label }) {
         border: `1px solid ${CHART_THEME.tooltipBorder}`,
       }}
     >
-      <div className="text-slate-300 mb-1">
+      <div className="text-neutral-300 mb-1">
 
         {fullName || label}
 
@@ -267,7 +267,7 @@ export function ManagerBarChart({ data }) {
         <Bar
           dataKey="revenue"
           name="Выручка"
-          fill={CHART_COLORS.cyan}
+          fill={CHART_COLORS.lime}
           radius={[8, 8, 0, 0]}
         />
       </BarChart>
@@ -449,7 +449,7 @@ export function ManagerKpiChart({ data }) {
         <Bar
           dataKey="topups"
           name="Доплаты"
-          fill={CHART_COLORS.cyan}
+          fill={CHART_COLORS.lime}
           stackId="a"
         />
         <Bar

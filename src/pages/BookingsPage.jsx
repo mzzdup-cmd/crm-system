@@ -61,7 +61,7 @@ export default function BookingsPage({
             <h1 className="text-3xl md:text-4xl font-bold">
               Бронь
             </h1>
-            <p className="text-slate-400 mt-2 flex items-center gap-3">
+            <p className="text-neutral-400 mt-2 flex items-center gap-3">
               <span>
                 Лиды с бронированием места (ББ).
                 Подписка начинается после
@@ -75,7 +75,7 @@ export default function BookingsPage({
         )}
 
         {embedded && (
-          <p className="text-slate-400 text-sm flex items-center gap-3">
+          <p className="text-neutral-400 text-sm flex items-center gap-3">
             <span>
               {sortedBookings.length}{" "}
               {sortedBookings.length === 1

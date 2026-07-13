@@ -48,7 +48,7 @@ import { useTrafficSources }
 from "../../hooks/useTrafficSources";
 
 const inputClass =
-  "mt-1 w-full bg-slate-800 p-3.5 rounded-xl";
+  "mt-1 w-full bg-surface-raised p-3.5 rounded-xl";
 
 function buildFormFromPayment(payment) {
   return {
@@ -357,7 +357,7 @@ export default function PaymentEditModal({
         <form
           onSubmit={handleSubmit}
           className="
-            bg-slate-900 border border-slate-700
+            bg-surface border border-neutral-700
             rounded-2xl p-6 max-w-lg w-full
             shadow-xl max-h-[90vh] overflow-y-auto
           "
@@ -366,7 +366,7 @@ export default function PaymentEditModal({
             Редактировать оплату
           </h2>
 
-          <p className="text-slate-400 text-sm mb-6">
+          <p className="text-neutral-400 text-sm mb-6">
             {payment.clientName}
             {!isAdmin && editable && (
               <span className="block mt-1 text-amber-400">
@@ -377,7 +377,7 @@ export default function PaymentEditModal({
             {!isAdmin &&
               canEditStartDate &&
               !editable && (
-                <span className="block mt-1 text-cyan-400">
+                <span className="block mt-1 text-brand">
                   Можно изменить только дату
                   старта — строка в ТТ
                   обновится при следующей
@@ -388,7 +388,7 @@ export default function PaymentEditModal({
               canEditCuratorDate &&
               !editable &&
               !canEditStartDate && (
-                <span className="block mt-1 text-cyan-400">
+                <span className="block mt-1 text-brand">
                   Можно изменить только
                   фактический старт для
                   куратора
@@ -398,7 +398,7 @@ export default function PaymentEditModal({
 
           <div className="space-y-4">
             <label className="block">
-              <span className="text-sm text-slate-400">
+              <span className="text-sm text-neutral-400">
                 Сумма оплаты
               </span>
               <MoneyInput
@@ -416,7 +416,7 @@ export default function PaymentEditModal({
             </label>
 
             <label className="block">
-              <span className="text-sm text-slate-400">
+              <span className="text-sm text-neutral-400">
                 Бюджет клиента
               </span>
               <MoneyInput
@@ -433,7 +433,7 @@ export default function PaymentEditModal({
             </label>
 
             <label className="block">
-              <span className="text-sm text-slate-400">
+              <span className="text-sm text-neutral-400">
                 Курс
               </span>
               <select
@@ -462,7 +462,7 @@ export default function PaymentEditModal({
             </label>
 
             <label className="block">
-              <span className="text-sm text-slate-400">
+              <span className="text-sm text-neutral-400">
                 Тариф
               </span>
               <select
@@ -491,7 +491,7 @@ export default function PaymentEditModal({
             </label>
 
             <label className="block">
-              <span className="text-sm text-slate-400">
+              <span className="text-sm text-neutral-400">
                 Тег (откуда пришёл)
               </span>
               <TrafficSourceSelect
@@ -520,7 +520,7 @@ export default function PaymentEditModal({
             </label>
 
             <label className="block">
-              <span className="text-sm text-slate-400">
+              <span className="text-sm text-neutral-400">
                 VK ссылка
               </span>
               <VkLinkInput
@@ -537,7 +537,7 @@ export default function PaymentEditModal({
             </label>
 
             <label className="block">
-              <span className="text-sm text-slate-400">
+              <span className="text-sm text-neutral-400">
                 Дата оплаты
               </span>
               <input
@@ -556,7 +556,7 @@ export default function PaymentEditModal({
             </label>
 
             <label className="block">
-              <span className="text-sm text-slate-400">
+              <span className="text-sm text-neutral-400">
                 Поток / startDate
               </span>
               <input
@@ -578,7 +578,7 @@ export default function PaymentEditModal({
                 className={`${inputClass} disabled:opacity-60`}
               />
               {optionalStartDate && (
-                <p className="text-xs text-slate-500 mt-1">
+                <p className="text-xs text-neutral-500 mt-1">
                   Для ББ и Рассылки можно
                   указать позже
                 </p>
@@ -601,7 +601,7 @@ export default function PaymentEditModal({
             />
 
             <label className="block">
-              <span className="text-sm text-slate-400">
+              <span className="text-sm text-neutral-400">
                 Тип сделки
               </span>
               <input
@@ -619,7 +619,7 @@ export default function PaymentEditModal({
             </label>
 
             <label className="block">
-              <span className="text-sm text-slate-400">
+              <span className="text-sm text-neutral-400">
                 Платежная система
               </span>
               <select
@@ -650,7 +650,7 @@ export default function PaymentEditModal({
             </label>
 
             <label className="block">
-              <span className="text-sm text-slate-400">
+              <span className="text-sm text-neutral-400">
                 Номер счёта
               </span>
               <input
@@ -667,7 +667,7 @@ export default function PaymentEditModal({
             </label>
 
             <label className="block">
-              <span className="text-sm text-slate-400">
+              <span className="text-sm text-neutral-400">
                 Комментарий
               </span>
               <textarea
@@ -692,7 +692,7 @@ export default function PaymentEditModal({
               disabled={saving}
               className="
                 px-4 py-2 rounded-xl
-                bg-slate-800 hover:bg-slate-700
+                bg-surface-raised hover:bg-surface-hover
               "
             >
               Отмена
@@ -705,7 +705,7 @@ export default function PaymentEditModal({
               }
               className="
                 px-4 py-2 rounded-xl font-semibold
-                bg-cyan-600 hover:bg-cyan-700
+                bg-brand-muted hover:bg-brand-dim
                 disabled:opacity-50
               "
             >

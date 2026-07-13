@@ -26,7 +26,7 @@ function LoadErrorState({
           ? "Загрузка занимает слишком много времени"
           : "Не удалось загрузить зарплаты"}
       </div>
-      <p className="text-sm text-slate-400">
+      <p className="text-sm text-neutral-400">
         {message}
       </p>
       <button
@@ -50,8 +50,8 @@ function SalaryManagerCard({
   return (
     <div
       className="
-        bg-slate-900 p-5 md:p-6 rounded-2xl
-        hover:bg-slate-800/80 transition-colors
+        bg-surface p-5 md:p-6 rounded-2xl
+        hover:bg-surface-raised/80 transition-colors
       "
     >
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
@@ -59,7 +59,7 @@ function SalaryManagerCard({
           <div className="text-2xl md:text-3xl font-bold">
             {manager.name}
           </div>
-          <div className="text-slate-400 mt-2 text-sm">
+          <div className="text-neutral-400 mt-2 text-sm">
             Выручка:{" "}
             {manager.revenue.toLocaleString(
               "ru-RU"
@@ -85,8 +85,8 @@ function SalaryManagerCard({
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mt-6">
-        <div className="bg-slate-800 p-4 rounded-xl">
-          <div className="text-slate-400 text-sm">
+        <div className="bg-surface-raised p-4 rounded-xl">
+          <div className="text-neutral-400 text-sm">
             Оклад
           </div>
           <div className="text-xl font-bold mt-2">
@@ -97,8 +97,8 @@ function SalaryManagerCard({
           </div>
         </div>
 
-        <div className="bg-slate-800 p-4 rounded-xl">
-          <div className="text-slate-400 text-sm">
+        <div className="bg-surface-raised p-4 rounded-xl">
+          <div className="text-neutral-400 text-sm">
             5% от продаж
           </div>
           <div className="text-xl font-bold mt-2">
@@ -109,8 +109,8 @@ function SalaryManagerCard({
           </div>
         </div>
 
-        <div className="bg-slate-800 p-4 rounded-xl">
-          <div className="text-slate-400 text-sm">
+        <div className="bg-surface-raised p-4 rounded-xl">
+          <div className="text-neutral-400 text-sm">
             Бонус оборота
           </div>
           <div className="text-xl font-bold mt-2 text-yellow-400">
@@ -121,11 +121,11 @@ function SalaryManagerCard({
           </div>
         </div>
 
-        <div className="bg-slate-800 p-4 rounded-xl">
-          <div className="text-slate-400 text-sm">
+        <div className="bg-surface-raised p-4 rounded-xl">
+          <div className="text-neutral-400 text-sm">
             Ночные смены
           </div>
-          <div className="text-xl font-bold mt-2 text-cyan-400">
+          <div className="text-xl font-bold mt-2 text-brand">
             {manager.nightBonus.toLocaleString(
               "ru-RU"
             )}{" "}
@@ -133,8 +133,8 @@ function SalaryManagerCard({
           </div>
         </div>
 
-        <div className="bg-slate-800 p-4 rounded-xl">
-          <div className="text-slate-400 text-sm">
+        <div className="bg-surface-raised p-4 rounded-xl">
+          <div className="text-neutral-400 text-sm">
             Ручные бонусы
           </div>
           <div className="text-xl font-bold mt-2 text-pink-400">
@@ -179,7 +179,7 @@ function SalaryPeriodSection({
             text-lg font-bold
             ${
               archived
-                ? "text-slate-300"
+                ? "text-neutral-300"
                 : "text-white"
             }
           `}
@@ -189,7 +189,7 @@ function SalaryPeriodSection({
             : ""}
           {period.label}
         </h3>
-        <p className="text-slate-500 text-sm mt-1">
+        <p className="text-neutral-500 text-sm mt-1">
           {period.subtitle}
         </p>
       </div>
@@ -278,7 +278,7 @@ export default function SalaryPage({
             )}
 
             {hasArchive && (
-              <div className="space-y-6 pt-2 border-t border-slate-800">
+              <div className="space-y-6 pt-2 border-t border-neutral-800">
                 {archive.map((period) => (
                   <SalaryPeriodSection
                     key={period.label}

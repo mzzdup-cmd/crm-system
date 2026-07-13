@@ -103,6 +103,31 @@ body {
   font-weight: 600;
 }
 
-.crm-btn-primary:hover {
-  background: var(--crm-lime-muted);
+input,
+textarea,
+select {
+  font-family: inherit;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  outline: none;
+}
+
+.crm-input {
+  background: var(--crm-surface);
+  border: 1px solid var(--crm-border);
+  color: #fff;
+}
+
+.crm-input:focus {
+  border-color: color-mix(in srgb, var(--crm-lime) 60%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--crm-lime) 25%, transparent);
+}
+
+.crm-card {
+  background: var(--crm-surface);
+  border: 1px solid var(--crm-border);
+  border-radius: 1rem;
 }

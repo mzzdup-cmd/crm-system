@@ -20,13 +20,13 @@ export default function RealtimeIndicator({
           w-2 h-2 rounded-full
           ${
             connected
-              ? "bg-emerald-400 animate-pulse"
-              : "bg-slate-500"
+              ? "bg-brand animate-pulse"
+              : "bg-neutral-500"
           }
         `}
       />
 
-      <span className="text-slate-400 hidden sm:inline">
+      <span className="text-neutral-400 hidden sm:inline">
 
         {connected ? "Live" : "..."}
 

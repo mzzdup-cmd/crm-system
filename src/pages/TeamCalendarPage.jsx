@@ -112,7 +112,7 @@ export default function TeamCalendarPage() {
             Календарь команды
           </h1>
 
-          <p className="text-slate-400 mt-2 flex items-center gap-3 flex-wrap">
+          <p className="text-neutral-400 mt-2 flex items-center gap-3 flex-wrap">
             <span>
               Единый календарь выходных, отпусков и событий
             </span>
@@ -169,7 +169,7 @@ export default function TeamCalendarPage() {
         <button
           type="button"
           onClick={goToToday}
-          className="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700"
+          className="px-4 py-2 rounded-xl bg-surface-raised text-neutral-300 hover:bg-surface-hover"
         >
           Сегодня
         </button>

@@ -42,7 +42,7 @@ import LoadingState
 from "../components/LoadingState";
 
 const inputClass =
-  "w-full bg-slate-800 p-3.5 rounded-xl";
+  "w-full bg-surface-raised p-3.5 rounded-xl";
 
 function StatusBadge({ status }) {
   const colors = {
@@ -264,13 +264,13 @@ export default function TimeOffPage({
 
       {!isLeadership && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <section className="bg-slate-900 rounded-2xl p-5 space-y-4">
+          <section className="bg-surface rounded-2xl p-5 space-y-4">
             <h2 className="text-lg font-bold">
               Запрос на выходной
             </h2>
 
             <label className="block">
-              <span className="text-sm text-slate-400">
+              <span className="text-sm text-neutral-400">
                 Дата *
               </span>
               <input
@@ -296,19 +296,19 @@ export default function TimeOffPage({
               type="button"
               onClick={submitDayOff}
               disabled={submitting}
-              className="w-full bg-cyan-500 hover:bg-cyan-400 p-3.5 rounded-xl font-bold disabled:opacity-50"
+              className="w-full bg-brand hover:opacity-90 p-3.5 rounded-xl font-bold disabled:opacity-50"
             >
               Отправить запрос
             </button>
           </section>
 
-          <section className="bg-slate-900 rounded-2xl p-5 space-y-4">
+          <section className="bg-surface rounded-2xl p-5 space-y-4">
             <h2 className="text-lg font-bold">
               Запрос на отпуск
             </h2>
 
             <label className="block">
-              <span className="text-sm text-slate-400">
+              <span className="text-sm text-neutral-400">
                 Дата начала *
               </span>
               <input
@@ -324,7 +324,7 @@ export default function TimeOffPage({
             </label>
 
             <label className="block">
-              <span className="text-sm text-slate-400">
+              <span className="text-sm text-neutral-400">
                 Дата конца *
               </span>
               <input
@@ -340,7 +340,7 @@ export default function TimeOffPage({
             </label>
 
             {vacationDays > 0 && (
-              <div className="text-sm text-cyan-300">
+              <div className="text-sm text-brand">
                 Дней отпуска: {vacationDays}
               </div>
             )}
@@ -377,7 +377,7 @@ export default function TimeOffPage({
 
         {timeOffRequests.length === 0 &&
           vacationRequests.length === 0 && (
-            <div className="text-slate-500 bg-slate-900 rounded-2xl p-6">
+            <div className="text-neutral-500 bg-surface rounded-2xl p-6">
               Запросов пока нет
             </div>
           )}
@@ -413,7 +413,7 @@ export default function TimeOffPage({
 
       <Link
         to="/"
-        className="text-sm text-cyan-400 hover:underline"
+        className="text-sm text-brand hover:underline"
       >
         ← Dashboard
       </Link>
@@ -432,7 +432,7 @@ function RequestRow({
     REQUEST_STATUS.PENDING;
 
   return (
-    <div className="bg-slate-900 rounded-2xl p-4 md:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div className="bg-surface rounded-2xl p-4 md:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
       <div>
         <div className="flex flex-wrap items-center gap-2">
           <span className="font-bold">
@@ -444,21 +444,21 @@ function RequestRow({
           <StatusBadge
             status={request.status}
           />
-          <span className="text-xs text-slate-500">
+          <span className="text-xs text-neutral-500">
             {type === "dayOff"
               ? "Выходной"
               : "Отпуск"}
           </span>
         </div>
 
-        <div className="text-slate-300 mt-2 text-sm">
+        <div className="text-neutral-300 mt-2 text-sm">
           {type === "dayOff"
             ? request.date
             : `${request.startDate} — ${request.endDate} (${request.daysCount} дн.)`}
         </div>
 
         {request.comment && (
-          <div className="text-slate-500 text-sm mt-1">
+          <div className="text-neutral-500 text-sm mt-1">
             {request.comment}
           </div>
         )}

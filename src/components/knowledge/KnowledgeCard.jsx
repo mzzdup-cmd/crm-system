@@ -33,9 +33,9 @@ export default function KnowledgeCard({
   return (
     <article
       className="
-        bg-slate-900 rounded-2xl p-4 md:p-5
-        border border-slate-800
-        hover:border-slate-700 transition-colors
+        bg-surface rounded-2xl p-4 md:p-5
+        border border-neutral-800
+        hover:border-neutral-700 transition-colors
       "
     >
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
@@ -48,7 +48,7 @@ export default function KnowledgeCard({
             )}
 
             {item.category && (
-              <span className="text-xs px-2 py-0.5 rounded-full bg-slate-800 text-slate-400">
+              <span className="text-xs px-2 py-0.5 rounded-full bg-surface-raised text-neutral-400">
                 {item.category}
               </span>
             )}
@@ -56,7 +56,7 @@ export default function KnowledgeCard({
             {(item.tags || []).map((tag) => (
               <span
                 key={tag}
-                className="text-xs px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-300 border border-cyan-500/20"
+                className="text-xs px-2 py-0.5 rounded-full bg-brand/10 text-brand border border-brand/20"
               >
                 {tag}
               </span>
@@ -68,7 +68,7 @@ export default function KnowledgeCard({
           </h3>
 
           {showAuthor && item.manager && (
-            <p className="text-xs text-slate-500 mt-1">
+            <p className="text-xs text-neutral-500 mt-1">
               {item.manager}
             </p>
           )}
@@ -78,7 +78,7 @@ export default function KnowledgeCard({
           <button
             type="button"
             onClick={handleCopy}
-            className="px-3 py-1.5 rounded-lg text-sm bg-slate-800 hover:bg-slate-700"
+            className="px-3 py-1.5 rounded-lg text-sm bg-surface-raised hover:bg-surface-hover"
           >
             Копировать
           </button>
@@ -88,7 +88,7 @@ export default function KnowledgeCard({
             onClick={() =>
               setExpanded((value) => !value)
             }
-            className="px-3 py-1.5 rounded-lg text-sm bg-slate-800 hover:bg-slate-700"
+            className="px-3 py-1.5 rounded-lg text-sm bg-surface-raised hover:bg-surface-hover"
           >
             {expanded
               ? "Свернуть"
@@ -99,7 +99,7 @@ export default function KnowledgeCard({
             <button
               type="button"
               onClick={() => onEdit(item)}
-              className="px-3 py-1.5 rounded-lg text-sm bg-cyan-500/20 text-cyan-300 hover:bg-cyan-500/30"
+              className="px-3 py-1.5 rounded-lg text-sm bg-brand/15 text-brand hover:bg-brand/20"
             >
               Изменить
             </button>
@@ -118,14 +118,14 @@ export default function KnowledgeCard({
       </div>
 
       {expanded && (
-        <div className="mt-4 pt-4 border-t border-slate-800">
+        <div className="mt-4 pt-4 border-t border-neutral-800">
           <SimpleMarkdown
             content={item.content}
           />
 
           {item.links?.length > 0 && (
             <div className="mt-4 space-y-1">
-              <div className="text-xs text-slate-500 uppercase tracking-wide">
+              <div className="text-xs text-neutral-500 uppercase tracking-wide">
                 Ссылки
               </div>
               {item.links.map((link) => (
@@ -134,7 +134,7 @@ export default function KnowledgeCard({
                   href={link}
                   target="_blank"
                   rel="noreferrer"
-                  className="block text-sm text-cyan-400 hover:underline break-all"
+                  className="block text-sm text-brand hover:underline break-all"
                 >
                   {link}
                 </a>

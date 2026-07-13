@@ -65,7 +65,7 @@ export default function NotificationBell({
         onClick={() => setOpen((v) => !v)}
         className="
           relative p-2.5 rounded-xl
-          bg-slate-800/80 hover:bg-slate-700
+          bg-surface-raised/80 hover:bg-surface-hover
           transition-colors
         "
       >

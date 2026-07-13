@@ -17,7 +17,7 @@ import LoadingState
 from "../components/LoadingState";
 
 const inputClass =
-  "w-full bg-slate-800 p-3.5 rounded-xl";
+  "w-full bg-surface-raised p-3.5 rounded-xl";
 
 const TABS = [
   { id: "faq", label: "FAQ" },
@@ -151,7 +151,7 @@ export default function KnowledgeBasePage() {
             <button
               type="button"
               onClick={openCreate}
-              className="px-4 py-2.5 rounded-xl font-bold text-sm bg-cyan-500 hover:bg-cyan-400"
+              className="px-4 py-2.5 rounded-xl font-bold text-sm bg-brand hover:opacity-90"
             >
               + Добавить
             </button>
@@ -180,8 +180,8 @@ export default function KnowledgeBasePage() {
               }
               className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
                 tab === item.id
-                  ? "bg-cyan-500 text-white"
-                  : "bg-slate-800 text-slate-300 hover:bg-slate-700"
+                  ? "crm-btn-primary"
+                  : "bg-surface-raised text-neutral-300 hover:bg-surface-hover"
               }`}
             >
               {item.label}
@@ -191,8 +191,8 @@ export default function KnowledgeBasePage() {
       </div>
 
       {recentUpdates.length > 0 && (
-        <section className="bg-slate-900/60 rounded-2xl p-4 md:p-5 space-y-3">
-          <h2 className="font-bold text-slate-300">
+        <section className="bg-surface/60 rounded-2xl p-4 md:p-5 space-y-3">
+          <h2 className="font-bold text-neutral-300">
             Недавние обновления
           </h2>
           <div className="flex flex-wrap gap-2">
@@ -208,7 +208,7 @@ export default function KnowledgeBasePage() {
                   );
                   openEdit(item);
                 }}
-                className="text-sm px-3 py-1.5 rounded-full bg-slate-800 hover:bg-slate-700"
+                className="text-sm px-3 py-1.5 rounded-full bg-surface-raised hover:bg-surface-hover"
               >
                 {item.title}
               </button>
@@ -228,8 +228,8 @@ export default function KnowledgeBasePage() {
               }
               className={`text-sm px-3 py-1.5 rounded-full border transition-colors ${
                 selectedTags.includes(tag)
-                  ? "bg-cyan-500/20 border-cyan-500/40 text-cyan-300"
-                  : "bg-slate-900 border-slate-700 text-slate-400 hover:border-slate-600"
+                  ? "bg-brand/15 border-brand/40 text-brand"
+                  : "bg-surface border-neutral-700 text-neutral-400 hover:border-neutral-600"
               }`}
             >
               {tag}
@@ -260,7 +260,7 @@ export default function KnowledgeBasePage() {
 
       <section className="space-y-3">
         {regular.length === 0 ? (
-          <div className="bg-slate-900 rounded-2xl p-8 text-center text-slate-500">
+          <div className="bg-surface rounded-2xl p-8 text-center text-neutral-500">
             Ничего не найдено
           </div>
         ) : (
@@ -298,7 +298,7 @@ export default function KnowledgeBasePage() {
 
       <Link
         to="/"
-        className="text-sm text-cyan-400 hover:underline"
+        className="text-sm text-brand hover:underline"
       >
         ← Dashboard
       </Link>
@@ -336,7 +336,7 @@ function EditorModal({
 
   return (
     <div className="fixed inset-0 z-50 bg-black/60 flex items-end sm:items-center justify-center p-4">
-      <div className="bg-slate-900 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-5 space-y-4">
+      <div className="bg-surface rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-5 space-y-4">
         <h2 className="text-xl font-bold">
           {mode === "create"
             ? "Новая запись"
@@ -366,7 +366,7 @@ function EditorModal({
           />
         )}
 
-        <p className="text-sm text-slate-400">
+        <p className="text-sm text-neutral-400">
           Текст обработки (можно использовать
           **жирный**, списки - пункт)
         </p>
@@ -396,8 +396,8 @@ function EditorModal({
                   (data.tags || []).includes(
                     tag
                   )
-                    ? "bg-cyan-500/20 border-cyan-500/40 text-cyan-300"
-                    : "bg-slate-800 border-slate-700"
+                    ? "bg-brand/15 border-brand/40 text-brand"
+                    : "bg-surface-raised border-neutral-700"
                 }`}
               >
                 {tag}
@@ -443,14 +443,14 @@ function EditorModal({
           <button
             type="button"
             onClick={onSave}
-            className="flex-1 bg-green-500 hover:bg-green-400 p-3 rounded-xl font-bold"
+            className="flex-1 crm-btn-primary hover:opacity-90 p-3 rounded-xl font-bold"
           >
             Сохранить
           </button>
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-3 rounded-xl bg-slate-800 hover:bg-slate-700"
+            className="px-4 py-3 rounded-xl bg-surface-raised hover:bg-surface-hover"
           >
             Отмена
           </button>

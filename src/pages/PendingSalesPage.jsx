@@ -147,7 +147,7 @@ export default function PendingSalesPage() {
         onClick={() => setModalOpen(true)}
         className={`
           px-4 py-2.5 rounded-xl font-bold
-          bg-cyan-500 hover:bg-cyan-400 transition-colors
+          bg-brand hover:opacity-90 transition-colors
           ${className}
         `}
       >
@@ -302,7 +302,7 @@ export default function PendingSalesPage() {
 
           <section>
 
-            <h2 className="text-xl font-bold mb-4 text-slate-400">
+            <h2 className="text-xl font-bold mb-4 text-neutral-400">
 
               История
 

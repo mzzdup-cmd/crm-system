@@ -43,13 +43,13 @@ export default class PageErrorBoundary extends Component {
               {title} временно недоступен
             </div>
 
-            <p className="text-sm text-slate-400">
+            <p className="text-sm text-neutral-400">
               Произошла ошибка при загрузке.
               Остальные разделы CRM работают.
             </p>
 
             {import.meta.env.DEV && (
-              <pre className="text-xs text-red-200/80 bg-slate-950/60 p-3 rounded-xl overflow-x-auto">
+              <pre className="text-xs text-red-200/80 bg-surface-deep/60 p-3 rounded-xl overflow-x-auto">
                 {error.message}
               </pre>
             )}

@@ -16,7 +16,7 @@ export default function SectionHeading({
       </h2>
 
       {hint && (
-        <p className="text-slate-500 text-sm font-normal mt-1">
+        <p className="text-neutral-500 text-sm font-normal mt-1">
           {hint}
         </p>
       )}

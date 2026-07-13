@@ -19,7 +19,7 @@ export default function PageHeader({
 
           (subtitle || badge) && (
 
-            <div className="text-slate-400 mt-2 flex flex-wrap items-center gap-3 text-sm md:text-base">
+            <div className="text-neutral-400 mt-2 flex flex-wrap items-center gap-3 text-sm md:text-base">
 
               {subtitle}
 

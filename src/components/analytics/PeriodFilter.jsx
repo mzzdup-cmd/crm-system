@@ -28,7 +28,7 @@ export default function PeriodFilter({
   ];
 
   return (
-    <div className="bg-slate-900 p-4 rounded-2xl flex flex-wrap gap-3 items-center">
+    <div className="bg-surface p-4 rounded-2xl flex flex-wrap gap-3 items-center">
 
       {
 
@@ -43,8 +43,8 @@ export default function PeriodFilter({
               px-4 py-2 rounded-xl font-bold transition-all
               ${
                 period === button.id
-                  ? "bg-cyan-500 text-white"
-                  : "bg-slate-800 text-slate-300 hover:bg-slate-700"
+                  ? "crm-btn-primary"
+                  : "bg-surface-raised text-neutral-300 hover:bg-surface-hover"
               }
             `}
           >
@@ -70,7 +70,7 @@ export default function PeriodFilter({
                   start: e.target.value,
                 })
               }
-              className="bg-slate-800 p-2 rounded-xl"
+              className="bg-surface-raised p-2 rounded-xl"
             />
 
             <input
@@ -82,7 +82,7 @@ export default function PeriodFilter({
                   end: e.target.value,
                 })
               }
-              className="bg-slate-800 p-2 rounded-xl"
+              className="bg-surface-raised p-2 rounded-xl"
             />
 
           </div>

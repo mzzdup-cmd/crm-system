@@ -7,7 +7,7 @@ export default function UnauthorizedPage() {
 
     <div className="min-h-[60vh] flex items-center justify-center">
 
-      <div className="bg-slate-900 p-10 rounded-2xl max-w-lg text-center">
+      <div className="bg-surface p-10 rounded-2xl max-w-lg text-center">
 
         <div className="text-5xl mb-6">
 
@@ -21,7 +21,7 @@ export default function UnauthorizedPage() {
 
         </h1>
 
-        <p className="text-slate-400 mb-8">
+        <p className="text-neutral-400 mb-8">
 
           У вас нет прав для просмотра этой страницы.
           Обратитесь к руководителю, если считаете это ошибкой.
@@ -30,7 +30,7 @@ export default function UnauthorizedPage() {
 
         <Link
           to="/"
-          className="inline-block bg-green-500 hover:bg-green-600 px-6 py-3 rounded-xl font-bold"
+          className="inline-block crm-btn-primary hover:opacity-90 px-6 py-3 rounded-xl font-bold"
         >
 
           На Dashboard

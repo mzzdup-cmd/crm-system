@@ -9,8 +9,8 @@ export default function EmptyState({
       className="
         flex flex-col items-center justify-center
         text-center py-12 px-6
-        bg-slate-900/50 rounded-2xl
-        border border-slate-800/80
+        bg-surface/50 rounded-2xl
+        border border-neutral-800/80
       "
     >
       <div className="text-4xl mb-4 opacity-80">
@@ -29,7 +29,7 @@ export default function EmptyState({
 
         description && (
 
-          <p className="text-slate-400 max-w-md mb-6">
+          <p className="text-neutral-400 max-w-md mb-6">
 
             {description}
 

@@ -7,7 +7,7 @@ export default function PageTabs({
     <div
       className="
         flex flex-wrap gap-2
-        border-b border-slate-800 pb-3
+        border-b border-neutral-800 pb-3
       "
       role="tablist"
     >
@@ -29,8 +29,8 @@ export default function PageTabs({
               transition-colors
               ${
                 isActive
-                  ? "bg-cyan-500/20 text-cyan-200 border border-cyan-500/40"
-                  : "bg-slate-800/60 text-slate-400 hover:bg-slate-800 hover:text-slate-200"
+                  ? "bg-brand/15 text-brand border border-brand/40"
+                  : "bg-surface-raised/60 text-neutral-400 hover:bg-surface-raised hover:text-neutral-200"
               }
             `}
           >

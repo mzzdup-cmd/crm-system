@@ -77,10 +77,10 @@ export function ToastProvider({
               text-sm font-medium animate-fade-in
               ${
                 toast.type === "success"
-                  ? "bg-emerald-600 text-white"
+                  ? "bg-brand text-brand-fg"
                   : toast.type === "error"
                     ? "bg-red-600 text-white"
-                    : "bg-slate-800 text-white border border-slate-700"
+                    : "bg-surface-raised text-white border border-neutral-700"
               }
             `}
           >

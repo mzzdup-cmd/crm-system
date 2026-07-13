@@ -14,7 +14,7 @@ import {
 } from "../../domain/traffic/trafficSourceMerge";
 
 const inputClass =
-  "w-full bg-slate-800 p-3.5 rounded-xl";
+  "w-full bg-surface-raised p-3.5 rounded-xl";
 
 export default function TrafficSourceSelect({
   sources = [],
@@ -209,20 +209,20 @@ export default function TrafficSourceSelect({
             className="
               absolute z-30 left-0 right-0 mt-1
               max-h-56 overflow-y-auto
-              bg-slate-900 border border-slate-700
+              bg-surface border border-neutral-700
               rounded-xl shadow-xl
             "
           >
             {!hasFirestoreSources &&
               sources.length > 0 && (
-                <div className="px-3 py-2 text-xs text-amber-400/90 border-b border-slate-800">
+                <div className="px-3 py-2 text-xs text-amber-400/90 border-b border-neutral-800">
                   Локальный список. Admin seed
                   создаст Firestore записи.
                 </div>
               )}
 
             {showEmptyState && (
-              <div className="p-3 text-sm text-slate-500">
+              <div className="p-3 text-sm text-neutral-500">
                 {emptyMessage}
               </div>
             )}
@@ -240,7 +240,7 @@ export default function TrafficSourceSelect({
                 }}
                 className="
                   w-full text-left px-3 py-2.5
-                  hover:bg-slate-800 text-sm
+                  hover:bg-surface-raised text-sm
                 "
               >
                 {source.name}
@@ -256,8 +256,8 @@ export default function TrafficSourceSelect({
                 }}
                 className="
                   w-full text-left px-3 py-2.5
-                  text-cyan-400 hover:bg-slate-800
-                  text-sm border-t border-slate-800
+                  text-brand hover:bg-surface-raised
+                  text-sm border-t border-neutral-800
                 "
               >
                 + Добавить «{query.trim()}»

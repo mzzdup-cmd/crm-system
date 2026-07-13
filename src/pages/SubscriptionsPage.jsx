@@ -157,7 +157,7 @@ export default function SubscriptionsPage({
               Подписки
             </h1>
 
-            <p className="text-slate-400 mt-2 flex items-center gap-3">
+            <p className="text-neutral-400 mt-2 flex items-center gap-3">
               <span>
                 {subscriptionCounts.active} активных
                 {" · "}
@@ -170,7 +170,7 @@ export default function SubscriptionsPage({
         )}
 
         {embedded && (
-          <p className="text-slate-400 text-sm flex items-center gap-3">
+          <p className="text-neutral-400 text-sm flex items-center gap-3">
             <span>
               {subscriptionCounts.active} активных
               {" · "}
@@ -204,8 +204,8 @@ export default function SubscriptionsPage({
                 px-4 py-2 rounded-xl font-medium transition-colors
                 ${
                   activeTab === tab.id
-                    ? "bg-cyan-500 text-white"
-                    : "bg-slate-800 text-slate-300 hover:bg-slate-700"
+                    ? "crm-btn-primary"
+                    : "bg-surface-raised text-neutral-300 hover:bg-surface-hover"
                 }
               `}
             >

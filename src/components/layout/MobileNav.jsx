@@ -64,7 +64,7 @@ export default function MobileNav({
         <button
           type="button"
           onClick={onMenuOpen}
-          className="flex flex-col items-center justify-center flex-1 py-2 px-1 text-xs text-slate-400"
+          className="flex flex-col items-center justify-center flex-1 py-2 px-1 text-xs text-neutral-400"
         >
 
           <span className="text-lg mb-1">

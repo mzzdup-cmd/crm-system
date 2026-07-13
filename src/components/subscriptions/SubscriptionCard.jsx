@@ -21,7 +21,7 @@ function StatusBadge({
 
   if (variant === SUBSCRIPTION_OUTCOMES.CHURNED) {
     return (
-      <span className="text-slate-400">
+      <span className="text-neutral-400">
         Слив
       </span>
     );
@@ -57,10 +57,10 @@ export default function SubscriptionCard({
   const cardClass = client.overdue && isActive
     ? "bg-red-500/10 border border-red-500/40"
     : variant === SUBSCRIPTION_OUTCOMES.CHURNED
-      ? "bg-slate-900/80 border border-slate-700"
+      ? "bg-surface/80 border border-neutral-700"
       : isCompleted
         ? "bg-green-500/5 border border-green-500/20"
-        : "bg-slate-900";
+        : "bg-surface";
 
   return (
     <div
@@ -76,14 +76,14 @@ export default function SubscriptionCard({
 
           <Link
             to={`/client/${client.id}`}
-            className="text-xl md:text-2xl font-bold hover:text-cyan-300 transition-colors"
+            className="text-xl md:text-2xl font-bold hover:text-brand transition-colors"
           >
 
             {client.name || client.manager || "Клиент"}
 
           </Link>
 
-          <div className="text-slate-400 mt-2">
+          <div className="text-neutral-400 mt-2">
 
             {client.course} · {client.manager}
 
@@ -107,7 +107,7 @@ export default function SubscriptionCard({
 
           </div>
 
-          <div className="text-slate-400 text-sm mt-1">
+          <div className="text-neutral-400 text-sm mt-1">
 
             {isCompleted ? "Бюджет закрыт" : "Остаток"}
 
@@ -121,7 +121,7 @@ export default function SubscriptionCard({
 
         <div>
 
-          <div className="text-slate-400">
+          <div className="text-neutral-400">
 
             {isCompleted
               ? "Оплачено"
@@ -143,7 +143,7 @@ export default function SubscriptionCard({
 
         <div className="text-right">
 
-          <div className="text-slate-400">
+          <div className="text-neutral-400">
 
             Статус
 
@@ -178,8 +178,8 @@ export default function SubscriptionCard({
                 }
                 className="
                   px-3 py-1.5 rounded-lg text-sm
-                  bg-slate-800 text-slate-300
-                  hover:bg-slate-700 transition-colors
+                  bg-surface-raised text-neutral-300
+                  hover:bg-surface-hover transition-colors
                 "
               >
                 Перенести в слив
@@ -190,7 +190,7 @@ export default function SubscriptionCard({
       )}
 
       {variant === SUBSCRIPTION_OUTCOMES.CHURNED && (
-        <p className="mt-4 text-sm text-slate-500">
+        <p className="mt-4 text-sm text-neutral-500">
           Ученик отказался продолжать оплату.
           {client.remain > 0 && (
             <>

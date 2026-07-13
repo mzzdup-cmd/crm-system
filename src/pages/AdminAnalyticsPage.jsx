@@ -76,9 +76,9 @@ export default function AdminAnalyticsPage({
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
 
-        <div className="bg-slate-900/80 p-4 rounded-xl border border-slate-800">
+        <div className="bg-surface/80 p-4 rounded-xl border border-neutral-800">
 
-          <div className="font-semibold text-slate-200 text-xs flex items-center gap-2">
+          <div className="font-semibold text-neutral-200 text-xs flex items-center gap-2">
 
             Выручка live
 
@@ -86,7 +86,7 @@ export default function AdminAnalyticsPage({
 
           </div>
 
-          <div className="text-slate-500 text-[11px] font-normal mt-0.5">
+          <div className="text-neutral-500 text-[11px] font-normal mt-0.5">
 
             сейчас в CRM
 
@@ -100,15 +100,15 @@ export default function AdminAnalyticsPage({
 
         </div>
 
-        <div className="bg-slate-900/80 p-4 rounded-xl border border-slate-800">
+        <div className="bg-surface/80 p-4 rounded-xl border border-neutral-800">
 
-          <div className="font-semibold text-slate-200 text-xs">
+          <div className="font-semibold text-neutral-200 text-xs">
 
             Просрочки live
 
           </div>
 
-          <div className="text-slate-500 text-[11px] font-normal mt-0.5">
+          <div className="text-neutral-500 text-[11px] font-normal mt-0.5">
 
             неоплаченные клиенты
 
@@ -122,15 +122,15 @@ export default function AdminAnalyticsPage({
 
         </div>
 
-        <div className="bg-slate-900/80 p-4 rounded-xl border border-slate-800">
+        <div className="bg-surface/80 p-4 rounded-xl border border-neutral-800">
 
-          <div className="font-semibold text-slate-200 text-xs">
+          <div className="font-semibold text-neutral-200 text-xs">
 
             Сделок
 
           </div>
 
-          <div className="text-slate-500 text-[11px] font-normal mt-0.5">
+          <div className="text-neutral-500 text-[11px] font-normal mt-0.5">
 
             за период
 
@@ -144,21 +144,21 @@ export default function AdminAnalyticsPage({
 
         </div>
 
-        <div className="bg-slate-900/80 p-4 rounded-xl border border-slate-800">
+        <div className="bg-surface/80 p-4 rounded-xl border border-neutral-800">
 
-          <div className="font-semibold text-slate-200 text-xs">
+          <div className="font-semibold text-neutral-200 text-xs">
 
             Свежие оплаты
 
           </div>
 
-          <div className="text-slate-500 text-[11px] font-normal mt-0.5">
+          <div className="text-neutral-500 text-[11px] font-normal mt-0.5">
 
             недавние поступления
 
           </div>
 
-          <div className="text-lg font-bold text-cyan-400 mt-1">
+          <div className="text-lg font-bold text-brand mt-1">
 
             {formatMoney(liveSummary.recentRevenue)}
 
@@ -176,19 +176,19 @@ export default function AdminAnalyticsPage({
               MM Аналитика
             </h1>
 
-            <p className="text-slate-400 mt-2">
+            <p className="text-neutral-400 mt-2">
               Панель руководителя · {data.range.label}
             </p>
           </div>
         )}
 
         {embedded && (
-          <p className="text-slate-400 text-sm">
+          <p className="text-neutral-400 text-sm">
             Период · {data.range.label}
           </p>
         )}
 
-        <div className="text-right text-sm text-slate-400">
+        <div className="text-right text-sm text-neutral-400">
 
           <div>
 
@@ -238,7 +238,7 @@ export default function AdminAnalyticsPage({
         <AnalyticsCard
           title="Средний чек"
           value={formatMoney(summary.averageCheck)}
-          accent="text-cyan-400"
+          accent="text-brand"
         />
 
         <AnalyticsCard
@@ -302,10 +302,10 @@ export default function AdminAnalyticsPage({
 
             <div
               key={item.key}
-              className="bg-gradient-to-br from-slate-900 to-slate-800 p-6 rounded-2xl border border-cyan-500/20"
+              className="bg-gradient-to-br from-surface to-surface-raised p-6 rounded-2xl border border-brand/20"
             >
 
-              <div className="text-cyan-400 font-bold">
+              <div className="text-brand font-bold">
 
                 {item.label}
 
@@ -334,7 +334,7 @@ export default function AdminAnalyticsPage({
 
               </div>
 
-              <div className="text-slate-400 text-sm mt-2">
+              <div className="text-neutral-400 text-sm mt-2">
 
                 Сделок:
 
@@ -354,7 +354,7 @@ export default function AdminAnalyticsPage({
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
 
-        <div className="bg-slate-900 p-6 rounded-2xl">
+        <div className="bg-surface p-6 rounded-2xl">
 
           <SectionHeading
             title="Динамика выручки"
@@ -368,7 +368,7 @@ export default function AdminAnalyticsPage({
 
         </div>
 
-        <div className="bg-slate-900 p-6 rounded-2xl">
+        <div className="bg-surface p-6 rounded-2xl">
 
           <SectionHeading
             title="Выручка по менеджерам"
@@ -382,7 +382,7 @@ export default function AdminAnalyticsPage({
 
         </div>
 
-        <div className="bg-slate-900 p-6 rounded-2xl">
+        <div className="bg-surface p-6 rounded-2xl">
 
           <SectionHeading
             title="Структура сделок"
@@ -396,7 +396,7 @@ export default function AdminAnalyticsPage({
 
         </div>
 
-        <div className="bg-slate-900 p-6 rounded-2xl">
+        <div className="bg-surface p-6 rounded-2xl">
 
           <SectionHeading
             title="Подписки и просрочки"
@@ -410,7 +410,7 @@ export default function AdminAnalyticsPage({
 
         </div>
 
-        <div className="bg-slate-900 p-6 rounded-2xl">
+        <div className="bg-surface p-6 rounded-2xl">
 
           <SectionHeading
             title="Нагрузка трафика"
@@ -424,7 +424,7 @@ export default function AdminAnalyticsPage({
 
         </div>
 
-        <div className="bg-slate-900 p-6 rounded-2xl">
+        <div className="bg-surface p-6 rounded-2xl">
 
           <SectionHeading
             title="KPI менеджеров"
@@ -442,7 +442,7 @@ export default function AdminAnalyticsPage({
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
 
-        <div className="bg-slate-900 p-6 rounded-2xl">
+        <div className="bg-surface p-6 rounded-2xl">
 
           <h2 className="text-2xl font-bold mb-4">
 
@@ -459,7 +459,7 @@ export default function AdminAnalyticsPage({
 
                   <div
                     key={manager.managerKey}
-                    className="bg-slate-800 p-4 rounded-xl flex justify-between items-center"
+                    className="bg-surface-raised p-4 rounded-xl flex justify-between items-center"
                   >
 
                     <div className="flex items-center gap-4">
@@ -478,7 +478,7 @@ export default function AdminAnalyticsPage({
 
                         </div>
 
-                        <div className="text-slate-400 text-sm mt-1">
+                        <div className="text-neutral-400 text-sm mt-1">
 
                           Сделок: {manager.deals}
 
@@ -508,7 +508,7 @@ export default function AdminAnalyticsPage({
 
                       </div>
 
-                      <div className="text-slate-400 text-sm">
+                      <div className="text-neutral-400 text-sm">
 
                         Средний чек: {formatMoney(manager.averageCheck)}
 
@@ -527,7 +527,7 @@ export default function AdminAnalyticsPage({
 
         </div>
 
-        <div className="bg-slate-900 p-6 rounded-2xl">
+        <div className="bg-surface p-6 rounded-2xl">
 
           <h2 className="text-2xl font-bold mb-4">
 
@@ -544,14 +544,14 @@ export default function AdminAnalyticsPage({
 
                   <div
                     key={course.course}
-                    className="bg-slate-800 p-4 rounded-xl flex justify-between"
+                    className="bg-surface-raised p-4 rounded-xl flex justify-between"
                   >
 
                     <div>
 
                       {course.course}
 
-                      <div className="text-slate-400 text-sm mt-1">
+                      <div className="text-neutral-400 text-sm mt-1">
 
                         {course.deals} сделок
 
@@ -580,7 +580,7 @@ export default function AdminAnalyticsPage({
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
 
-        <div className="bg-slate-900 p-6 rounded-2xl">
+        <div className="bg-surface p-6 rounded-2xl">
 
           <SectionHeading
             title="Обзор смен"
@@ -614,7 +614,7 @@ export default function AdminAnalyticsPage({
 
                   <div
                     key={item.managerId}
-                    className="bg-slate-800 p-4 rounded-xl"
+                    className="bg-surface-raised p-4 rounded-xl"
                   >
 
                     <div className="font-bold">
@@ -623,7 +623,7 @@ export default function AdminAnalyticsPage({
 
                     </div>
 
-                    <div className="text-slate-400 text-sm mt-1">
+                    <div className="text-neutral-400 text-sm mt-1">
 
                       {
 
@@ -664,7 +664,7 @@ export default function AdminAnalyticsPage({
 
               <div className="mt-4">
 
-                <div className="text-slate-400 mb-2">
+                <div className="text-neutral-400 mb-2">
 
                   Выходные сегодня
 
@@ -701,7 +701,7 @@ export default function AdminAnalyticsPage({
 
         </div>
 
-        <div className="bg-slate-900 p-6 rounded-2xl">
+        <div className="bg-surface p-6 rounded-2xl">
 
           <h2 className="text-2xl font-bold mb-4">
 
@@ -718,7 +718,7 @@ export default function AdminAnalyticsPage({
 
                   <div
                     key={item.managerKey}
-                    className="bg-slate-800 p-4 rounded-xl flex justify-between"
+                    className="bg-surface-raised p-4 rounded-xl flex justify-between"
                   >
 
                     <div>
@@ -729,7 +729,7 @@ export default function AdminAnalyticsPage({
 
                       </div>
 
-                      <div className="text-slate-400 text-sm mt-1">
+                      <div className="text-neutral-400 text-sm mt-1">
 
                         Выручка: {formatMoney(item.revenue)}
 
@@ -756,7 +756,7 @@ export default function AdminAnalyticsPage({
 
       </div>
 
-      <div className="bg-slate-900 p-6 rounded-2xl">
+      <div className="bg-surface p-6 rounded-2xl">
 
         <h2 className="text-2xl font-bold mb-4">
 
@@ -773,14 +773,14 @@ export default function AdminAnalyticsPage({
 
                 <div
                   key={item.managerKey}
-                  className="bg-slate-800 p-4 rounded-xl flex justify-between"
+                  className="bg-surface-raised p-4 rounded-xl flex justify-between"
                 >
 
                   <div>
 
                     {item.name}
 
-                    <div className="text-slate-400 text-sm mt-1">
+                    <div className="text-neutral-400 text-sm mt-1">
 
                       {item.count} клиентов
 
@@ -805,7 +805,7 @@ export default function AdminAnalyticsPage({
 
             !data.subscriptionStats.byManager.length && (
 
-              <div className="text-slate-400">
+              <div className="text-neutral-400">
 
                 Просрочек нет
 

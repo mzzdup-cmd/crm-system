@@ -38,7 +38,7 @@ export function VkLinkInput({
       />
 
       {showHint && (
-        <span className="text-xs text-slate-500 mt-1 block">
+        <span className="text-xs text-neutral-500 mt-1 block">
           Вставляйте прямые ссылки vk.com/id... без автоматической обработки.
         </span>
       )}

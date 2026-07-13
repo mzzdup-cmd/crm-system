@@ -284,8 +284,8 @@ export default function ManagementPage() {
       {activeTab === "schedule" && (
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-            <div className="bg-slate-900 p-6 rounded-2xl">
-              <div className="text-slate-400 mb-2">
+            <div className="bg-surface p-6 rounded-2xl">
+              <div className="text-neutral-400 mb-2">
                 Дата
               </div>
 
@@ -295,24 +295,24 @@ export default function ManagementPage() {
                 onChange={(e) =>
                   setDate(e.target.value)
                 }
-                className="w-full bg-slate-800 p-4 rounded-xl"
+                className="w-full bg-surface-raised p-4 rounded-xl"
               />
             </div>
 
-            <div className="bg-slate-900 p-6 rounded-2xl">
-              <div className="text-slate-400 mb-2">
+            <div className="bg-surface p-6 rounded-2xl">
+              <div className="text-neutral-400 mb-2">
                 Traffic amount
               </div>
 
               <MoneyInput
                 value={trafficAmount}
                 onChange={setTrafficAmount}
-                className="w-full bg-slate-800 p-4 rounded-xl"
+                className="w-full bg-surface-raised p-4 rounded-xl"
               />
             </div>
           </div>
 
-          <div className="bg-slate-900 p-6 rounded-2xl">
+          <div className="bg-surface p-6 rounded-2xl">
             <h2 className="text-2xl font-bold mb-4">
               Выходные
             </h2>
@@ -321,7 +321,7 @@ export default function ManagementPage() {
               {MANAGERS.map((manager) => (
                 <label
                   key={manager.id}
-                  className="bg-slate-800 p-4 rounded-xl flex items-center gap-3 cursor-pointer"
+                  className="bg-surface-raised p-4 rounded-xl flex items-center gap-3 cursor-pointer"
                 >
                   <input
                     type="checkbox"
@@ -344,7 +344,7 @@ export default function ManagementPage() {
               type="button"
               onClick={saveScheduleAndTraffic}
               disabled={saving}
-              className="mt-6 w-full bg-green-500 hover:bg-green-600 p-4 rounded-xl font-bold disabled:opacity-50"
+              className="mt-6 w-full crm-btn-primary hover:bg-green-600 p-4 rounded-xl font-bold disabled:opacity-50"
             >
               {saving
                 ? "Сохранение..."
@@ -364,7 +364,7 @@ export default function ManagementPage() {
               {pendingManual.map((item) => (
                 <div
                   key={item.offManagerId}
-                  className="bg-slate-900/70 p-4 rounded-xl flex flex-wrap items-center gap-3"
+                  className="bg-surface/70 p-4 rounded-xl flex flex-wrap items-center gap-3"
                 >
                   <span className="font-medium">
                     {item.offManagerName} →
@@ -384,7 +384,7 @@ export default function ManagementPage() {
                         })
                       );
                     }}
-                    className="bg-slate-800 p-2 rounded-lg min-w-[200px]"
+                    className="bg-surface-raised p-2 rounded-lg min-w-[200px]"
                   >
                     <option value="">
                       Выберите замену
@@ -410,7 +410,7 @@ export default function ManagementPage() {
                 type="button"
                 onClick={saveManualAssignments}
                 disabled={savingManual}
-                className="px-4 py-2 rounded-xl bg-amber-500 text-slate-950 font-bold disabled:opacity-50"
+                className="px-4 py-2 rounded-xl bg-amber-500 text-brand-fg font-bold disabled:opacity-50"
               >
                 {savingManual
                   ? "Сохранение..."
@@ -420,7 +420,7 @@ export default function ManagementPage() {
           )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-            <div className="bg-slate-900 p-6 rounded-2xl">
+            <div className="bg-surface p-6 rounded-2xl">
               <h2 className="text-2xl font-bold mb-4">
                 Замены
               </h2>
@@ -430,13 +430,13 @@ export default function ManagementPage() {
                   .map((item) => (
                     <div
                       key={`${item.from}-${item.to}-${item.start || ""}`}
-                      className="bg-slate-800 p-4 rounded-xl"
+                      className="bg-surface-raised p-4 rounded-xl"
                     >
                       {getManagerNameById(item.to)}
                       {" работает за "}
                       {getManagerNameById(item.from)}
                       {item.start && item.end && (
-                        <span className="block text-sm text-slate-400 mt-1">
+                        <span className="block text-sm text-neutral-400 mt-1">
                           {item.start}–{item.end} MSK
                         </span>
                       )}
@@ -444,14 +444,14 @@ export default function ManagementPage() {
                   ))}
 
                 {!(schedule?.substitutions || []).length && (
-                  <div className="text-slate-400">
+                  <div className="text-neutral-400">
                     Замен нет
                   </div>
                 )}
               </div>
             </div>
 
-            <div className="bg-slate-900 p-6 rounded-2xl">
+            <div className="bg-surface p-6 rounded-2xl">
               <h2 className="text-2xl font-bold mb-4">
                 Нагрузка команды
               </h2>
@@ -460,7 +460,7 @@ export default function ManagementPage() {
                 {teamLoad.map((item) => (
                   <div
                     key={item.managerId}
-                    className="bg-slate-800 p-4 rounded-xl flex justify-between"
+                    className="bg-surface-raised p-4 rounded-xl flex justify-between"
                   >
                     <div>
                       {getManagerNameById(
@@ -468,7 +468,7 @@ export default function ManagementPage() {
                       )}
                     </div>
 
-                    <div className="text-cyan-400">
+                    <div className="text-brand">
                       {Math.round(
                         item.share * 100
                       )}

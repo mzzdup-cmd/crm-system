@@ -17,8 +17,8 @@ export default function ConfirmModal({
     variant === "danger"
       ? "bg-red-600 hover:bg-red-700"
       : variant === "default"
-        ? "bg-cyan-600 hover:bg-cyan-700"
-        : "bg-cyan-600 hover:bg-cyan-700";
+        ? "bg-brand-muted hover:bg-brand-dim"
+        : "bg-brand-muted hover:bg-brand-dim";
 
   return (
     <div
@@ -32,7 +32,7 @@ export default function ConfirmModal({
     >
       <div
         className="
-          bg-slate-900 border border-slate-700
+          bg-surface border border-neutral-700
           rounded-2xl p-6 max-w-md w-full
           shadow-xl
         "
@@ -41,7 +41,7 @@ export default function ConfirmModal({
           {title}
         </h2>
 
-        <p className="text-slate-400 mb-6">
+        <p className="text-neutral-400 mb-6">
           {message}
         </p>
 
@@ -52,7 +52,7 @@ export default function ConfirmModal({
             disabled={loading}
             className="
               px-4 py-2 rounded-xl
-              bg-slate-800 hover:bg-slate-700
+              bg-surface-raised hover:bg-surface-hover
               disabled:opacity-50
             "
           >

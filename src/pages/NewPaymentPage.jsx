@@ -129,7 +129,7 @@ import {
 } from "../utils/moneyFormat";
 
 const inputClass =
-  "w-full bg-slate-800 p-3.5 rounded-xl";
+  "w-full bg-surface-raised p-3.5 rounded-xl";
 
 function FieldLabel({
   children,
@@ -137,7 +137,7 @@ function FieldLabel({
 }) {
   return (
     <div className="flex items-center justify-between gap-2 mb-1">
-      <span className="text-sm text-slate-400">
+      <span className="text-sm text-neutral-400">
         {children}
       </span>
       {done ? (
@@ -171,7 +171,7 @@ function LegacyTtDealTypeSelect({
 }) {
   return (
     <label className="block">
-      <span className="text-sm text-slate-400">
+      <span className="text-sm text-neutral-400">
         Тип сделки для ТТ *
       </span>
       <select
@@ -192,7 +192,7 @@ function LegacyTtDealTypeSelect({
           )
         )}
       </select>
-      <p className="text-slate-500 text-xs mt-1.5">
+      <p className="text-neutral-500 text-xs mt-1.5">
         Этот тип попадёт в колонку B Google ТТ
       </p>
     </label>
@@ -1580,11 +1580,11 @@ export default function NewPaymentPage() {
       />
 
       {pendingSale && (
-        <div className="bg-cyan-500/10 border border-cyan-500/30 p-4 rounded-2xl text-sm">
-          <div className="font-bold text-cyan-300 mb-1">
+        <div className="bg-brand/10 border border-brand/30 p-4 rounded-2xl text-sm">
+          <div className="font-bold text-brand mb-1">
             Временная продажа
           </div>
-          <div className="text-slate-300">
+          <div className="text-neutral-300">
             KPI и выручка будут начислены:{" "}
             <strong>
               {getManagerNameById(
@@ -1594,14 +1594,14 @@ export default function NewPaymentPage() {
           </div>
           <Link
             to="/pending-sales"
-            className="text-cyan-400 text-xs mt-2 inline-block hover:underline"
+            className="text-brand text-xs mt-2 inline-block hover:underline"
           >
             ← Назад к списку
           </Link>
         </div>
       )}
 
-      <div className="bg-slate-900 p-5 md:p-6 rounded-2xl max-w-2xl space-y-1">
+      <div className="bg-surface p-5 md:p-6 rounded-2xl max-w-2xl space-y-1">
         {!dealTypeKnown && dealTypeId && (
           <div className="mb-4 bg-amber-500/10 border border-amber-500/30 p-4 rounded-xl text-sm text-amber-200">
             Неизвестный тип сделки. Выберите
@@ -1633,7 +1633,7 @@ export default function NewPaymentPage() {
               <button
                 type="button"
                 onClick={resetLegacyEntryMode}
-                className="text-sm text-slate-400 hover:text-slate-200 mb-2"
+                className="text-sm text-neutral-400 hover:text-neutral-200 mb-2"
               >
                 ← Другой тип сделки
               </button>
@@ -1671,8 +1671,8 @@ export default function NewPaymentPage() {
                   )
                 }
                 className="
-                  w-full bg-slate-800 hover:bg-slate-700
-                  border border-slate-600 p-3.5
+                  w-full bg-surface-raised hover:bg-surface-hover
+                  border border-neutral-600 p-3.5
                   rounded-xl font-semibold
                   disabled:opacity-50
                 "
@@ -1775,7 +1775,7 @@ export default function NewPaymentPage() {
                   )}
 
                   <label className="block">
-                    <span className="text-sm text-slate-400">
+                    <span className="text-sm text-neutral-400">
                       Дата оплаты *
                     </span>
                     <input
@@ -1999,7 +1999,7 @@ export default function NewPaymentPage() {
                   />
 
                   <label className="block">
-                    <span className="text-sm text-slate-400">
+                    <span className="text-sm text-neutral-400">
                       Дата первого контакта *
                     </span>
                     <input
@@ -2015,7 +2015,7 @@ export default function NewPaymentPage() {
                   </label>
 
                   <label className="block">
-                    <span className="text-sm text-slate-400">
+                    <span className="text-sm text-neutral-400">
                       Откуда (traffic) *
                     </span>
                     <div className="mt-1">
@@ -2064,7 +2064,7 @@ export default function NewPaymentPage() {
                   )}
 
                   <label className="block">
-                    <span className="text-sm text-slate-400">
+                    <span className="text-sm text-neutral-400">
                       Дата оплаты *
                     </span>
                     <input
@@ -2336,7 +2336,7 @@ export default function NewPaymentPage() {
 
             <FormSection title="Даты">
               <label className="block">
-                <span className="text-sm text-slate-400">
+                <span className="text-sm text-neutral-400">
                   Дата оплаты *
                 </span>
                 <input
@@ -2352,7 +2352,7 @@ export default function NewPaymentPage() {
               </label>
 
               <label className="block">
-                <span className="text-sm text-slate-400">
+                <span className="text-sm text-neutral-400">
                   Первый контакт
                 </span>
                 <input
@@ -2397,7 +2397,7 @@ export default function NewPaymentPage() {
 
             <FormSection title="Источник">
               <label className="block">
-                <span className="text-sm text-slate-400">
+                <span className="text-sm text-neutral-400">
                   Откуда (traffic) *
                 </span>
                 <div className="mt-1">
@@ -2493,7 +2493,7 @@ export default function NewPaymentPage() {
                 }
                 disabled={submitting}
                 className="
-                  w-full bg-green-500
+                  w-full crm-btn-primary
                   hover:bg-green-600 p-4
                   rounded-xl font-bold
                   disabled:opacity-50
@@ -2560,7 +2560,7 @@ export default function NewPaymentPage() {
                 </label>
 
                 {foundClient && (
-                  <div className="bg-slate-800/60 p-4 rounded-xl text-sm space-y-2">
+                  <div className="bg-surface-raised/60 p-4 rounded-xl text-sm space-y-2">
                     <div className="text-green-400 font-bold">
                       Клиент найден ✅
                     </div>
@@ -2569,7 +2569,7 @@ export default function NewPaymentPage() {
                         "—"}{" "}
                       · {foundClient.course}
                     </div>
-                    <div className="text-slate-400">
+                    <div className="text-neutral-400">
                       Остаток:{" "}
                       {getRemain(
                         foundClient
@@ -2578,7 +2578,7 @@ export default function NewPaymentPage() {
                     </div>
                     {(foundClient.sourceName ||
                       foundClient.source) && (
-                      <div className="text-slate-400">
+                      <div className="text-neutral-400">
                         Traffic:{" "}
                         {foundClient.sourceName ||
                           foundClient.source}
@@ -2797,7 +2797,7 @@ export default function NewPaymentPage() {
 
                     {isLegacyClientMode && (
                       <label className="block">
-                        <span className="text-sm text-slate-400">
+                        <span className="text-sm text-neutral-400">
                           Дата первого контакта *
                         </span>
                         <input
@@ -2855,7 +2855,7 @@ export default function NewPaymentPage() {
                   {isLegacyClientMode && (
                     <FormSection title="Источник">
                       <label className="block">
-                        <span className="text-sm text-slate-400">
+                        <span className="text-sm text-neutral-400">
                           Откуда (traffic) *
                         </span>
                         <div className="mt-1">
@@ -2981,7 +2981,7 @@ export default function NewPaymentPage() {
                       }
                       disabled={submitting}
                       className="
-                        w-full bg-green-500
+                        w-full crm-btn-primary
                         hover:bg-green-600 p-4
                         rounded-xl font-bold
                         disabled:opacity-50

@@ -84,7 +84,7 @@ function LoadErrorState({
           ? "Загрузка занимает слишком много времени"
           : "Не удалось загрузить платежи"}
       </div>
-      <p className="text-sm text-slate-400">
+      <p className="text-sm text-neutral-400">
         {message}
       </p>
       <button
@@ -375,9 +375,9 @@ export default function PaymentsPage({
             )
           }
           className="
-            w-full bg-slate-900 p-4 rounded-2xl
-            border border-slate-800
-            focus:border-cyan-500/50 outline-none
+            w-full bg-surface p-4 rounded-2xl
+            border border-neutral-800
+            focus:border-brand/50 outline-none
           "
         />
       )}
@@ -458,8 +458,8 @@ export default function PaymentsPage({
                 <div
                   key={payment.id}
                   className="
-                    bg-slate-900 p-5 md:p-6 rounded-2xl
-                    hover:bg-slate-800/80 transition-colors
+                    bg-surface p-5 md:p-6 rounded-2xl
+                    hover:bg-surface-raised/80 transition-colors
                   "
                 >
                   <div className="flex flex-col sm:flex-row sm:justify-between gap-4">
@@ -473,14 +473,14 @@ export default function PaymentsPage({
                             "Без имени"}
                       </div>
 
-                      <div className="text-slate-400 mt-2 text-sm break-all">
+                      <div className="text-neutral-400 mt-2 text-sm break-all">
                         {legacy
                           ? `${payment.course || "—"} · ${payment.dialogLink || "—"}`
                           : `${payment.course} · ${payment.manager}`}
                       </div>
 
                       {!legacy && (
-                        <div className="text-slate-500 mt-1 text-sm">
+                        <div className="text-neutral-500 mt-1 text-sm">
                           {payment.manager}
                         </div>
                       )}
@@ -493,7 +493,7 @@ export default function PaymentsPage({
                         )}
                       </div>
 
-                      <div className="text-slate-400 mt-1 text-sm">
+                      <div className="text-neutral-400 mt-1 text-sm">
                         {payment.paymentDate}
                       </div>
 
@@ -522,8 +522,8 @@ export default function PaymentsPage({
                   </div>
 
                   <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 text-sm">
-                    <div className="bg-slate-800/60 p-3 rounded-xl">
-                      <div className="text-slate-400">
+                    <div className="bg-surface-raised/60 p-3 rounded-xl">
+                      <div className="text-neutral-400">
                         Тип сделки
                       </div>
                       <div className="mt-1">
@@ -531,8 +531,8 @@ export default function PaymentsPage({
                       </div>
                     </div>
 
-                    <div className="bg-slate-800/60 p-3 rounded-xl">
-                      <div className="text-slate-400">
+                    <div className="bg-surface-raised/60 p-3 rounded-xl">
+                      <div className="text-neutral-400">
                         Платежка
                       </div>
                       <div className="mt-1">
@@ -541,8 +541,8 @@ export default function PaymentsPage({
                       </div>
                     </div>
 
-                    <div className="bg-slate-800/60 p-3 rounded-xl">
-                      <div className="text-slate-400">
+                    <div className="bg-surface-raised/60 p-3 rounded-xl">
+                      <div className="text-neutral-400">
                         Счёт
                       </div>
                       <div className="mt-1 break-all">
@@ -551,8 +551,8 @@ export default function PaymentsPage({
                       </div>
                     </div>
 
-                    <div className="bg-slate-800/60 p-3 rounded-xl">
-                      <div className="text-slate-400">
+                    <div className="bg-surface-raised/60 p-3 rounded-xl">
+                      <div className="text-neutral-400">
                         Поток
                       </div>
                       <div className="mt-1">
@@ -569,7 +569,7 @@ export default function PaymentsPage({
                   </div>
 
                   {payment.comment && (
-                    <div className="mt-4 bg-slate-800 p-3 rounded-xl text-sm text-slate-300">
+                    <div className="mt-4 bg-surface-raised p-3 rounded-xl text-sm text-neutral-300">
                       {payment.comment}
                     </div>
                   )}
@@ -587,7 +587,7 @@ export default function PaymentsPage({
                           }
                           className="
                             px-4 py-2 rounded-xl
-                            bg-cyan-600 hover:bg-cyan-700
+                            bg-brand-muted hover:bg-brand-dim
                             text-sm font-semibold
                           "
                         >

@@ -34,7 +34,7 @@ function statusBadge(status) {
   }
 
   return (
-    <span className="text-slate-500 text-xs font-bold uppercase">
+    <span className="text-neutral-500 text-xs font-bold uppercase">
 
       Отклонено
 
@@ -62,9 +62,9 @@ export default function PendingSaleCard({
   return (
     <div
       className="
-        bg-slate-900 border border-slate-800
+        bg-surface border border-neutral-800
         p-4 md:p-5 rounded-2xl
-        hover:border-slate-700 transition-colors
+        hover:border-neutral-700 transition-colors
       "
     >
 
@@ -78,7 +78,7 @@ export default function PendingSaleCard({
 
           </div>
 
-          <div className="text-slate-400 text-sm mt-1">
+          <div className="text-neutral-400 text-sm mt-1">
 
             {sale.paymentDate}
 
@@ -94,7 +94,7 @@ export default function PendingSaleCard({
 
         <div className="flex justify-between gap-4">
 
-          <span className="text-slate-400">
+          <span className="text-neutral-400">
 
             Владелец
 
@@ -110,7 +110,7 @@ export default function PendingSaleCard({
 
         <div className="flex justify-between gap-4">
 
-          <span className="text-slate-400">
+          <span className="text-neutral-400">
 
             Внёс
 
@@ -132,7 +132,7 @@ export default function PendingSaleCard({
 
                   <div className="flex justify-between gap-4 flex-1 min-w-[140px]">
 
-                    <span className="text-slate-400">
+                    <span className="text-neutral-400">
 
                       Тип
 
@@ -156,7 +156,7 @@ export default function PendingSaleCard({
 
                   <div className="flex justify-between gap-4 flex-1 min-w-[140px]">
 
-                    <span className="text-slate-400">
+                    <span className="text-neutral-400">
 
                       Курс
 
@@ -178,7 +178,7 @@ export default function PendingSaleCard({
 
         <div>
 
-          <div className="text-slate-400 mb-1">
+          <div className="text-neutral-400 mb-1">
 
             Диалог
 
@@ -188,7 +188,7 @@ export default function PendingSaleCard({
             href={sale.dialogLink}
             target="_blank"
             rel="noreferrer"
-            className="text-cyan-400 break-all hover:underline"
+            className="text-brand break-all hover:underline"
           >
 
             {sale.dialogLink}
@@ -201,7 +201,7 @@ export default function PendingSaleCard({
 
           sale.comment && (
 
-            <div className="bg-slate-800/80 p-3 rounded-xl text-slate-300">
+            <div className="bg-surface-raised/80 p-3 rounded-xl text-neutral-300">
 
               {sale.comment}
 
@@ -218,14 +218,14 @@ export default function PendingSaleCard({
         (showActions || canDelete) &&
         sale.status === PENDING_SALE_STATUS.PENDING && (
 
-          <div className="flex flex-col sm:flex-row gap-2 mt-4 pt-4 border-t border-slate-800">
+          <div className="flex flex-col sm:flex-row gap-2 mt-4 pt-4 border-t border-neutral-800">
 
             {showActions && (
               <Link
                 to={`/new-payment?pendingSale=${sale.id}`}
                 className="
                   flex-1 text-center py-3 rounded-xl font-bold
-                  bg-green-500 hover:bg-green-400 transition-colors
+                  crm-btn-primary hover:opacity-90 transition-colors
                 "
               >
 
@@ -241,8 +241,8 @@ export default function PendingSaleCard({
                 disabled={rejecting || deleting}
                 className="
                   flex-1 py-3 rounded-xl font-bold
-                  bg-slate-800 hover:bg-slate-700
-                  text-slate-300 disabled:opacity-50
+                  bg-surface-raised hover:bg-surface-hover
+                  text-neutral-300 disabled:opacity-50
                 "
               >
 

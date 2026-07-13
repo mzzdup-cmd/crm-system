@@ -32,7 +32,7 @@ export const NOTIFICATION_TYPE_CONFIG = {
     label: "Замена",
     icon: "🔄",
     priority: NOTIFICATION_PRIORITY.MEDIUM,
-    color: "text-cyan-400",
+    color: "text-brand",
   },
   [NOTIFICATION_TYPES.TRAFFIC_OVERLOAD]: {
     label: "Нагрузка трафика",
@@ -44,13 +44,13 @@ export const NOTIFICATION_TYPE_CONFIG = {
     label: "Изменение расписания",
     icon: "📋",
     priority: NOTIFICATION_PRIORITY.LOW,
-    color: "text-slate-300",
+    color: "text-neutral-300",
   },
   [NOTIFICATION_TYPES.PENDING_SALE]: {
     label: "Временная продажа",
     icon: "⚡",
     priority: NOTIFICATION_PRIORITY.HIGH,
-    color: "text-cyan-400",
+    color: "text-brand",
   },
   [NOTIFICATION_TYPES.MISSING_VK_LINK]: {
     label: "Нужно дозаполнить",
@@ -78,7 +78,7 @@ export function getNotificationConfig(type) {
       label: "Уведомление",
       icon: "🔔",
       priority: NOTIFICATION_PRIORITY.LOW,
-      color: "text-slate-300",
+      color: "text-neutral-300",
     }
   );
 }

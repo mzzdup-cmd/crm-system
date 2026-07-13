@@ -136,7 +136,7 @@ export default function DealsPage({
         </h1>
       )}
 
-      <div className="bg-slate-900 rounded-2xl p-6 mb-8">
+      <div className="bg-surface rounded-2xl p-6 mb-8">
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
@@ -146,7 +146,7 @@ export default function DealsPage({
             onChange={(e) =>
               setSearch(e.target.value)
             }
-            className="bg-slate-800 p-3 rounded-xl"
+            className="bg-surface-raised p-3 rounded-xl"
           />
 
           <select
@@ -156,7 +156,7 @@ export default function DealsPage({
                 e.target.value
               )
             }
-            className="bg-slate-800 p-3 rounded-xl"
+            className="bg-surface-raised p-3 rounded-xl"
           >
 
             <option value="">
@@ -191,7 +191,7 @@ export default function DealsPage({
           <Link
             to={`/client/${client.id}`}
             key={client.id}
-            className="bg-slate-900 rounded-2xl p-6 block"
+            className="bg-surface rounded-2xl p-6 block"
           >
 
             <div className="flex justify-between">
@@ -204,25 +204,25 @@ export default function DealsPage({
 
                 </div>
 
-                <div className="text-slate-400 mt-2">
+                <div className="text-neutral-400 mt-2">
 
                   {client.dealType}
 
                 </div>
 
-                <div className="text-slate-400">
+                <div className="text-neutral-400">
 
                   {client.course}
 
                 </div>
 
-                <div className="text-slate-400">
+                <div className="text-neutral-400">
 
                   {client.tariff}
 
                 </div>
 
-                <div className="text-slate-400 mt-4 break-all">
+                <div className="text-neutral-400 mt-4 break-all">
 
                   {client.dialogLink}
 
@@ -238,7 +238,7 @@ export default function DealsPage({
 
                 </div>
 
-                <div className="text-slate-400 mt-2">
+                <div className="text-neutral-400 mt-2">
 
                   Бюджет:
 
@@ -294,7 +294,7 @@ export default function DealsPage({
 
                 <div
                   key={payment.id}
-                  className="bg-slate-900 p-4 rounded-2xl"
+                  className="bg-surface p-4 rounded-2xl"
                 >
 
                   <div className="font-bold">
@@ -307,7 +307,7 @@ export default function DealsPage({
 
                   </div>
 
-                  <div className="text-slate-400 mt-2">
+                  <div className="text-neutral-400 mt-2">
 
                     {
 

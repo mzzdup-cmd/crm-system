@@ -71,11 +71,11 @@ export default function NotificationItem({
     <div
       className={`
         flex gap-3 p-4 rounded-xl transition-all duration-200
-        hover:bg-slate-800/80
+        hover:bg-surface-raised/80
         ${
           notification.read || isDone
             ? "opacity-70"
-            : "bg-slate-800/40"
+            : "bg-surface-raised/40"
         }
       `}
     >
@@ -97,7 +97,7 @@ export default function NotificationItem({
 
           </div>
 
-          <div className="text-xs text-slate-500 shrink-0">
+          <div className="text-xs text-neutral-500 shrink-0">
 
             {formatTime(notification.createdAt)}
 
@@ -107,7 +107,7 @@ export default function NotificationItem({
 
         <div
           className={`
-            text-slate-300 mt-1
+            text-neutral-300 mt-1
             ${compact ? "text-sm line-clamp-2" : "text-sm"}
           `}
         >
@@ -130,8 +130,8 @@ export default function NotificationItem({
                 onClick={handleMarkRead}
                 className="
                   px-2.5 py-1 rounded-lg text-xs
-                  bg-slate-700 text-slate-200
-                  hover:bg-slate-600 transition-colors
+                  bg-surface-hover text-neutral-200
+                  hover:bg-neutral-600 transition-colors
                 "
               >
                 Прочитано
@@ -144,8 +144,8 @@ export default function NotificationItem({
                 onClick={handleResolve}
                 className="
                   px-2.5 py-1 rounded-lg text-xs
-                  bg-cyan-500/20 text-cyan-300
-                  hover:bg-cyan-500/30 transition-colors
+                  bg-brand/15 text-brand
+                  hover:bg-brand/20 transition-colors
                 "
               >
                 Исполнено
@@ -158,7 +158,7 @@ export default function NotificationItem({
 
           !notification.read && !isDone && (
 
-            <div className="mt-2 w-2 h-2 rounded-full bg-cyan-400" />
+            <div className="mt-2 w-2 h-2 rounded-full bg-brand" />
 
           )
 
