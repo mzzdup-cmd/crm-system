@@ -3,12 +3,12 @@ import {
   SHIFT_END,
   PERMANENT_SUBSTITUTION_PAIRS,
   GROUP_OFFDAY_MANAGER_IDS,
-} from "../../constants/schedule";
+} from "../../constants/schedule.js";
 
 import {
   MANAGERS,
   getManagerNameById,
-} from "../../constants/managers";
+} from "../../constants/managers.js";
 
 export const REPLACEMENT_PAIRS =
   PERMANENT_SUBSTITUTION_PAIRS;

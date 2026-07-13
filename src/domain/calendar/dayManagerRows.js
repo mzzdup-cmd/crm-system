@@ -1,4 +1,4 @@
-import { MANAGERS } from "../../constants/managers";
+import { MANAGERS } from "../../constants/managers.js";
 
 import {
   getManagerInitials,
@@ -6,18 +6,18 @@ import {
 
 import {
   getManagerNameById,
-} from "../../constants/managers";
+} from "../../constants/managers.js";
 
 import {
   buildScheduleDocument,
   getManagerShiftInfo,
   resolveEffectiveSchedule,
-} from "../schedule/scheduleLogic";
+} from "../schedule/scheduleLogic.js";
 
 import {
   buildReplacementTooltip,
   normalizeReplacementManagerId,
-} from "./replacementLogic";
+} from "./replacementLogic.js";
 
 function getShortManagerLabel(managerId) {
   const name =
