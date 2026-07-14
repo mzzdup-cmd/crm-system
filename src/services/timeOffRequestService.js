@@ -4,11 +4,13 @@ import {
   addDoc,
   doc,
   updateDoc,
+  deleteDoc,
 } from "firebase/firestore";
 
 import { db } from "./firebase";
 
 import {
+  managerRequestMatchesUser,
   normalizeManagerFields,
 } from "../domain/auth/managerMigration";
 
@@ -31,6 +33,7 @@ import {
 
 import {
   applyApprovedDayOff,
+  removeApprovedDayOff,
 } from "../domain/schedule/applyApprovedTimeOff";
 
 import {
@@ -159,4 +162,79 @@ export async function reviewTimeOffRequest({
     requestId,
     status,
   };
+}
+
+function canDeleteTimeOffRequest(
+  request,
+  userData
+) {
+  if (isLeadership(userData)) {
+    return true;
+  }
+
+  return (
+    managerRequestMatchesUser(
+      request,
+      userData
+    ) &&
+    (
+      request.status ===
+        REQUEST_STATUS.PENDING ||
+      request.status ===
+        REQUEST_STATUS.APPROVED
+    )
+  );
+}
+
+export async function deleteTimeOffRequest({
+  requestId,
+  userData,
+}) {
+  const requestRef = doc(
+    db,
+    "timeOffRequests",
+    requestId
+  );
+
+  const snapshot =
+    await getDoc(requestRef);
+
+  if (!snapshot.exists()) {
+    throw new Error(
+      "Запрос не найден"
+    );
+  }
+
+  const request = {
+    id: snapshot.id,
+    ...snapshot.data(),
+    status: normalizeRequestStatus(
+      snapshot.data().status
+    ),
+  };
+
+  if (
+    !canDeleteTimeOffRequest(
+      request,
+      userData
+    )
+  ) {
+    throw new Error(
+      "Нет прав на удаление"
+    );
+  }
+
+  if (
+    request.status ===
+    REQUEST_STATUS.APPROVED
+  ) {
+    await removeApprovedDayOff({
+      date: request.date,
+      managerId: request.managerId,
+    });
+  }
+
+  await deleteDoc(requestRef);
+
+  return { requestId };
 }

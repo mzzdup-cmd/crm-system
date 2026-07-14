@@ -15,6 +15,7 @@ import {
 import {
   enumerateDateRange,
   mergeOffDays,
+  removeOffDays,
 } from "./timeOffDates";
 
 import {
@@ -55,6 +56,76 @@ async function applyOffDayForDate(
   });
 
   return schedule;
+}
+
+async function removeOffDayForDate(
+  date,
+  managerId
+) {
+  const existing =
+    (await getScheduleByDate(date)) ||
+    buildScheduleDocument(date);
+
+  const offDays = removeOffDays(
+    existing.offDays || [],
+    managerId
+  );
+
+  const schedule =
+    await updateScheduleOffDays(
+      date,
+      offDays,
+      { existing }
+    );
+
+  const traffic =
+    await getTrafficByDate(date);
+
+  await updateTrafficAmount(
+    date,
+    schedule,
+    Number(traffic?.trafficAmount || 0)
+  );
+
+  await syncSubstitutionNotifications({
+    schedule,
+  });
+
+  return schedule;
+}
+
+export async function removeApprovedDayOff({
+  date,
+  managerId,
+}) {
+  return removeOffDayForDate(
+    date,
+    managerId
+  );
+}
+
+export async function removeApprovedVacation({
+  startDate,
+  endDate,
+  managerId,
+}) {
+  const dates = enumerateDateRange(
+    startDate,
+    endDate
+  );
+
+  const results = [];
+
+  for (const date of dates) {
+    results.push(
+      await removeOffDayForDate(
+        date,
+        managerId
+      )
+    );
+  }
+
+  return results;
 }
 
 export async function applyApprovedDayOff({

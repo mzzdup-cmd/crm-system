@@ -1,7 +1,7 @@
 import {
   managerIdsMatch,
   managerRequestMatchesUser,
-} from "../auth/managerMigration";
+} from "../auth/managerMigration.js";
 
 export function enumerateDateRange(
   startDate,
@@ -49,6 +49,19 @@ export function mergeOffDays(
       managerId,
     ]),
   ];
+}
+
+export function removeOffDays(
+  existingOffDays = [],
+  managerId
+) {
+  if (!managerId) {
+    return [...existingOffDays];
+  }
+
+  return existingOffDays.filter(
+    (id) => !managerIdsMatch(id, managerId)
+  );
 }
 
 export function isDateWithinRange(

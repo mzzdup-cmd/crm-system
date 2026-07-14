@@ -4,11 +4,13 @@ import {
   addDoc,
   doc,
   updateDoc,
+  deleteDoc,
 } from "firebase/firestore";
 
 import { db } from "./firebase";
 
 import {
+  managerRequestMatchesUser,
   normalizeManagerFields,
 } from "../domain/auth/managerMigration";
 
@@ -35,6 +37,7 @@ import {
 
 import {
   applyApprovedVacation,
+  removeApprovedVacation,
 } from "../domain/schedule/applyApprovedTimeOff";
 
 import {
@@ -178,4 +181,80 @@ export async function reviewVacationRequest({
     requestId,
     status,
   };
+}
+
+function canDeleteVacationRequest(
+  request,
+  userData
+) {
+  if (isLeadership(userData)) {
+    return true;
+  }
+
+  return (
+    managerRequestMatchesUser(
+      request,
+      userData
+    ) &&
+    (
+      request.status ===
+        REQUEST_STATUS.PENDING ||
+      request.status ===
+        REQUEST_STATUS.APPROVED
+    )
+  );
+}
+
+export async function deleteVacationRequest({
+  requestId,
+  userData,
+}) {
+  const requestRef = doc(
+    db,
+    "vacationRequests",
+    requestId
+  );
+
+  const snapshot =
+    await getDoc(requestRef);
+
+  if (!snapshot.exists()) {
+    throw new Error(
+      "Запрос не найден"
+    );
+  }
+
+  const request = {
+    id: snapshot.id,
+    ...snapshot.data(),
+    status: normalizeRequestStatus(
+      snapshot.data().status
+    ),
+  };
+
+  if (
+    !canDeleteVacationRequest(
+      request,
+      userData
+    )
+  ) {
+    throw new Error(
+      "Нет прав на удаление"
+    );
+  }
+
+  if (
+    request.status ===
+    REQUEST_STATUS.APPROVED
+  ) {
+    await removeApprovedVacation({
+      startDate: request.startDate,
+      endDate: request.endDate,
+      managerId: request.managerId,
+    });
+  }
+
+  await deleteDoc(requestRef);
+
+  return { requestId };
 }

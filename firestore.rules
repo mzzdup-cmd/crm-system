@@ -854,7 +854,15 @@ service cloud.firestore {
 
       allow update: if isLeadership();
 
-      allow delete: if false;
+      allow delete: if isLeadership()
+        || (
+          isSignedIn()
+          && isOwnTimeOffRequest(resource.data)
+          && (
+            resource.data.status == 'pending'
+            || resource.data.status == 'approved'
+          )
+        );
     }
 
     match /vacationRequests/{requestId} {
@@ -868,7 +876,15 @@ service cloud.firestore {
 
       allow update: if isLeadership();
 
-      allow delete: if false;
+      allow delete: if isLeadership()
+        || (
+          isSignedIn()
+          && isOwnTimeOffRequest(resource.data)
+          && (
+            resource.data.status == 'pending'
+            || resource.data.status == 'approved'
+          )
+        );
     }
 
     match /calendarEvents/{eventId} {

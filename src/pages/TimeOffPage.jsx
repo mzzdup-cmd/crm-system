@@ -19,11 +19,13 @@ from "../hooks/useOperationalRequests";
 import {
   createTimeOffRequest,
   reviewTimeOffRequest,
+  deleteTimeOffRequest,
 } from "../services/timeOffRequestService";
 
 import {
   createVacationRequest,
   reviewVacationRequest,
+  deleteVacationRequest,
 } from "../services/vacationRequestService";
 
 import {
@@ -40,6 +42,9 @@ from "../components/ui/PageHeader";
 
 import LoadingState
 from "../components/LoadingState";
+
+import ConfirmModal
+from "../components/ui/ConfirmModal";
 
 const inputClass =
   "w-full bg-surface-raised p-3.5 rounded-xl";
@@ -91,6 +96,9 @@ export default function TimeOffPage({
 
   const [submitting, setSubmitting] =
     useState(false);
+
+  const [deleteTarget, setDeleteTarget] =
+    useState(null);
 
   const actor = userData
     ? {
@@ -213,6 +221,68 @@ export default function TimeOffPage({
     }
   }
 
+  async function handleDeleteConfirm() {
+    if (!deleteTarget || !actor) {
+      return;
+    }
+
+    setSubmitting(true);
+
+    try {
+      if (deleteTarget.type === "dayOff") {
+        await deleteTimeOffRequest({
+          requestId: deleteTarget.requestId,
+          userData: actor,
+        });
+      } else {
+        await deleteVacationRequest({
+          requestId: deleteTarget.requestId,
+          userData: actor,
+        });
+      }
+
+      toast.success(
+        deleteTarget.wasApproved
+          ? "Отсутствие удалено, календарь обновлён"
+          : "Запрос удалён"
+      );
+      setDeleteTarget(null);
+    } catch (error) {
+      toast.error(error.message);
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  function canDeleteRequest(request) {
+    if (!actor) {
+      return false;
+    }
+
+    if (isLeadership) {
+      return (
+        request.status ===
+          REQUEST_STATUS.PENDING ||
+        request.status ===
+          REQUEST_STATUS.APPROVED
+      );
+    }
+
+    const isOwn =
+      request.managerId === actor.managerId ||
+      request.createdBy === actor.uid;
+
+    return (
+      isOwn &&
+      (
+        request.status ===
+          REQUEST_STATUS.PENDING ||
+        request.status ===
+          REQUEST_STATUS.APPROVED
+      )
+    );
+  }
+
   if (loading) {
     return (
       <LoadingState message="Загрузка запросов..." />
@@ -243,6 +313,17 @@ export default function TimeOffPage({
                   request={request}
                   type="dayOff"
                   onReview={handleReview}
+                  onDelete={
+                    canDeleteRequest(request)
+                      ? () =>
+                          setDeleteTarget({
+                            type: "dayOff",
+                            requestId: request.id,
+                            label: `${request.manager || getManagerNameById(request.managerId)} — ${request.date}`,
+                            wasApproved: false,
+                          })
+                      : null
+                  }
                   submitting={submitting}
                 />
               )
@@ -255,6 +336,17 @@ export default function TimeOffPage({
                   request={request}
                   type="vacation"
                   onReview={handleReview}
+                  onDelete={
+                    canDeleteRequest(request)
+                      ? () =>
+                          setDeleteTarget({
+                            type: "vacation",
+                            requestId: request.id,
+                            label: `${request.manager || getManagerNameById(request.managerId)} — ${request.startDate} — ${request.endDate}`,
+                            wasApproved: false,
+                          })
+                      : null
+                  }
                   submitting={submitting}
                 />
               )
@@ -392,6 +484,19 @@ export default function TimeOffPage({
                 ? handleReview
                 : null
             }
+            onDelete={
+              canDeleteRequest(request)
+                ? () =>
+                    setDeleteTarget({
+                      type: "dayOff",
+                      requestId: request.id,
+                      label: `${request.manager || getManagerNameById(request.managerId)} — ${request.date}`,
+                      wasApproved:
+                        request.status ===
+                        REQUEST_STATUS.APPROVED,
+                    })
+                : null
+            }
             submitting={submitting}
           />
         ))}
@@ -406,10 +511,42 @@ export default function TimeOffPage({
                 ? handleReview
                 : null
             }
+            onDelete={
+              canDeleteRequest(request)
+                ? () =>
+                    setDeleteTarget({
+                      type: "vacation",
+                      requestId: request.id,
+                      label: `${request.manager || getManagerNameById(request.managerId)} — ${request.startDate} — ${request.endDate}`,
+                      wasApproved:
+                        request.status ===
+                        REQUEST_STATUS.APPROVED,
+                    })
+                : null
+            }
             submitting={submitting}
           />
         ))}
       </section>
+
+      <ConfirmModal
+        open={Boolean(deleteTarget)}
+        title="Удалить отсутствие?"
+        message={
+          deleteTarget
+            ? deleteTarget.wasApproved
+              ? `${deleteTarget.label} — строка исчезнет из календаря команды.`
+              : `Удалить запрос: ${deleteTarget.label}?`
+            : ""
+        }
+        confirmLabel="Удалить"
+        variant="danger"
+        loading={submitting}
+        onConfirm={handleDeleteConfirm}
+        onCancel={() =>
+          setDeleteTarget(null)
+        }
+      />
 
       <Link
         to="/"
@@ -425,11 +562,16 @@ function RequestRow({
   request,
   type,
   onReview,
+  onDelete,
   submitting,
 }) {
   const isPending =
     request.status ===
     REQUEST_STATUS.PENDING;
+
+  const isApproved =
+    request.status ===
+    REQUEST_STATUS.APPROVED;
 
   return (
     <div className="bg-surface rounded-2xl p-4 md:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -497,6 +639,19 @@ function RequestRow({
             Отклонить
           </button>
         </div>
+      )}
+
+      {onDelete && (isPending || isApproved) && (
+        <button
+          type="button"
+          disabled={submitting}
+          onClick={onDelete}
+          className="px-4 py-2 rounded-xl bg-red-500/15 text-red-300 border border-red-500/30 hover:bg-red-500/25 disabled:opacity-50 shrink-0"
+        >
+          {isApproved
+            ? "Удалить"
+            : "Отменить запрос"}
+        </button>
       )}
     </div>
   );
