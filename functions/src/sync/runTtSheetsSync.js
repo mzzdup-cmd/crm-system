@@ -44,6 +44,47 @@ const {
 
 const STALE_VK_BATCH_LIMIT = 50;
 const TT_ROW_DELETION_BATCH_LIMIT = 30;
+const APPEND_RETRY_ATTEMPTS = 2;
+
+function isTransientSheetsError(error) {
+  const message = String(
+    error?.message || error
+  );
+
+  return /429|503|502|500|timeout|ECONNRESET|ETIMEDOUT|rate limit|backend error/i.test(
+    message
+  );
+}
+
+async function appendTtRowWithRetry(options) {
+  let lastError = null;
+
+  for (
+    let attempt = 1;
+    attempt <= APPEND_RETRY_ATTEMPTS;
+    attempt += 1
+  ) {
+    try {
+      return await appendTtRow(options);
+    } catch (error) {
+      lastError = error;
+
+      if (
+        !isTransientSheetsError(error) ||
+        attempt >= APPEND_RETRY_ATTEMPTS
+      ) {
+        throw error;
+      }
+
+      console.warn(
+        "[tt-sync] Transient append error, retrying:",
+        error.message || error
+      );
+    }
+  }
+
+  throw lastError;
+}
 
 function getDb() {
   return admin.firestore();
@@ -88,30 +129,38 @@ async function recoverMisroutedTopupPayments(
       continue;
     }
 
-    await getDb()
-      .collection("payments")
-      .doc(payment.id)
-      .update({
-        syncedToSheets: false,
-        syncedToTt: false,
-        ttRowResyncPending: false,
-        ttRowNumber:
-          admin.firestore.FieldValue.delete(),
-        ttUpdatedRange:
-          admin.firestore.FieldValue.delete(),
-        sheetsUpdatedRange:
-          admin.firestore.FieldValue.delete(),
-        ttSpreadsheetId:
-          admin.firestore.FieldValue.delete(),
-        syncedAt:
-          admin.firestore.FieldValue.delete(),
-        lastTtSyncSkipReason:
-          admin.firestore.FieldValue.delete(),
-        lastTtSyncSkippedAt:
-          admin.firestore.FieldValue.delete(),
-      });
+    try {
+      await getDb()
+        .collection("payments")
+        .doc(payment.id)
+        .update({
+          syncedToSheets: false,
+          syncedToTt: false,
+          ttRowResyncPending: false,
+          ttRowNumber:
+            admin.firestore.FieldValue.delete(),
+          ttUpdatedRange:
+            admin.firestore.FieldValue.delete(),
+          sheetsUpdatedRange:
+            admin.firestore.FieldValue.delete(),
+          ttSpreadsheetId:
+            admin.firestore.FieldValue.delete(),
+          syncedAt:
+            admin.firestore.FieldValue.delete(),
+          lastTtSyncSkipReason:
+            admin.firestore.FieldValue.delete(),
+          lastTtSyncSkippedAt:
+            admin.firestore.FieldValue.delete(),
+        });
 
-    recoveredIds.push(payment.id);
+      recoveredIds.push(payment.id);
+    } catch (error) {
+      console.warn(
+        "[tt-sync] Top-up recovery failed:",
+        payment.id,
+        error.message || error
+      );
+    }
   }
 
   return recoveredIds;
@@ -749,6 +798,8 @@ async function runTtSheetsSync({
   const summary = {
     processed: 0,
     success: 0,
+    appendSuccess: 0,
+    appendFailed: 0,
     skipped: 0,
     failed: 0,
     resyncFailed: 0,
@@ -851,12 +902,53 @@ async function runTtSheetsSync({
       const client =
         clientsById[payment.clientId] || {};
 
-      const metadata =
-        await getTtRowMetadataWithVk({
-          payment,
-          client,
-          cycle: cycleMap[payment.id] || 1,
-        });
+      let metadata;
+
+      try {
+        metadata =
+          await getTtRowMetadataWithVk({
+            payment,
+            client,
+            cycle: cycleMap[payment.id] || 1,
+          });
+      } catch (error) {
+        const skipReason =
+          "row_metadata_error";
+
+        summary.skipped += 1;
+        summary.skipReasons[skipReason] =
+          (summary.skipReasons[skipReason] ||
+            0) + 1;
+
+        await getDb()
+          .collection("syncLog")
+          .add({
+            type: "tt_append",
+            paymentId: payment.id,
+            status: SYNC_LOG_STATUS.SKIPPED,
+            reason: skipReason,
+            error:
+              error.message ||
+              String(error),
+            createdAt: Date.now(),
+          });
+
+        await getDb()
+          .collection("payments")
+          .doc(payment.id)
+          .update({
+            lastTtSyncSkipReason: skipReason,
+            lastTtSyncSkippedAt: Date.now(),
+          });
+
+        console.warn(
+          "[tt-sync] Row metadata failed:",
+          payment.id,
+          error.message || error
+        );
+
+        continue;
+      }
 
       const ttConfig = getTtSheetForManager(
         metadata.managerId
@@ -907,7 +999,7 @@ async function runTtSheetsSync({
 
       try {
         const sheetsResult =
-          await appendTtRow({
+          await appendTtRowWithRetry({
             spreadsheetId:
               ttConfig.spreadsheetId,
             sheetName: ttConfig.sheetName,
@@ -920,6 +1012,7 @@ async function runTtSheetsSync({
         );
 
         summary.success += 1;
+        summary.appendSuccess += 1;
         summary.byManager[
           metadata.managerId
         ].success += 1;
@@ -949,6 +1042,7 @@ async function runTtSheetsSync({
           });
       } catch (error) {
         summary.failed += 1;
+        summary.appendFailed += 1;
         summary.byManager[
           metadata.managerId
         ].failed += 1;
@@ -1011,13 +1105,17 @@ async function runTtSheetsSync({
         .doc(logId)
         .update({
           status:
-            summary.failed > 0
+            summary.appendFailed > 0
               ? SYNC_LOG_STATUS.FAILED
               : SYNC_LOG_STATUS.SUCCESS,
           processed: summary.processed,
           successCount: summary.success,
+          appendSuccessCount:
+            summary.appendSuccess,
           skippedCount: summary.skipped,
           failedCount: summary.failed,
+          appendFailedCount:
+            summary.appendFailed,
           resyncFailedCount:
             summary.resyncFailed,
           byManager: summary.byManager,
@@ -1035,7 +1133,7 @@ async function runTtSheetsSync({
 
     return {
       status:
-        summary.failed > 0
+        summary.appendFailed > 0
           ? SYNC_LOG_STATUS.FAILED
           : SYNC_LOG_STATUS.SUCCESS,
       logId,

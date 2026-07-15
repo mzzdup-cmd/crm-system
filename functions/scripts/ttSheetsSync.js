@@ -89,8 +89,10 @@ async function main() {
 
   console.log(
     `[tt-sync] Summary: pending=${result.pendingBefore}, ` +
-      `exported=${result.success}, skipped=${result.skipped}, ` +
-      `failed=${result.failed}, resyncFailed=${result.resyncFailed || 0}`
+      `appended=${result.appendSuccess ?? result.success}, ` +
+      `skipped=${result.skipped}, appendFailed=${result.appendFailed ?? result.failed}, ` +
+      `resyncOk=${result.success - (result.appendSuccess ?? 0)}, ` +
+      `resyncFailed=${result.resyncFailed || 0}`
   );
 
   if (result.syncedRows?.length) {
@@ -102,16 +104,38 @@ async function main() {
     });
   }
 
-  if (
+  const appendSuccess =
+    result.appendSuccess ?? 0;
+  const appendFailed =
+    result.appendFailed ?? result.failed ?? 0;
+
+  const pendingAppendStuck =
     result.pendingBefore > 0 &&
-    result.success === 0 &&
-    result.failed === 0
-  ) {
+    appendSuccess === 0 &&
+    appendFailed === 0;
+
+  if (pendingAppendStuck) {
+    const skipReasons =
+      result.skipReasons || {};
+    const skipKeys = Object.keys(skipReasons);
+    const onlyKnownSkips =
+      skipKeys.length > 0 &&
+      skipKeys.every((reason) =>
+        [
+          "manager_unresolved",
+          "manager_tt_not_configured",
+          "row_metadata_error",
+        ].includes(reason)
+      );
+
     console.warn(
-      "[tt-sync] WARNING: pending payments exist but nothing was exported.",
-      result.skipReasons
+      "[tt-sync] WARNING: pending payments exist but none were appended.",
+      skipReasons
     );
-    process.exit(1);
+
+    if (!onlyKnownSkips) {
+      process.exit(1);
+    }
   }
 
   if (result.resyncFailed > 0) {
@@ -121,7 +145,11 @@ async function main() {
     );
   }
 
-  if (result.failed > 0) {
+  if (appendFailed > 0) {
+    console.error(
+      "[tt-sync] Append failures:",
+      result.errors
+    );
     process.exit(1);
   }
 }
