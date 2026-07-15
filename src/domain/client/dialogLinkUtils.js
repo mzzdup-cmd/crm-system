@@ -1,3 +1,17 @@
+const DIALOG_LINK_HOST_ALIASES = [
+  "bluesales.ru",
+  "bizasales.ru",
+  "business.vk.com",
+];
+
+export function extractDialogId(link) {
+  const match = String(link || "").match(
+    /dialogId=(\d+)/i
+  );
+
+  return match?.[1] || "";
+}
+
 export function normalizeDialogLink(link) {
   if (!link) {
     return "";
@@ -23,6 +37,17 @@ export function normalizeDialogLink(link) {
   }
 }
 
+function dialogIdsMatch(left, right) {
+  const leftId = extractDialogId(left);
+  const rightId = extractDialogId(right);
+
+  return (
+    Boolean(leftId) &&
+    Boolean(rightId) &&
+    leftId === rightId
+  );
+}
+
 export function dialogLinksMatch(
   left,
   right
@@ -32,6 +57,10 @@ export function dialogLinksMatch(
   }
 
   if (left.trim() === right.trim()) {
+    return true;
+  }
+
+  if (dialogIdsMatch(left, right)) {
     return true;
   }
 
@@ -58,6 +87,19 @@ export function getDialogLinkLookupVariants(
   variants.add(
     `${trimmed.replace(/\/+$/, "")}/`
   );
+
+  const dialogId = extractDialogId(trimmed);
+
+  if (dialogId) {
+    for (const host of DIALOG_LINK_HOST_ALIASES) {
+      variants.add(
+        `https://${host}/app/Messenger?dialogId=${dialogId}`
+      );
+      variants.add(
+        `http://${host}/app/Messenger?dialogId=${dialogId}`
+      );
+    }
+  }
 
   try {
     const url = new URL(trimmed);

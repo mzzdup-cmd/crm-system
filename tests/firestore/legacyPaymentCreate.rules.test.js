@@ -264,4 +264,58 @@ describe("payments create — legacy old client", () => {
       )
     );
   });
+
+  it("PASS: Denis Manuilov legacy top-up after subscriber lookup", async () => {
+    const UID = "denis-uid";
+    const EMAIL = "denis@crm-school.ru";
+
+    await seedUser(UID, {
+      managerId: "denis_manuilov",
+      name: "Денис Мануйлов",
+      email: EMAIL,
+    });
+
+    const now = Date.now();
+
+    await assertSucceeds(
+      addDoc(
+        collection(
+          authed(UID, EMAIL).firestore(),
+          "payments"
+        ),
+        {
+          clientId: null,
+          clientName: "Mychik: Монтаж-Базовый",
+          legacyClientName: "Mychik: Монтаж-Базовый",
+          legacyClientBsId: "160769525",
+          course: "Монтаж",
+          tariff: "Базовый",
+          dealType: "Доплата Новая",
+          isLegacy: true,
+          isLegacyClient: true,
+          dialogLink:
+            "https://bizasales.ru/app/Messenger?dialogId=100174414",
+          vkLink: "https://vk.com/example",
+          amount: 5000,
+          paymentSystem: "Prodamus",
+          invoiceNumber: "46286185",
+          comment: "",
+          manager: "Денис Мануйлов",
+          managerId: "denis_manuilov",
+          paymentDate: "2026-07-15",
+          startDate: "2026-06-08",
+          curatorStartDate: "",
+          sourceId: "6",
+          sourceName: "6",
+          budget: 28000,
+          syncedToSheets: false,
+          deletedAt: null,
+          createdAt: now,
+          updatedAt: now,
+          createdByUid: UID,
+          updatedByUid: UID,
+        }
+      )
+    );
+  });
 });

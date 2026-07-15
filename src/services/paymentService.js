@@ -72,6 +72,7 @@ import {
 } from "../domain/client/bbBookingLogic";
 import {
   dialogLinksMatch,
+  extractDialogId,
 } from "../domain/client/dialogLinkUtils";
 import { updateClient, getClientById } from "./clientService";
 import {
@@ -1255,6 +1256,9 @@ export async function findLegacySubscriber({
   const payments =
     await getPaymentsForUser(userData);
 
+  const normalizedDialogId =
+    extractDialogId(normalizedLink);
+
   const matchingPayments = payments
     .filter((payment) => {
       if (normalizedId) {
@@ -1271,10 +1275,22 @@ export async function findLegacySubscriber({
       }
 
       if (normalizedLink) {
-        return dialogLinksMatch(
-          payment.dialogLink,
-          normalizedLink
-        );
+        if (
+          dialogLinksMatch(
+            payment.dialogLink,
+            normalizedLink
+          )
+        ) {
+          return true;
+        }
+
+        if (normalizedDialogId) {
+          return (
+            extractDialogId(
+              payment.dialogLink
+            ) === normalizedDialogId
+          );
+        }
       }
 
       return false;

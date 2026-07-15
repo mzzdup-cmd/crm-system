@@ -968,6 +968,11 @@ export default function NewPaymentPage() {
         payment.clientNote ||
         ""
     );
+
+    if (payment.dialogLink?.trim()) {
+      setDialogLink(payment.dialogLink.trim());
+    }
+
     setLegacyTtDealTypeId(
       resolveLegacyTtDealTypeId(
         payment.dealType
@@ -992,11 +997,17 @@ export default function NewPaymentPage() {
     resetLegacyLookup();
   }
 
-  function handleLegacyDialogLinkChange(
+  function handleLegacySearchDialogLinkChange(
     value
   ) {
     setDialogLink(value);
     resetLegacyLookup();
+  }
+
+  function handleLegacyPaymentDialogLinkChange(
+    value
+  ) {
+    setDialogLink(value);
   }
 
   async function lookupLegacySubscriber() {
@@ -1120,13 +1131,20 @@ export default function NewPaymentPage() {
         legacySubscriberProfile;
 
       await createLegacyClientPayment({
-        dialogLink,
+        dialogLink:
+          dialogLink.trim() ||
+          profile?.dialogLink?.trim() ||
+          "",
         vkLink: profile?.vkLink || vkLink,
         legacyClientName:
           profile?.legacyClientName ||
           profile?.clientName ||
           clientName,
-        legacyClientBsId: clientNote.trim(),
+        legacyClientBsId:
+          clientNote.trim() ||
+          profile?.legacyClientBsId ||
+          profile?.clientNote ||
+          "",
         course: profile?.course || course,
         tariff: profile?.tariff || tariff,
         dealType: dealTypeLabel,
@@ -1642,7 +1660,7 @@ export default function NewPaymentPage() {
                 placeholder="Ссылка на диалог Bluesales"
                 value={dialogLink}
                 onChange={(e) =>
-                  handleLegacyDialogLinkChange(
+                  handleLegacySearchDialogLinkChange(
                     e.target.value
                   )
                 }
@@ -1755,7 +1773,7 @@ export default function NewPaymentPage() {
                     placeholder="Ссылка на диалог *"
                     value={dialogLink}
                     onChange={(e) =>
-                      handleLegacyDialogLinkChange(
+                      handleLegacyPaymentDialogLinkChange(
                         e.target.value
                       )
                     }
