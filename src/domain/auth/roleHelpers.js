@@ -437,15 +437,18 @@ export function resolveOwnershipManagerFieldsForWrite(
   }
 
   const managerId =
-    getFirestoreManagerId(userData) ??
     getEffectiveOwnerManagerId(userData) ??
+    getFirestoreManagerId(userData) ??
     getCurrentManagerId(userData);
 
   if (managerId) {
+    const canonicalId =
+      canonicalManagerId(managerId);
+
     return {
-      managerId,
+      managerId: canonicalId,
       manager:
-        getManagerNameById(managerId) ||
+        getManagerNameById(canonicalId) ||
         userData?.name?.trim() ||
         selectedManager?.trim() ||
         "",

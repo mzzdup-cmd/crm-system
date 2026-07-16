@@ -40,6 +40,16 @@ describe("dialogLinkUtils", () => {
     );
   });
 
+  it("matches bluesales links with Messenger/? path", () => {
+    assert.equal(
+      dialogLinksMatch(
+        "https://bluesales.ru/app/Messenger/?dialogId=105731596",
+        "https://bluesales.ru/app/Messenger?dialogId=105731596"
+      ),
+      true
+    );
+  });
+
   it("adds host alias variants for lookup", () => {
     const variants =
       getDialogLinkLookupVariants(

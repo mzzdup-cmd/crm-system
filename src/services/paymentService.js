@@ -1172,13 +1172,17 @@ export async function createLegacyClientPayment({
       manager
     );
 
+  const resolvedBsId = String(
+    legacyClientBsId || ""
+  ).trim();
+
   const paymentPayload = normalizePaymentPayload({
     clientId: null,
     clientName:
       legacyClientName ||
       dialogLink.trim(),
     legacyClientName,
-    legacyClientBsId,
+    legacyClientBsId: resolvedBsId,
     course,
     tariff,
     dealType,
@@ -1190,7 +1194,7 @@ export async function createLegacyClientPayment({
     paymentSystem,
     invoiceNumber,
     comment: comment.trim(),
-    clientNote: legacyClientBsId,
+    clientNote: resolvedBsId,
     firstContact: firstContactDate,
     manager: managerFields.manager,
     managerId: managerFields.managerId,
@@ -1262,14 +1266,13 @@ export async function findLegacySubscriber({
   const matchingPayments = payments
     .filter((payment) => {
       if (normalizedId) {
-        const storedId =
+        const storedId = String(
           payment.legacyClientBsId ||
-          payment.clientNote ||
-          "";
+            payment.clientNote ||
+            ""
+        ).trim();
 
-        if (
-          storedId.trim() === normalizedId
-        ) {
+        if (storedId === normalizedId) {
           return true;
         }
       }

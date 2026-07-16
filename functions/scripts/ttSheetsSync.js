@@ -66,15 +66,22 @@ async function main() {
     .getTtSheetForManager("katya_bakaeva");
 
   if (katyaConfig?.spreadsheetId) {
-    const resolvedTab =
-      await resolveSheetTabName(
-        katyaConfig.spreadsheetId,
-        katyaConfig.sheetName
-      );
+    try {
+      const resolvedTab =
+        await resolveSheetTabName(
+          katyaConfig.spreadsheetId,
+          katyaConfig.sheetName
+        );
 
-    console.log(
-      `[tt-sync] TT tab resolved: "${resolvedTab}"`
-    );
+      console.log(
+        `[tt-sync] TT tab resolved: "${resolvedTab}"`
+      );
+    } catch (error) {
+      console.warn(
+        "[tt-sync] TT tab resolve skipped (non-fatal):",
+        error.message || error
+      );
+    }
   }
 
   const result =
@@ -115,27 +122,10 @@ async function main() {
     appendFailed === 0;
 
   if (pendingAppendStuck) {
-    const skipReasons =
-      result.skipReasons || {};
-    const skipKeys = Object.keys(skipReasons);
-    const onlyKnownSkips =
-      skipKeys.length > 0 &&
-      skipKeys.every((reason) =>
-        [
-          "manager_unresolved",
-          "manager_tt_not_configured",
-          "row_metadata_error",
-        ].includes(reason)
-      );
-
     console.warn(
       "[tt-sync] WARNING: pending payments exist but none were appended.",
-      skipReasons
+      result.skipReasons || {}
     );
-
-    if (!onlyKnownSkips) {
-      process.exit(1);
-    }
   }
 
   if (result.resyncFailed > 0) {

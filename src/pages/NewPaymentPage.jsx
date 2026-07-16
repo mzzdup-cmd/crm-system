@@ -924,10 +924,12 @@ export default function NewPaymentPage() {
       resetAfterSubmit();
     } catch (error) {
       console.error(error);
-      toast.error(
-        error.message ||
-          "Ошибка при сохранении"
-      );
+      const message =
+        error?.code === "permission-denied"
+          ? "Нет прав на сохранение. Обновите страницу (Ctrl+Shift+R) и войдите снова."
+          : error.message ||
+            "Ошибка при сохранении";
+      toast.error(message);
     } finally {
       setSubmitting(false);
     }
@@ -1192,10 +1194,12 @@ export default function NewPaymentPage() {
       resetAfterSubmit();
     } catch (error) {
       console.error(error);
-      toast.error(
-        error.message ||
-          "Ошибка при сохранении"
-      );
+      const message =
+        error?.code === "permission-denied"
+          ? "Нет прав на сохранение. Обновите страницу (Ctrl+Shift+R) и войдите снова."
+          : error.message ||
+            "Ошибка при сохранении";
+      toast.error(message);
     } finally {
       setSubmitting(false);
     }
