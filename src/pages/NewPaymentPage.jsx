@@ -58,6 +58,7 @@ import {
   isLegacyTableTtDealType,
   isBbDealType,
   isOptionalStartDateDealType,
+  isDeferredPaymentProfileDealType,
   isRejectDealType,
   needsBudgetFieldForExistingDeal,
   resolveDealTypeId,
@@ -161,6 +162,18 @@ function VkLinkHint({ visible }) {
     <p className="text-amber-400/90 text-sm">
       Можно заполнить позже — появится
       напоминание в dashboard
+    </p>
+  );
+}
+
+function DeferredFieldHint({ visible }) {
+  if (!visible) {
+    return null;
+  }
+
+  return (
+    <p className="text-neutral-500 text-xs mt-1">
+      Можно заполнить позже
     </p>
   );
 }
@@ -349,6 +362,11 @@ export default function NewPaymentPage() {
 
   const isBbDeal =
     isBbDealType(dealTypeId);
+
+  const isDeferredProfile =
+    isDeferredPaymentProfileDealType(
+      dealTypeId
+    );
 
   const curatorDealTypeId =
     isLegacy &&
@@ -687,6 +705,9 @@ export default function NewPaymentPage() {
 
     if (
       needsBudgetFieldForExistingDeal(
+        dealTypeId
+      ) &&
+      !isDeferredPaymentProfileDealType(
         dealTypeId
       ) &&
       !budget
@@ -1324,7 +1345,10 @@ export default function NewPaymentPage() {
       return;
     }
 
-    if (!budget) {
+    if (
+      !isDeferredProfile &&
+      !budget
+    ) {
       toast.error("Укажите бюджет");
       return;
     }
@@ -1518,7 +1542,10 @@ export default function NewPaymentPage() {
       return;
     }
 
-    if (!budget) {
+    if (
+      !isDeferredProfile &&
+      !budget
+    ) {
       toast.error("Укажите бюджет");
       return;
     }
@@ -2270,7 +2297,9 @@ export default function NewPaymentPage() {
                 className={inputClass}
               >
                 <option value="">
-                  Тариф
+                  {isDeferredProfile
+                    ? "Тариф (необязательно)"
+                    : "Тариф *"}
                 </option>
                 {TARIFFS.map((item) => (
                   <option
@@ -2282,9 +2311,17 @@ export default function NewPaymentPage() {
                 ))}
               </select>
 
+              <DeferredFieldHint
+                visible={isDeferredProfile}
+              />
+
               <MoneyInput
-                placeholder="Бюджет *"
-                required
+                placeholder={
+                  isDeferredProfile
+                    ? "Бюджет (необязательно)"
+                    : "Бюджет *"
+                }
+                required={!isDeferredProfile}
                 value={budget}
                 onChange={setBudget}
                 className={inputClass}
@@ -2758,14 +2795,28 @@ export default function NewPaymentPage() {
                               ) > 0
                             }
                           >
-                            Бюджет (сумма тарифа) *
+                            Бюджет (сумма тарифа)
+                            {isDeferredPaymentProfileDealType(
+                              dealTypeId
+                            )
+                              ? ""
+                              : " *"}
                           </FieldLabel>
                           <MoneyInput
                             placeholder=""
-                            required
+                            required={
+                              !isDeferredPaymentProfileDealType(
+                                dealTypeId
+                              )
+                            }
                             value={budget}
                             onChange={setBudget}
                             className={inputClass}
+                          />
+                          <DeferredFieldHint
+                            visible={isDeferredPaymentProfileDealType(
+                              dealTypeId
+                            )}
                           />
                         </label>
                       )}

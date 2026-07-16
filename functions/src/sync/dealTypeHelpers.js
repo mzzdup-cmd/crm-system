@@ -1,10 +1,33 @@
-const OPTIONAL_START_DATE_LABELS =
-  new Set(["ББ", "Рассылка"]);
+const DEFERRED_PROFILE_DEAL_LABELS =
+  new Set([
+    "ББ",
+    "Рассылка",
+    "Апсэйл",
+    "Апсейл",
+    "upsell",
+  ]);
 
-function isOptionalStartDateDeal(dealType) {
-  return OPTIONAL_START_DATE_LABELS.has(
+function isDeferredProfileDeal(dealType) {
+  return DEFERRED_PROFILE_DEAL_LABELS.has(
     String(dealType || "").trim()
   );
+}
+
+function isOptionalStartDateDeal(dealType) {
+  return isDeferredProfileDeal(dealType);
+}
+
+function formatTtBudgetCell(dealType, value) {
+  const amount = Number(value || 0);
+
+  if (
+    isDeferredProfileDeal(dealType) &&
+    amount <= 0
+  ) {
+    return "";
+  }
+
+  return amount > 0 ? amount : Number(value || 0);
 }
 
 /** Доплаты в ТТ — без суммы бюджета в колонке F. */
@@ -69,7 +92,10 @@ function resolveTtBudgetAmount({
   }
 
   if (isLegacyClient) {
-    return Number(payment.budget ?? 0);
+    return formatTtBudgetCell(
+      payment.dealType,
+      payment.budget ?? 0
+    );
   }
 
   if (isUpsellDeal(payment.dealType)) {
@@ -85,10 +111,16 @@ function resolveTtBudgetAmount({
       return paymentBudget;
     }
 
-    return Number(client.budget || 0);
+    return formatTtBudgetCell(
+      payment.dealType,
+      client.budget || 0
+    );
   }
 
-  return Number(client.budget || 0);
+  return formatTtBudgetCell(
+    payment.dealType,
+    client.budget || 0
+  );
 }
 
 function parseTtRowNumber(payment) {
@@ -114,6 +146,7 @@ function parseTtRowNumber(payment) {
 }
 
 module.exports = {
+  isDeferredProfileDeal,
   isOptionalStartDateDeal,
   isTopupDeal,
   isUpsellDeal,

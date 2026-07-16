@@ -138,6 +138,14 @@ export function getDealTypeOption(value) {
     );
   }
 
+  if (value === "Апсейл") {
+    return (
+      DEAL_TYPE_OPTIONS.find(
+        (item) => item.id === "upsell"
+      ) || null
+    );
+  }
+
   return (
     DEAL_TYPE_OPTIONS.find(
       (item) => item.id === value
@@ -199,13 +207,27 @@ export function isMailingDealType(value) {
   );
 }
 
-/** ББ / Рассылка — дату старта можно указать позже (как VK). */
-export function isOptionalStartDateDealType(
+/** ББ / Апсэйл / Рассылка — старт, тариф и бюджет можно указать позже (без напоминаний). */
+const DEFERRED_PAYMENT_PROFILE_DEAL_TYPE_IDS =
+  ["bb", "upsell", "mailing"];
+
+export function isDeferredPaymentProfileDealType(
   value
 ) {
   const id = resolveDealTypeId(value);
 
-  return id === "bb" || id === "mailing";
+  return DEFERRED_PAYMENT_PROFILE_DEAL_TYPE_IDS.includes(
+    id
+  );
+}
+
+/** @deprecated alias — use isDeferredPaymentProfileDealType */
+export function isOptionalStartDateDealType(
+  value
+) {
+  return isDeferredPaymentProfileDealType(
+    value
+  );
 }
 
 export function isLegacyDealType(value) {
@@ -263,7 +285,7 @@ export function isRefundDealType(value) {
   );
 }
 
-/** Бюджет (сумма тарифа) при оплате существующего клиента — только апсэйл. */
+/** Поле бюджета при оплате существующего клиента — только апсэйл (необязательно). */
 export function needsBudgetFieldForExistingDeal(
   value
 ) {

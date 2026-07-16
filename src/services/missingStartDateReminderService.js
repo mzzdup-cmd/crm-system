@@ -15,10 +15,6 @@ import {
   getManagerIdByName,
 } from "../constants/managers";
 
-import {
-  isOptionalStartDateDealType,
-} from "../constants/dealTypes";
-
 function buildMissingStartDateDedupKey(
   paymentId
 ) {
@@ -32,15 +28,8 @@ export function paymentNeedsStartDate(
     return false;
   }
 
-  if (
-    !isOptionalStartDateDealType(
-      payment.dealType
-    )
-  ) {
-    return false;
-  }
-
-  return !payment.startDate?.trim();
+  // Напоминания о дате старта отключены (ББ / Апсэйл / Рассылка — без напоминаний).
+  return false;
 }
 
 export async function notifyMissingStartDate({

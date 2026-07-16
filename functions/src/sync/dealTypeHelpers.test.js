@@ -54,3 +54,36 @@ test("resolveTtBudgetAmount uses client budget for bb deals", () => {
     40000
   );
 });
+
+test("resolveTtBudgetAmount omits empty budget for deferred profile deals", () => {
+  assert.equal(
+    resolveTtBudgetAmount({
+      payment: {
+        dealType: "ББ",
+      },
+      client: { budget: 0 },
+    }),
+    ""
+  );
+
+  assert.equal(
+    resolveTtBudgetAmount({
+      payment: {
+        dealType: "Апсэйл",
+        budget: 0,
+      },
+      client: { budget: 0 },
+    }),
+    ""
+  );
+
+  assert.equal(
+    resolveTtBudgetAmount({
+      payment: {
+        dealType: "Рассылка",
+      },
+      client: { budget: 0 },
+    }),
+    ""
+  );
+});

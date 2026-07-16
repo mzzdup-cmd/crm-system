@@ -15,13 +15,25 @@ function resolveDealTypeId(value) {
     return "mailing";
   }
 
+  if (
+    value === "Апсэйл" ||
+    value === "Апсейл" ||
+    value === "upsell"
+  ) {
+    return "upsell";
+  }
+
   return String(value);
 }
 
 function isOptionalStartDateDealType(value) {
   const id = resolveDealTypeId(value);
 
-  return id === "bb" || id === "mailing";
+  return (
+    id === "bb" ||
+    id === "mailing" ||
+    id === "upsell"
+  );
 }
 
 function canonicalManagerId(managerId) {

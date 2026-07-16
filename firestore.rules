@@ -555,7 +555,19 @@ service cloud.firestore {
             && value.lower() == 'рассылка'
           )
           ? 'mailing'
-          : value;
+          : value == 'Апсэйл'
+            || value == 'Апсейл'
+            || value == 'upsell'
+            || (
+              value is string
+              && value.lower() == 'апсэйл'
+            )
+            || (
+              value is string
+              && value.lower() == 'апсейл'
+            )
+            ? 'upsell'
+            : value;
     }
 
     function isOptionalStartDateDealType(
@@ -563,7 +575,9 @@ service cloud.firestore {
     ) {
       return resolveDealTypeId(dealType) == 'bb'
         || resolveDealTypeId(dealType)
-          == 'mailing';
+          == 'mailing'
+        || resolveDealTypeId(dealType)
+          == 'upsell';
     }
 
     function ownsPaymentRecord(data) {

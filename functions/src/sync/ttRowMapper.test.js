@@ -143,6 +143,42 @@ test("bb rows keep client budget in TT export", () => {
   assert.equal(row[5], 40000);
 });
 
+test("deferred profile rows omit empty budget and start date in TT export", () => {
+  const bbRow = mapPaymentToTtRow({
+    payment: {
+      ...basePayment,
+      dealType: "ББ",
+      amount: 5000,
+      startDate: "",
+    },
+    client: {
+      budget: 0,
+      course: "Экстерн Монтаж",
+    },
+    cycle: 1,
+  });
+
+  assert.equal(bbRow[5], "");
+  assert.equal(bbRow[6], "");
+
+  const upsellRow = mapPaymentToTtRow({
+    payment: {
+      ...basePayment,
+      dealType: "Апсэйл",
+      amount: 10000,
+      budget: 0,
+      startDate: "",
+    },
+    client: {
+      budget: 0,
+    },
+    cycle: 2,
+  });
+
+  assert.equal(upsellRow[5], "");
+  assert.equal(upsellRow[6], "");
+});
+
 test("topup upsell rows omit budget column in TT export", () => {
   const row = mapPaymentToTtRow({
     payment: {

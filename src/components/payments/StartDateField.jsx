@@ -69,7 +69,7 @@ export default function StartDateField({
         />
         <p className="text-xs text-neutral-500 mt-1">
           {isOptionalStartDate
-            ? "Можно указать позже — напоминание появится на главной (как с VK)."
+            ? "Можно заполнить позже"
             : "Для ББ старт может быть любой датой, не только понедельником потока"}
         </p>
       </label>
@@ -158,9 +158,7 @@ export default function StartDateField({
         </p>
       ) : isOptionalStartDate ? (
         <p className="text-xs text-neutral-500 mt-1">
-          Для рассылки дату старта часто узнают позже — можно
-          сохранить без потока и дозаполнить в «Продажи →
-          Оплаты».
+          Можно заполнить позже
         </p>
       ) : (
         <p className="text-xs text-neutral-500 mt-1">
