@@ -89,6 +89,76 @@ test("new deal rows keep client budget in TT export", () => {
   assert.equal(row[5], 22000);
 });
 
+test("upsell rows use payment budget when client budget is zero", () => {
+  const row = mapPaymentToTtRow({
+    payment: {
+      ...basePayment,
+      dealType: "Апсэйл",
+      amount: 22000,
+      budget: 22000,
+    },
+    client: {
+      ...clientWithBudget,
+      budget: 0,
+    },
+    cycle: 2,
+  });
+
+  assert.equal(row[4], 22000);
+  assert.equal(row[5], 22000);
+});
+
+test("upsell rows accept alternate spelling label", () => {
+  const row = mapPaymentToTtRow({
+    payment: {
+      ...basePayment,
+      dealType: "Апсейл",
+      amount: 15000,
+      budget: 30000,
+    },
+    client: {
+      budget: 0,
+    },
+    cycle: 2,
+  });
+
+  assert.equal(row[5], 30000);
+});
+
+test("bb rows keep client budget in TT export", () => {
+  const row = mapPaymentToTtRow({
+    payment: {
+      ...basePayment,
+      dealType: "ББ",
+      amount: 5000,
+    },
+    client: {
+      budget: 40000,
+      course: "Экстерн Монтаж",
+    },
+    cycle: 1,
+  });
+
+  assert.equal(row[4], 5000);
+  assert.equal(row[5], 40000);
+});
+
+test("topup upsell rows omit budget column in TT export", () => {
+  const row = mapPaymentToTtRow({
+    payment: {
+      ...basePayment,
+      dealType: "Доплата Апсэйл",
+      amount: 5500,
+      budget: 22000,
+    },
+    client: clientWithBudget,
+    cycle: 2,
+  });
+
+  assert.equal(row[4], 5500);
+  assert.equal(row[5], "");
+});
+
 test("manager id aliases resolve to configured TT sheet owner", () => {
   const {
     resolveManagerId,

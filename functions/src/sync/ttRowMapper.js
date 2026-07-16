@@ -17,7 +17,7 @@ const {
 
 const {
   isOptionalStartDateDeal,
-  isTopupDeal,
+  resolveTtBudgetAmount,
 } = require("./dealTypeHelpers");
 
 const {
@@ -154,14 +154,12 @@ function mapPaymentToTtRow({
       : payment.startDate ||
         getStartDate(payment.paymentDate);
 
-  const budget =
-    isMinimalLegacy ||
-    isRejectDeal ||
-    isTopupDeal(payment.dealType)
-      ? ""
-      : isLegacyClient
-        ? Number(payment.budget ?? 0)
-        : Number(client.budget || 0);
+  const budget = isRejectDeal
+    ? ""
+    : resolveTtBudgetAmount({
+        payment,
+        client,
+      });
 
   return [
     formatDateRu(payment.paymentDate),

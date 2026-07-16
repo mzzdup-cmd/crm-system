@@ -24,6 +24,7 @@ const {
 
 const {
   canResyncStartDateInTt,
+  isUpsellDeal,
   parseTtRowNumber,
 } = require("./dealTypeHelpers");
 
@@ -774,6 +775,60 @@ function sortPayments(payments) {
   });
 }
 
+async function queueBudgetRepairResyncs({
+  allPayments = [],
+  clientsById = {},
+}) {
+  const repairedIds = [];
+
+  for (const payment of allPayments) {
+    if (
+      payment.deletedAt ||
+      payment.syncedToSheets !== true ||
+      payment.ttBudgetRepairQueued === true ||
+      payment.ttRowResyncPending === true
+    ) {
+      continue;
+    }
+
+    if (!parseTtRowNumber(payment)) {
+      continue;
+    }
+
+    if (!isUpsellDeal(payment.dealType)) {
+      continue;
+    }
+
+    const paymentBudget = Number(
+      payment.budget || 0
+    );
+
+    if (paymentBudget <= 0) {
+      continue;
+    }
+
+    try {
+      await getDb()
+        .collection("payments")
+        .doc(payment.id)
+        .update({
+          ttRowResyncPending: true,
+          ttBudgetRepairQueued: true,
+        });
+
+      repairedIds.push(payment.id);
+    } catch (error) {
+      console.warn(
+        "[tt-sync] Budget repair queue failed:",
+        payment.id,
+        error.message || error
+      );
+    }
+  }
+
+  return repairedIds;
+}
+
 async function fetchAllActivePayments() {
   const snapshot = await getDb()
     .collection("payments")
@@ -859,7 +914,26 @@ async function runTtSheetsSync({
         ...resyncPayments,
         ...vkResyncPayments,
         ...syncedForVkCheck,
+        ...activePayments.filter(
+          (payment) =>
+            isUpsellDeal(payment.dealType) &&
+            payment.budget > 0
+        ),
       ]);
+
+    const budgetRepairIds =
+      await queueBudgetRepairResyncs({
+        allPayments: activePayments,
+        clientsById,
+      });
+
+    if (budgetRepairIds.length) {
+      console.log(
+        "[tt-sync] Queued budget repair resync:",
+        budgetRepairIds.length,
+        "payment(s)"
+      );
+    }
 
     const cycleMap =
       buildPaymentCycleMap(activePayments);
@@ -1162,4 +1236,5 @@ module.exports = {
   runTtSheetsSync,
   fetchUnsyncedPayments,
   recoverMisroutedTopupPayments,
+  queueBudgetRepairResyncs,
 };
