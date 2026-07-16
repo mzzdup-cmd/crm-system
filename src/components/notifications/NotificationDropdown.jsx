@@ -14,6 +14,7 @@ export default function NotificationDropdown({
   notifications,
   unreadCount,
   onMarkRead,
+  onMarkResolved,
   onMarkAllRead,
 }) {
   const panelRef = useRef(null);
@@ -144,6 +145,7 @@ export default function NotificationDropdown({
                   key={notification.id}
                   notification={notification}
                   onRead={onMarkRead}
+                  onResolve={onMarkResolved}
                   compact
                 />
 

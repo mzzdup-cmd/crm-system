@@ -134,6 +134,7 @@ export function getCuratorStartsTodayItems({
     .filter(
       (payment) =>
         !payment.deletedAt &&
+        !payment.curatorStartHandoffDoneAt &&
         payment.curatorStartDate === today &&
         (
           !userData ||

@@ -79,6 +79,12 @@ import {
   countTodayPaymentsForUser,
 } from "../domain/dashboard/dayPlanInsights";
 
+import { markCuratorStartHandoffDone }
+from "../services/curatorStartReminderService";
+
+import { useToast }
+from "../context/ToastContext";
+
 import PageErrorBoundary
 from "../components/ui/PageErrorBoundary";
 
@@ -533,6 +539,7 @@ export default function DashboardPage() {
 
 function DashboardPageContent() {
   const { userData } = useAuth();
+  const toast = useToast();
   const {
     isManager,
     isLeadership,
@@ -595,6 +602,47 @@ function DashboardPageContent() {
 
   const [quickSaleOpen, setQuickSaleOpen] =
     useState(false);
+
+  const [
+    curatorHandoffPendingId,
+    setCuratorHandoffPendingId,
+  ] = useState(null);
+
+  async function handleCuratorHandoffDone(
+    paymentId
+  ) {
+    const payment = payments.find(
+      (item) => item.id === paymentId
+    );
+
+    if (!payment || !userData?.uid) {
+      return;
+    }
+
+    setCuratorHandoffPendingId(paymentId);
+
+    try {
+      await markCuratorStartHandoffDone({
+        payment,
+        userId: userData.uid,
+      });
+
+      toast.success(
+        "Готово — напоминание закрыто"
+      );
+    } catch (error) {
+      console.error(
+        "Curator handoff mark failed:",
+        error
+      );
+
+      toast.error(
+        "Не удалось закрыть напоминание"
+      );
+    } finally {
+      setCuratorHandoffPendingId(null);
+    }
+  }
 
   const curatorStartsToday = useMemo(
     () =>
@@ -1003,6 +1051,27 @@ function DashboardPageContent() {
                               Отправить куратору →
                             </Link>
                           )}
+                          <button
+                            type="button"
+                            disabled={
+                              curatorHandoffPendingId ===
+                              item.id
+                            }
+                            onClick={() =>
+                              handleCuratorHandoffDone(
+                                item.id
+                              )
+                            }
+                            className="
+                              text-brand hover:underline
+                              disabled:opacity-50
+                            "
+                          >
+                            {curatorHandoffPendingId ===
+                            item.id
+                              ? "…"
+                              : "Готово"}
+                          </button>
                         </div>
                       </div>
                     ))}

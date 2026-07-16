@@ -3,7 +3,15 @@ import {
 } from "../constants/notifications";
 
 import {
+  doc,
+  updateDoc,
+} from "firebase/firestore";
+
+import { db } from "./firebase";
+
+import {
   createNotificationIfMissing,
+  resolveNotificationByDedupKey,
 } from "./notificationService";
 
 import {
@@ -164,6 +172,40 @@ export async function maybeNotifyCuratorStart({
   });
 }
 
+export async function markCuratorStartHandoffDone({
+  payment,
+  userId,
+}) {
+  if (!payment?.id || !userId) {
+    return null;
+  }
+
+  const ref = doc(
+    db,
+    "payments",
+    payment.id
+  );
+
+  await updateDoc(ref, {
+    curatorStartHandoffDoneAt:
+      Date.now(),
+    updatedAt: Date.now(),
+    updatedByUid: userId,
+  });
+
+  if (payment.curatorStartDate?.trim()) {
+    await resolveNotificationByDedupKey(
+      userId,
+      buildCuratorStartDedupKey(
+        payment.id,
+        payment.curatorStartDate
+      )
+    );
+  }
+
+  return payment.id;
+}
+
 export async function syncCuratorStartRemindersForUser(
   userData,
   payments = [],
@@ -184,6 +226,7 @@ export async function syncCuratorStartRemindersForUser(
   const dueToday = payments.filter(
     (payment) =>
       !payment.deletedAt &&
+      !payment.curatorStartHandoffDoneAt &&
       payment.curatorStartDate === today &&
       canAccessPayment(
         userData,

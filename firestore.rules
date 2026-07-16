@@ -539,6 +539,19 @@ service cloud.firestore {
         ]);
     }
 
+    function isCuratorStartHandoffPatchUpdate() {
+      return request.resource.data
+        .diff(resource.data)
+        .affectedKeys()
+        .hasOnly([
+          'curatorStartHandoffDoneAt',
+          'updatedAt',
+          'updatedByUid',
+          'managerId',
+          'manager',
+        ]);
+    }
+
     function resolveDealTypeId(value) {
       return value == 'ББ'
         || value == 'bb'
@@ -697,6 +710,12 @@ service cloud.firestore {
         && paymentPatchOwnershipOk();
     }
 
+    function canPatchCuratorStartHandoff() {
+      return isSignedIn()
+        && isCuratorStartHandoffPatchUpdate()
+        && paymentPatchOwnershipOk();
+    }
+
     match /payments/{paymentId} {
       allow read: if isSignedIn();
 
@@ -707,7 +726,8 @@ service cloud.firestore {
         && (
           canPatchOptionalStartDate()
           || canPatchVkResyncQueue()
-          || canPatchCuratorStartDate()
+          ||           canPatchCuratorStartDate()
+          || canPatchCuratorStartHandoff()
           || isLeadership()
           || managerCanEditPayment()
         );

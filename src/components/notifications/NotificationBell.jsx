@@ -23,6 +23,7 @@ export default function NotificationBell({
     missingVkReminders,
     unreadCount,
     markRead,
+    markResolved,
     markAllRead,
   } = useNotifications();
 
@@ -54,6 +55,18 @@ export default function NotificationBell({
     }
 
     return markRead(id);
+  }
+
+  function handleMarkResolved(id) {
+    if (
+      String(id).startsWith(
+        "missing_vk_client_"
+      )
+    ) {
+      return Promise.resolve();
+    }
+
+    return markResolved(id);
   }
 
   return (
@@ -107,6 +120,7 @@ export default function NotificationBell({
         notifications={visibleNotifications}
         unreadCount={unreadCount}
         onMarkRead={handleMarkRead}
+        onMarkResolved={handleMarkResolved}
         onMarkAllRead={markAllRead}
       />
 
