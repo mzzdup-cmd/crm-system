@@ -62,13 +62,16 @@ import {
   isRejectDealType,
   needsBudgetFieldForExistingDeal,
   resolveDealTypeId,
-  resolveLegacyTtDealTypeId,
   showCuratorStartDateField,
 } from "../constants/dealTypes";
 
 import {
   BB_BOOKING_STAGE,
 } from "../domain/client/bbBookingLogic";
+
+import {
+  suggestLegacyTopupDealTypeId,
+} from "../domain/payment/legacySubscriberLookup";
 
 import { COURSES } from "../constants/courses";
 import { TARIFFS } from "../constants/tariffs";
@@ -997,7 +1000,7 @@ export default function NewPaymentPage() {
     }
 
     setLegacyTtDealTypeId(
-      resolveLegacyTtDealTypeId(
+      suggestLegacyTopupDealTypeId(
         payment.dealType
       )
     );

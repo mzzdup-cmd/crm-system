@@ -71,9 +71,9 @@ import {
   BB_BOOKING_STAGE,
 } from "../domain/client/bbBookingLogic";
 import {
-  dialogLinksMatch,
-  extractDialogId,
-} from "../domain/client/dialogLinkUtils";
+  buildLegacySubscriberProfile,
+  matchLegacySubscriberPayments,
+} from "../domain/payment/legacySubscriberLookup";
 import { updateClient, getClientById } from "./clientService";
 import {
   maybeNotifyMissingStartDate,
@@ -1260,80 +1260,18 @@ export async function findLegacySubscriber({
   const payments =
     await getPaymentsForUser(userData);
 
-  const normalizedDialogId =
-    extractDialogId(normalizedLink);
-
-  const matchingPayments = payments
-    .filter((payment) => {
-      if (normalizedId) {
-        const storedId = String(
-          payment.legacyClientBsId ||
-            payment.clientNote ||
-            ""
-        ).trim();
-
-        if (storedId === normalizedId) {
-          return true;
-        }
+  const matchingPayments =
+    matchLegacySubscriberPayments(
+      payments,
+      {
+        bsId: normalizedId,
+        dialogLink: normalizedLink,
       }
-
-      if (normalizedLink) {
-        if (
-          dialogLinksMatch(
-            payment.dialogLink,
-            normalizedLink
-          )
-        ) {
-          return true;
-        }
-
-        if (normalizedDialogId) {
-          return (
-            extractDialogId(
-              payment.dialogLink
-            ) === normalizedDialogId
-          );
-        }
-      }
-
-      return false;
-    })
-    .sort(
-      (a, b) =>
-        Number(b.createdAt || 0) -
-        Number(a.createdAt || 0)
     );
 
-  if (!matchingPayments.length) {
-    return null;
-  }
-
-  const latest = matchingPayments[0];
-  const totalPaidInCrm =
-    matchingPayments.reduce(
-      (sum, payment) =>
-        sum +
-        Number(payment.amount || 0),
-      0
-    );
-  const budget = Number(
-    latest.budget || 0
+  return buildLegacySubscriberProfile(
+    matchingPayments
   );
-  const remainInCrm =
-    budget > 0
-      ? Math.max(
-          0,
-          budget - totalPaidInCrm
-        )
-      : null;
-
-  return {
-    ...latest,
-    totalPaidInCrm,
-    remainInCrm,
-    paymentCount:
-      matchingPayments.length,
-  };
 }
 
 /** @deprecated use findLegacySubscriber */
