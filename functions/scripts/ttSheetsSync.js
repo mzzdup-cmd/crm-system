@@ -145,6 +145,23 @@ async function main() {
 }
 
 main().catch((error) => {
+  const message = String(
+    error?.message || error
+  );
+
+  if (
+    error?.code === 8 ||
+    /RESOURCE_EXHAUSTED|Quota exceeded/i.test(
+      message
+    )
+  ) {
+    console.error(
+      "[tt-sync] Failed: Firestore daily read quota exceeded. " +
+        "Sync will retry on the next schedule slot; " +
+        "consider Blaze plan or fewer sync runs if this persists."
+    );
+  }
+
   console.error(
     "[tt-sync] Failed:",
     error

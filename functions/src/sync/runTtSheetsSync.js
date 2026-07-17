@@ -46,6 +46,64 @@ const {
 const STALE_VK_BATCH_LIMIT = 50;
 const TT_ROW_DELETION_BATCH_LIMIT = 30;
 const APPEND_RETRY_ATTEMPTS = 2;
+const FIRESTORE_RETRY_ATTEMPTS = 4;
+
+function isFirestoreQuotaError(error) {
+  const code = error?.code;
+  const message = String(
+    error?.message || error
+  );
+
+  return (
+    code === 8 ||
+    /RESOURCE_EXHAUSTED|Quota exceeded/i.test(
+      message
+    )
+  );
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+
+async function withFirestoreRetry(
+  label,
+  operation
+) {
+  let lastError = null;
+
+  for (
+    let attempt = 1;
+    attempt <= FIRESTORE_RETRY_ATTEMPTS;
+    attempt += 1
+  ) {
+    try {
+      return await operation();
+    } catch (error) {
+      lastError = error;
+
+      if (
+        !isFirestoreQuotaError(error) ||
+        attempt >= FIRESTORE_RETRY_ATTEMPTS
+      ) {
+        throw error;
+      }
+
+      const delayMs =
+        attempt * attempt * 2000;
+
+      console.warn(
+        `[tt-sync] Firestore quota hit during ${label}, retry ${attempt}/${FIRESTORE_RETRY_ATTEMPTS} in ${delayMs}ms`
+      );
+
+      await sleep(delayMs);
+    }
+  }
+
+  throw lastError;
+}
 
 function isTransientSheetsError(error) {
   const message = String(
@@ -91,19 +149,12 @@ function getDb() {
   return admin.firestore();
 }
 
-async function fetchUnsyncedPayments(
+function filterUnsyncedPayments(
+  allPayments = [],
   paymentsByClient = null,
   limit = 500
 ) {
-  const snapshot = await getDb()
-    .collection("payments")
-    .get();
-
-  return snapshot.docs
-    .map((docSnap) => ({
-      id: docSnap.id,
-      ...docSnap.data(),
-    }))
+  return allPayments
     .filter((payment) =>
       paymentNeedsTtAppend(
         payment,
@@ -111,6 +162,41 @@ async function fetchUnsyncedPayments(
       )
     )
     .slice(0, limit);
+}
+
+async function fetchUnsyncedPayments(
+  paymentsByClient = null,
+  limit = 500,
+  allPayments = null
+) {
+  if (Array.isArray(allPayments)) {
+    return filterUnsyncedPayments(
+      allPayments,
+      paymentsByClient,
+      limit
+    );
+  }
+
+  const snapshot = await withFirestoreRetry(
+    "fetchUnsyncedPayments",
+    () =>
+      getDb()
+        .collection("payments")
+        .get()
+  );
+
+  const payments = snapshot.docs.map(
+    (docSnap) => ({
+      id: docSnap.id,
+      ...docSnap.data(),
+    })
+  );
+
+  return filterUnsyncedPayments(
+    payments,
+    paymentsByClient,
+    limit
+  );
 }
 
 async function recoverMisroutedTopupPayments(
@@ -165,6 +251,39 @@ async function recoverMisroutedTopupPayments(
   }
 
   return recoveredIds;
+}
+
+function applyRecoveryInMemory(
+  allPayments,
+  recoveredIds
+) {
+  if (!recoveredIds.length) {
+    return allPayments;
+  }
+
+  const recoveredSet = new Set(
+    recoveredIds
+  );
+
+  return allPayments.map((payment) => {
+    if (!recoveredSet.has(payment.id)) {
+      return payment;
+    }
+
+    return {
+      ...payment,
+      syncedToSheets: false,
+      syncedToTt: false,
+      ttRowResyncPending: false,
+      ttRowNumber: undefined,
+      ttUpdatedRange: undefined,
+      sheetsUpdatedRange: undefined,
+      ttSpreadsheetId: undefined,
+      syncedAt: undefined,
+      lastTtSyncSkipReason: undefined,
+      lastTtSyncSkippedAt: undefined,
+    };
+  });
 }
 
 async function fetchClientsForPayments(
@@ -830,9 +949,13 @@ async function queueBudgetRepairResyncs({
 }
 
 async function fetchAllActivePayments() {
-  const snapshot = await getDb()
-    .collection("payments")
-    .get();
+  const snapshot = await withFirestoreRetry(
+    "fetchAllActivePayments",
+    () =>
+      getDb()
+        .collection("payments")
+        .get()
+  );
 
   return snapshot.docs
     .map((docSnap) => ({
@@ -879,19 +1002,25 @@ async function runTtSheetsSync({
     const allPayments =
       await fetchAllActivePayments();
 
-    await recoverMisroutedTopupPayments(
-      allPayments
-    );
+    const recoveredIds =
+      await recoverMisroutedTopupPayments(
+        allPayments
+      );
 
     const activePayments =
-      await fetchAllActivePayments();
+      applyRecoveryInMemory(
+        allPayments,
+        recoveredIds
+      );
 
     const paymentsByClient =
       buildPaymentsByClient(activePayments);
 
     const payments =
       await fetchUnsyncedPayments(
-        paymentsByClient
+        paymentsByClient,
+        500,
+        activePayments
       );
 
     const resyncPayments =
