@@ -38,8 +38,9 @@ import {
   resolveDialogLookupId,
 } from "../domain/client/dialogLinkUtils";
 import {
-  recordMatchesDialogSearch,
-} from "../domain/client/recordDialogSearch";
+  clientCanonicalDialogMatches,
+  clientMatchesDialogLookup,
+} from "../domain/client/clientDialogLookup";
 import { resolveNextPaymentDate } from "../domain/client/clientDates";
 import { getClientStatus, getRemain } from "../domain/client/clientStatus";
 import { resolveMissingVkRemindersForClient } from "./missingVkReminderService";
@@ -346,49 +347,6 @@ function clientMatchesBsId(
   );
 }
 
-/** Client card dialog is source of truth — stale payment dialogLink must not win. */
-function clientCanonicalDialogMatches(
-  client,
-  dialogLink,
-  dialogId
-) {
-  if (!client) {
-    return false;
-  }
-
-  const clientDialogId =
-    String(
-      client.dialogId ||
-        extractDialogId(
-          client.dialogLink
-        ) ||
-        ""
-    ).trim();
-
-  if (dialogId && clientDialogId) {
-    return clientDialogId === dialogId;
-  }
-
-  if (
-    dialogLink &&
-    client.dialogLink?.trim()
-  ) {
-    return dialogLinksMatch(
-      client.dialogLink,
-      dialogLink
-    );
-  }
-
-  if (!clientDialogId && !client.dialogLink?.trim()) {
-    return true;
-  }
-
-  return recordMatchesDialogSearch(
-    client,
-    dialogLink
-  );
-}
-
 async function searchPaymentsByBsId({
   bsId,
   userData,
@@ -574,7 +532,8 @@ async function searchPaymentsForDialog({
           !clientCanonicalDialogMatches(
             resolved.client,
             dialogLink,
-            dialogId
+            dialogId,
+            paymentData
           )
         ) {
           dialogCollisions.push({
@@ -769,7 +728,7 @@ async function searchOwnedClientsForDialog(
 
   return (
     ownedClients.find((client) =>
-      recordMatchesDialogSearch(
+      clientMatchesDialogLookup(
         client,
         dialogLink
       )
@@ -837,30 +796,34 @@ export async function findClientByDialogLink(
         dialogLink
       );
 
-    const paymentResult =
-      await searchPaymentsForDialog({
-        dialogId,
-        variants,
+    const ownedClient =
+      await searchOwnedClientsForDialog(
         dialogLink,
-        userData,
-        blockedOwner: null,
-        bsId,
-      });
+        userData
+      );
 
-    if (paymentResult.status === "found") {
-      return paymentResult;
-    }
+    if (ownedClient) {
+      if (
+        bsId &&
+        !clientMatchesBsId(
+          ownedClient,
+          bsId
+        )
+      ) {
+        return {
+          client: null,
+          status: "bs_id_mismatch",
+          collision: {
+            client: ownedClient,
+            paymentBsId:
+              ownedClient.clientNote || "",
+          },
+        };
+      }
 
-    if (paymentResult.collision) {
       return {
-        client: null,
-        status:
-          paymentResult.collision.kind ===
-          "dialog_client_mismatch"
-            ? "dialog_client_mismatch"
-            : "bs_id_mismatch",
-        collision:
-          paymentResult.collision,
+        client: ownedClient,
+        status: "found",
       };
     }
 
@@ -869,8 +832,7 @@ export async function findClientByDialogLink(
         dialogId,
         variants,
         userData,
-        blockedOwner:
-          paymentResult.blockedOwner,
+        blockedOwner: null,
       });
 
     if (clientResult.status === "found") {
@@ -900,6 +862,34 @@ export async function findClientByDialogLink(
       };
     }
 
+    const paymentResult =
+      await searchPaymentsForDialog({
+        dialogId,
+        variants,
+        dialogLink,
+        userData,
+        blockedOwner:
+          clientResult.blockedOwner,
+        bsId,
+      });
+
+    if (paymentResult.status === "found") {
+      return paymentResult;
+    }
+
+    if (paymentResult.collision) {
+      return {
+        client: null,
+        status:
+          paymentResult.collision.kind ===
+          "dialog_client_mismatch"
+            ? "dialog_client_mismatch"
+            : "bs_id_mismatch",
+        collision:
+          paymentResult.collision,
+      };
+    }
+
     const accessDenied =
       paymentResult.accessDenied ||
       clientResult.accessDenied;
@@ -912,37 +902,6 @@ export async function findClientByDialogLink(
         client: null,
         status: "access_denied",
         blockedOwner,
-      };
-    }
-
-    const ownedClient =
-      await searchOwnedClientsForDialog(
-        dialogLink,
-        userData
-      );
-
-    if (ownedClient) {
-      if (
-        bsId &&
-        !clientMatchesBsId(
-          ownedClient,
-          bsId
-        )
-      ) {
-        return {
-          client: null,
-          status: "bs_id_mismatch",
-          collision: {
-            client: ownedClient,
-            paymentBsId:
-              ownedClient.clientNote || "",
-          },
-        };
-      }
-
-      return {
-        client: ownedClient,
-        status: "found",
       };
     }
 
