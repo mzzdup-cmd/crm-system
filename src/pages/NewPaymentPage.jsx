@@ -1105,7 +1105,7 @@ export default function NewPaymentPage() {
 
   async function findClient(
     link,
-    bsIdOverride = clientNote
+    bsIdOverride = null
   ) {
     setDialogLink(link);
 
@@ -1120,15 +1120,18 @@ export default function NewPaymentPage() {
     setDialogLookupStatus("");
     setDialogBlockedOwner(null);
     setDialogCollision(null);
+    setFoundClient(null);
+
+    const explicitBsId =
+      bsIdOverride?.trim?.() || "";
 
     const lookup =
       await findClientByDialogLink(
         link,
         userData,
-        {
-          bsId: bsIdOverride?.trim?.() ||
-            clientNote.trim(),
-        }
+        explicitBsId
+          ? { bsId: explicitBsId }
+          : {}
       );
 
     setFoundClient(lookup.client);
