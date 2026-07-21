@@ -58,17 +58,7 @@ export function clientCanonicalDialogMatches(
     !clientDialogId &&
     !client.dialogLink?.trim()
   ) {
-    if (!dialogId) {
-      return true;
-    }
-
-    const paymentDialogId =
-      getPaymentDialogId(payment);
-
-    return (
-      Boolean(paymentDialogId) &&
-      paymentDialogId === dialogId
-    );
+    return false;
   }
 
   return recordMatchesDialogSearch(

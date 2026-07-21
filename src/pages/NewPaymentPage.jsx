@@ -2,6 +2,7 @@ import {
   useState,
   useEffect,
   useMemo,
+  useRef,
 } from "react";
 
 import {
@@ -401,6 +402,11 @@ export default function NewPaymentPage() {
 
   const [dialogCollision, setDialogCollision] =
     useState(null);
+
+  const dialogLookupTimerRef =
+    useRef(null);
+  const dialogLookupRequestRef =
+    useRef(0);
 
   const [clientName, setClientName] =
     useState("");
@@ -1107,6 +1113,9 @@ export default function NewPaymentPage() {
     link,
     bsIdOverride = null
   ) {
+    const requestId =
+      ++dialogLookupRequestRef.current;
+
     setDialogLink(link);
 
     if (isLegacyClientMode) {
@@ -1125,6 +1134,10 @@ export default function NewPaymentPage() {
     const explicitBsId =
       bsIdOverride?.trim?.() || "";
 
+    if (!explicitBsId) {
+      setClientNote("");
+    }
+
     const lookup =
       await findClientByDialogLink(
         link,
@@ -1133,6 +1146,13 @@ export default function NewPaymentPage() {
           ? { bsId: explicitBsId }
           : {}
       );
+
+    if (
+      requestId !==
+      dialogLookupRequestRef.current
+    ) {
+      return;
+    }
 
     setFoundClient(lookup.client);
     setDialogLookupStatus(
@@ -1182,6 +1202,35 @@ export default function NewPaymentPage() {
       bsId
     );
   }
+
+  function scheduleDialogLookup(
+    link,
+    bsIdOverride = null
+  ) {
+    if (dialogLookupTimerRef.current) {
+      clearTimeout(
+        dialogLookupTimerRef.current
+      );
+    }
+
+    dialogLookupTimerRef.current =
+      setTimeout(() => {
+        findClient(
+          link,
+          bsIdOverride
+        );
+      }, 400);
+  }
+
+  useEffect(() => {
+    return () => {
+      if (dialogLookupTimerRef.current) {
+        clearTimeout(
+          dialogLookupTimerRef.current
+        );
+      }
+    };
+  }, []);
 
   function resetAfterSubmit() {
     setPaymentAmount("");
@@ -2858,7 +2907,7 @@ export default function NewPaymentPage() {
                   placeholder="https://..."
                   value={dialogLink}
                   onChange={(e) =>
-                    findClient(
+                    scheduleDialogLookup(
                       e.target.value
                     )
                   }
@@ -3133,7 +3182,7 @@ export default function NewPaymentPage() {
                     placeholder="https://..."
                     value={dialogLink}
                     onChange={(e) =>
-                      findClient(
+                      scheduleDialogLookup(
                         e.target.value
                       )
                     }

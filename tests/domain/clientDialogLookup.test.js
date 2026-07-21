@@ -30,31 +30,17 @@ test("rejects stale payment dialog when client card has different dialog", () =>
   );
 });
 
-test("accepts payment dialog only for legacy client without dialog on card", () => {
-  const legacyClient = {
-    name: "Legacy",
-    clientNote: "12345678",
-  };
-
+test("does not trust payment dialog when client card has no dialog link", () => {
   assert.equal(
     clientCanonicalDialogMatches(
-      legacyClient,
+      {
+        name: "Legacy",
+        clientNote: "12345678",
+      },
       "https://bluesales.ru/app/Messenger/?dialogId=89559619",
       "89559619",
       {
         dialogId: "89559619",
-      }
-    ),
-    true
-  );
-
-  assert.equal(
-    clientCanonicalDialogMatches(
-      legacyClient,
-      "https://bluesales.ru/app/Messenger/?dialogId=89559619",
-      "89559619",
-      {
-        dialogId: "105631789",
       }
     ),
     false
