@@ -1,7 +1,7 @@
 import {
   isBbDealType,
   isOptionalStartDateDealType,
-} from "../../constants/dealTypes";
+} from "../../constants/dealTypes.js";
 
 const SUBSCRIPTION_CYCLE_DAYS = 14;
 

@@ -34,7 +34,17 @@ import {
 import {
   canEditPayment,
   canDeletePayment,
+  canEditPaymentStartDate,
+  canEditPaymentCoreFields,
 } from "../domain/payment/paymentPermissions";
+
+import {
+  canChangePaymentStreamDealType,
+} from "../constants/dealTypes";
+
+import {
+  formatBookingDate,
+} from "../domain/client/bbBookingLogic";
 
 import {
   formatMoney,
@@ -248,12 +258,18 @@ export default function ClientDetailsPage() {
         setClient(updatedClient);
       }
 
-      await loadPayments();
+      await Promise.all([
+        loadPayments(),
+        loadClient(),
+      ]);
     } catch (error) {
       console.error(error);
+      const code = error?.code || "";
       toast.error(
-        error.message ||
-          "Не удалось сохранить"
+        code === "permission-denied"
+          ? "Не удалось сохранить дату старта. Обновите страницу (Ctrl+F5) и попробуйте снова."
+          : error.message ||
+              "Не удалось сохранить"
       );
     } finally {
       setSavingPayment(false);
@@ -432,11 +448,11 @@ export default function ClientDetailsPage() {
 
         rel="noreferrer"
 
-        className="bg-brand hover:bg-brand-muted px-6 py-3 rounded-xl font-bold"
+        className="text-brand hover:underline break-all text-sm max-w-md"
 
       >
 
-        VK клиента
+        {client.vkLink}
 
       </a>
 
@@ -613,8 +629,43 @@ export default function ClientDetailsPage() {
           {
 
             payments.map(
-              (payment) => (
+              (payment) => {
+                const editable =
+                  canEditPayment(
+                    payment,
+                    userData
+                  );
+                const canEditStartDate =
+                  canEditPaymentStartDate(
+                    payment,
+                    userData
+                  );
+                const canChangeStream =
+                  canChangePaymentStreamDealType(
+                    payment.dealType
+                  ) ||
+                  canChangePaymentStreamDealType(
+                    payment.dealTypeId
+                  );
+                const canEditCoreFields =
+                  canEditPaymentCoreFields(
+                    payment,
+                    userData
+                  );
+                const showEditActions =
+                  editable ||
+                  canEditStartDate ||
+                  canEditCoreFields;
+                const streamLabel =
+                  payment.startDate
+                    ? formatBookingDate(
+                        payment.startDate
+                      )
+                    : canChangeStream
+                      ? "не указан"
+                      : "—";
 
+                return (
                 <div
                   key={payment.id}
                   className="bg-surface p-6 rounded-2xl"
@@ -643,6 +694,12 @@ export default function ClientDetailsPage() {
                         }
 
                       </div>
+
+                      {canChangeStream && (
+                        <div className="text-neutral-500 mt-1 text-sm">
+                          Поток: {streamLabel}
+                        </div>
+                      )}
 
                     </div>
 
@@ -698,10 +755,7 @@ export default function ClientDetailsPage() {
                   }
 
                   <div className="mt-4 flex flex-wrap gap-3">
-                    {canEditPayment(
-                      payment,
-                      userData
-                    ) && (
+                    {showEditActions && (
                       <button
                         type="button"
                         onClick={() =>
@@ -715,7 +769,12 @@ export default function ClientDetailsPage() {
                           text-sm font-semibold
                         "
                       >
-                        Редактировать
+                        {canEditStartDate &&
+                        !editable
+                          ? payment.startDate
+                            ? "Изменить поток"
+                            : "Указать поток"
+                          : "Редактировать"}
                       </button>
                     )}
 
@@ -742,8 +801,8 @@ export default function ClientDetailsPage() {
                   </div>
 
                 </div>
-
-              )
+                );
+              }
             )
 
           }

@@ -1,3 +1,43 @@
+import {
+  extractDialogId,
+} from "../client/dialogLinkUtils.js";
+
+import {
+  recordMatchesDialogSearch,
+} from "../client/recordDialogSearch.js";
+
+export function enrichPaymentForSearch(
+  payment,
+  client = null
+) {
+  if (!payment) {
+    return payment;
+  }
+
+  const dialogLink =
+    payment.dialogLink ||
+    client?.dialogLink ||
+    "";
+  const dialogId =
+    payment.dialogId ||
+    extractDialogId(dialogLink) ||
+    client?.dialogId ||
+    extractDialogId(
+      client?.dialogLink || ""
+    ) ||
+    "";
+
+  return {
+    ...payment,
+    dialogLink,
+    dialogId,
+    clientName:
+      payment.clientName ||
+      client?.name ||
+      "",
+  };
+}
+
 function normalizeSearchText(value) {
   return String(value || "")
     .trim()
@@ -21,14 +61,6 @@ function resolveInvoiceValues(payment) {
     payment?.account,
     payment?.accountNumber,
   ].filter(Boolean);
-}
-
-function extractDialogId(value) {
-  const match = String(value || "").match(
-    /dialogId=(\d+)/i
-  );
-
-  return match?.[1] || "";
 }
 
 function invoiceMatchesQuery(
@@ -78,6 +110,15 @@ export function paymentMatchesSearch(
     return true;
   }
 
+  if (
+    recordMatchesDialogSearch(
+      payment,
+      query
+    )
+  ) {
+    return true;
+  }
+
   const invoiceQuery =
     normalizeInvoiceQuery(query);
   const digitQuery =
@@ -96,6 +137,8 @@ export function paymentMatchesSearch(
   const haystack = [
     payment?.clientName,
     payment?.legacyClientName,
+    payment?.clientNote,
+    payment?.legacyClientBsId,
     payment?.manager,
     payment?.dealType,
     payment?.course,
@@ -104,6 +147,7 @@ export function paymentMatchesSearch(
     payment?.comment,
     payment?.amount,
     payment?.paymentDate,
+    payment?.dialogId,
     ...resolveInvoiceValues(payment),
     extractDialogId(payment?.dialogLink),
   ]
@@ -126,3 +170,5 @@ export function paymentMatchesSearch(
 
   return false;
 }
+
+export { clientMatchesSearch } from "../client/recordDialogSearch.js";

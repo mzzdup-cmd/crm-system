@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 
 import {
   paymentMatchesSearch,
+  enrichPaymentForSearch,
 } from "../../src/domain/payment/paymentSearch.js";
 
 const basePayment = {
@@ -61,6 +62,50 @@ test("matches dialog id from dialog link", () => {
     paymentMatchesSearch(
       basePayment,
       "104624030"
+    ),
+    true
+  );
+});
+
+test("matches full bluesales URL in search", () => {
+  assert.equal(
+    paymentMatchesSearch(
+      basePayment,
+      "https://bluesales.ru/app/Messenger/?dialogId=104624030"
+    ),
+    true
+  );
+});
+
+test("matches dialog link from linked client record", () => {
+  assert.equal(
+    paymentMatchesSearch(
+      enrichPaymentForSearch(
+        {
+          clientId: "c1",
+          clientName: "Миша",
+          course: "Монтаж",
+        },
+        {
+          id: "c1",
+          dialogLink:
+            "https://bluesales.ru/app/Messenger/?dialogId=105631789",
+        }
+      ),
+      "https://bluesales.ru/app/Messenger/?dialogId=105631789"
+    ),
+    true
+  );
+});
+
+test("matches BS client id in clientNote", () => {
+  assert.equal(
+    paymentMatchesSearch(
+      {
+        ...basePayment,
+        clientNote: "142728300",
+      },
+      "142728300"
     ),
     true
   );

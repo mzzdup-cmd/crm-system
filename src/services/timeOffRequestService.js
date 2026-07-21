@@ -228,10 +228,17 @@ export async function deleteTimeOffRequest({
     request.status ===
     REQUEST_STATUS.APPROVED
   ) {
-    await removeApprovedDayOff({
-      date: request.date,
-      managerId: request.managerId,
-    });
+    try {
+      await removeApprovedDayOff({
+        date: request.date,
+        managerId: request.managerId,
+      });
+    } catch (error) {
+      console.warn(
+        "Schedule update after time-off delete skipped:",
+        error
+      );
+    }
   }
 
   await deleteDoc(requestRef);

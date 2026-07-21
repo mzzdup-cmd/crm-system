@@ -143,6 +143,21 @@ test("bb rows keep client budget in TT export", () => {
   assert.equal(row[5], 40000);
 });
 
+test("refund rows keep amount but omit budget", () => {
+  const row = mapPaymentToTtRow({
+    payment: {
+      ...basePayment,
+      dealType: "Возврат",
+      amount: 5000,
+    },
+    client: clientWithBudget,
+    cycle: 2,
+  });
+
+  assert.equal(row[4], 5000);
+  assert.equal(row[5], "");
+});
+
 test("deferred profile rows omit empty budget and start date in TT export", () => {
   const bbRow = mapPaymentToTtRow({
     payment: {

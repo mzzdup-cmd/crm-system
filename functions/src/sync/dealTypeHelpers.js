@@ -17,6 +17,34 @@ function isOptionalStartDateDeal(dealType) {
   return isDeferredProfileDeal(dealType);
 }
 
+function isRejectDeal(dealType) {
+  return String(dealType || "").startsWith(
+    "Отказ"
+  );
+}
+
+function isRefundDeal(dealType) {
+  const value = String(dealType || "").trim();
+
+  return (
+    value === "Возврат" || value === "refund"
+  );
+}
+
+/** Колонка E (Сумма) — пустая только для отказов. */
+function shouldExportTtAmount(dealType) {
+  return !isRejectDeal(dealType);
+}
+
+/** Колонка F (Бюджет) — пустая для отказов, доплат и возвратов. */
+function shouldExportTtBudget(dealType) {
+  return (
+    !isRejectDeal(dealType) &&
+    !isTopupDeal(dealType) &&
+    !isRefundDeal(dealType)
+  );
+}
+
 function formatTtBudgetCell(dealType, value) {
   const amount = Number(value || 0);
 
@@ -28,6 +56,16 @@ function formatTtBudgetCell(dealType, value) {
   }
 
   return amount > 0 ? amount : Number(value || 0);
+}
+
+function resolveTtAmount(payment) {
+  if (!shouldExportTtAmount(payment?.dealType)) {
+    return "";
+  }
+
+  const amount = Number(payment?.amount || 0);
+
+  return amount > 0 ? amount : amount;
 }
 
 /** Доплаты в ТТ — без суммы бюджета в колонке F. */
@@ -79,14 +117,10 @@ function resolveTtBudgetAmount({
   const isMinimalLegacy =
     payment.isLegacy === true &&
     !isLegacyClient;
-  const isRejectDeal = String(
-    payment.dealType || ""
-  ).startsWith("Отказ");
 
   if (
     isMinimalLegacy ||
-    isRejectDeal ||
-    isTopupDeal(payment.dealType)
+    !shouldExportTtBudget(payment.dealType)
   ) {
     return "";
   }
@@ -99,21 +133,20 @@ function resolveTtBudgetAmount({
   }
 
   if (isUpsellDeal(payment.dealType)) {
-    const paymentBudget =
-      payment.budget != null
-        ? Number(payment.budget || 0)
-        : null;
-
-    if (
-      paymentBudget != null &&
+    const paymentBudget = Number(
+      payment.budget || 0
+    );
+    const clientBudget = Number(
+      client.budget || 0
+    );
+    const resolvedBudget =
       paymentBudget > 0
-    ) {
-      return paymentBudget;
-    }
+        ? paymentBudget
+        : clientBudget;
 
     return formatTtBudgetCell(
       payment.dealType,
-      client.budget || 0
+      resolvedBudget
     );
   }
 
@@ -148,8 +181,13 @@ function parseTtRowNumber(payment) {
 module.exports = {
   isDeferredProfileDeal,
   isOptionalStartDateDeal,
+  isRejectDeal,
+  isRefundDeal,
   isTopupDeal,
   isUpsellDeal,
+  shouldExportTtAmount,
+  shouldExportTtBudget,
+  resolveTtAmount,
   resolveTtBudgetAmount,
   canResyncStartDateInTt,
   parseTtRowNumber,

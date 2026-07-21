@@ -207,17 +207,32 @@ export function isMailingDealType(value) {
   );
 }
 
-/** ББ / Апсэйл / Рассылка — старт, тариф и бюджет можно указать позже (без напоминаний). */
-const DEFERRED_PAYMENT_PROFILE_DEAL_TYPE_IDS =
+/** ББ, Апсэйл, Рассылка — можно менять поток (startDate) без ограничения 30 мин. */
+export const PAYMENT_STREAM_CHANGE_DEAL_TYPE_IDS =
   ["bb", "upsell", "mailing"];
 
-export function isDeferredPaymentProfileDealType(
+export const PAYMENT_STREAM_CHANGE_DEAL_TYPES_LABEL =
+  "ББ, Апсэйл и Рассылка";
+
+/** ББ / Апсэйл / Рассылка — старт, тариф и бюджет можно указать позже (без напоминаний). */
+const DEFERRED_PAYMENT_PROFILE_DEAL_TYPE_IDS =
+  PAYMENT_STREAM_CHANGE_DEAL_TYPE_IDS;
+
+export function canChangePaymentStreamDealType(
   value
 ) {
   const id = resolveDealTypeId(value);
 
-  return DEFERRED_PAYMENT_PROFILE_DEAL_TYPE_IDS.includes(
+  return PAYMENT_STREAM_CHANGE_DEAL_TYPE_IDS.includes(
     id
+  );
+}
+
+export function isDeferredPaymentProfileDealType(
+  value
+) {
+  return canChangePaymentStreamDealType(
+    value
   );
 }
 

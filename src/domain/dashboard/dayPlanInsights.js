@@ -2,6 +2,7 @@ import {
   getRemain,
   hasDebt,
   isOverdue,
+  indexPaymentsByClientId,
 } from "../client/clientStatus";
 
 import {
@@ -59,7 +60,8 @@ function buildLatestStreamStartByClientId(
 function resolveTopupPlanMonthKey(
   client,
   latestPaymentByClientId,
-  todayStr
+  todayStr,
+  paymentsByClientId = null
 ) {
   if (!hasDebt(client)) {
     return null;
@@ -71,7 +73,8 @@ function resolveTopupPlanMonthKey(
   if (
     isOverdue(
       client,
-      new Date(`${todayStr}T12:00:00`)
+      new Date(`${todayStr}T12:00:00`),
+      paymentsByClientId
     )
   ) {
     return currentMonth;
@@ -206,6 +209,8 @@ export function getPlannedTopupsSummary(
     buildLatestStreamStartByClientId(
       payments
     );
+  const paymentsByClientId =
+    indexPaymentsByClientId(payments);
 
   const subscriptionClients =
     clients.filter((client) =>
@@ -222,7 +227,8 @@ export function getPlannedTopupsSummary(
           resolveTopupPlanMonthKey(
             client,
             latestByClient,
-            todayStr
+            todayStr,
+            paymentsByClientId
           );
 
         return planMonth === currentMonth;

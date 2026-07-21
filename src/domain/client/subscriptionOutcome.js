@@ -56,7 +56,8 @@ export function isActiveSubscription(client) {
 
 export function buildSubscriptionOutcomeUpdate(
   client,
-  nextAmount
+  nextAmount,
+  dealTypeId = ""
 ) {
   const budget = Number(client?.budget || 0);
 
@@ -67,6 +68,31 @@ export function buildSubscriptionOutcomeUpdate(
   if (
     isSubscriptionChurned(client)
   ) {
+    if (
+      dealTypeId === "topup_po" ||
+      dealTypeId === "Доплата ПО"
+    ) {
+      const remain =
+        budget -
+        Number(nextAmount || 0);
+
+      if (remain <= 0) {
+        return {
+          subscriptionOutcome:
+            SUBSCRIPTION_OUTCOMES.COMPLETED,
+          subscriptionClosedAt:
+            Date.now(),
+          nextPaymentDate: null,
+        };
+      }
+
+      return {
+        subscriptionOutcome:
+          SUBSCRIPTION_OUTCOMES.ACTIVE,
+        subscriptionClosedAt: null,
+      };
+    }
+
     return {};
   }
 

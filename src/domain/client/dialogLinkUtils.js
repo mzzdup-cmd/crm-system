@@ -96,7 +96,13 @@ export function getDialogLinkLookupVariants(
         `https://${host}/app/Messenger?dialogId=${dialogId}`
       );
       variants.add(
+        `https://${host}/app/Messenger/?dialogId=${dialogId}`
+      );
+      variants.add(
         `http://${host}/app/Messenger?dialogId=${dialogId}`
+      );
+      variants.add(
+        `http://${host}/app/Messenger/?dialogId=${dialogId}`
       );
     }
   }
@@ -126,4 +132,25 @@ export function getDialogLinkLookupVariants(
   }
 
   return [...variants];
+}
+
+/** Bluesales dialog id from URL or plain digits (not BS client id). */
+export function resolveDialogLookupId(raw) {
+  const trimmed = String(raw || "").trim();
+
+  if (!trimmed) {
+    return "";
+  }
+
+  const fromUrl = extractDialogId(trimmed);
+
+  if (fromUrl) {
+    return fromUrl;
+  }
+
+  if (/^\d{5,}$/.test(trimmed)) {
+    return trimmed;
+  }
+
+  return "";
 }

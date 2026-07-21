@@ -24,10 +24,15 @@ import {
   isLeadership,
   getCurrentManagerId,
   getFirestoreManagerId,
+  getManagerIdsForScopedQuery,
   resolveManagerFieldsForWrite,
 } from "../domain/auth/roleHelpers";
 import {
+  canAccessPayment,
+} from "../domain/auth/permissionHelpers";
+import {
   getStartDate,
+  getNextPaymentDate,
   resolveNextPaymentDate,
 } from "../domain/client/clientDates";
 import {
@@ -42,6 +47,11 @@ import {
   isPaymentDeleted,
   canEditPaymentStartDate,
   canEditCuratorStartDate,
+  canEditDeferredPaymentProfile,
+  canEditPaymentCoreFields,
+  canApplyPaymentUpdates,
+  isDeferredProfileOnlyUpdates,
+  isClientCoreProfileUpdates,
   isStartDateOnlyPaymentUpdates,
   isCuratorStartDateOnlyPaymentUpdates,
   shouldSkipClientRecalcForPaymentUpdates,
@@ -63,12 +73,19 @@ import {
 } from "../domain/payment/legacyPayment";
 import {
   isOptionalStartDateDealType,
+  canChangePaymentStreamDealType,
+  PAYMENT_STREAM_CHANGE_DEAL_TYPES_LABEL,
   isTopupBbDealType,
   isTopupDealType,
   needsBudgetFieldForExistingDeal,
+  resolveDealTypeId,
 } from "../constants/dealTypes";
 import {
+  extractDialogId,
+} from "../domain/client/dialogLinkUtils";
+import {
   BB_BOOKING_STAGE,
+  resolvePlannedStartDate,
 } from "../domain/client/bbBookingLogic";
 import {
   buildLegacySubscriberProfile,
@@ -143,10 +160,19 @@ export function normalizePaymentPayload(data) {
     );
   }
 
+  const dialogLink =
+    data.dialogLink?.trim() || "";
+  const dialogId =
+    data.dialogId?.trim() ||
+    extractDialogId(dialogLink) ||
+    "";
+
   return {
     ...data,
     manager,
     managerId,
+    dialogLink,
+    dialogId,
     amount: Number(data.amount || 0),
     isLegacy: legacy,
     isLegacyClient,
@@ -289,36 +315,16 @@ function paymentBelongsToManager(
   payment,
   userData
 ) {
-  const canonicalId =
-    getCurrentManagerId(userData);
-  const firestoreId =
-    getFirestoreManagerId(userData);
-  const managerName =
-    userData?.name || "";
-
-  return (
-    (canonicalId &&
-      payment.managerId === canonicalId) ||
-    (firestoreId &&
-      payment.managerId === firestoreId) ||
-    (managerName &&
-      payment.manager === managerName)
+  return canAccessPayment(
+    userData,
+    payment
   );
 }
 
 function getManagerQueryIds(userData) {
-  const canonicalId =
-    getCurrentManagerId(userData);
-  const firestoreId =
-    getFirestoreManagerId(userData);
-
-  return [
-    ...new Set(
-      [firestoreId, canonicalId].filter(
-        Boolean
-      )
-    ),
-  ];
+  return getManagerIdsForScopedQuery(
+    userData
+  );
 }
 
 async function queryPaymentsByManagerId(
@@ -536,7 +542,80 @@ export async function recalculateClientAmount(
   };
 }
 
-/** Указать поток для ББ / Рассылка — без пересчёта клиента и лишних полей. */
+async function syncClientScheduleAfterStartDateChange(
+  payment,
+  {
+    startDate,
+    curatorStartDate,
+  } = {}
+) {
+  if (!payment?.clientId) {
+    return null;
+  }
+
+  const optionalStartDate =
+    isOptionalStartDateDealType(
+      payment.dealType
+    ) ||
+    isOptionalStartDateDealType(
+      payment.dealTypeId
+    );
+
+  if (!optionalStartDate) {
+    return null;
+  }
+
+  const client = await getClientById(
+    payment.clientId
+  );
+
+  if (!client) {
+    return null;
+  }
+
+  const mergedPayment = {
+    ...payment,
+    ...(startDate !== undefined
+      ? {
+          startDate:
+            startDate || "",
+        }
+      : {}),
+    ...(curatorStartDate !== undefined
+      ? {
+          curatorStartDate:
+            curatorStartDate || "",
+        }
+      : {}),
+  };
+  const effectiveStart =
+    resolvePlannedStartDate(
+      mergedPayment,
+      client
+    );
+  const update = {
+    startDate: effectiveStart,
+  };
+
+  if (effectiveStart) {
+    update.nextPaymentDate =
+      getNextPaymentDate(
+        effectiveStart
+      );
+  }
+
+  await updateClient(
+    payment.clientId,
+    update
+  );
+
+  return {
+    ...client,
+    ...update,
+  };
+}
+
+/** Указать поток для ББ / Апсэйл / Рассылка — без пересчёта клиента. */
 export async function updatePaymentStartDate({
   paymentId,
   startDate,
@@ -555,6 +634,10 @@ export async function updatePaymentStartDate({
     !canEditPaymentStartDate(
       payment,
       userData
+    ) &&
+    !canEditPaymentCoreFields(
+      payment,
+      userData
     )
   ) {
     throw new Error(
@@ -562,17 +645,17 @@ export async function updatePaymentStartDate({
     );
   }
 
-  const optionalStartDate =
-    isOptionalStartDateDealType(
+  const canChangeStream =
+    canChangePaymentStreamDealType(
       payment.dealType
     ) ||
-    isOptionalStartDateDealType(
+    canChangePaymentStreamDealType(
       payment.dealTypeId
     );
 
-  if (!optionalStartDate) {
+  if (!canChangeStream) {
     throw new Error(
-      "Дата старта доступна только для ББ и Рассылки"
+      `Смена потока доступна только для ${PAYMENT_STREAM_CHANGE_DEAL_TYPES_LABEL}`
     );
   }
 
@@ -619,6 +702,28 @@ export async function updatePaymentStartDate({
     throw error;
   }
 
+  let client = null;
+
+  try {
+    client =
+      await syncClientScheduleAfterStartDateChange(
+        {
+          ...payment,
+          ...payload,
+          id: paymentId,
+        },
+        {
+          startDate:
+            payload.startDate,
+        }
+      );
+  } catch (error) {
+    console.warn(
+      "Client schedule sync skipped:",
+      error
+    );
+  }
+
   try {
     await resolveMissingStartDateReminder(
       {
@@ -639,6 +744,7 @@ export async function updatePaymentStartDate({
     id: paymentId,
     ...payment,
     ...payload,
+    client,
   };
 }
 
@@ -695,10 +801,33 @@ export async function updatePaymentCuratorStartDate({
     throw error;
   }
 
+  let client = null;
+
+  try {
+    client =
+      await syncClientScheduleAfterStartDateChange(
+        {
+          ...payment,
+          ...payload,
+          id: paymentId,
+        },
+        {
+          curatorStartDate:
+            payload.curatorStartDate,
+        }
+      );
+  } catch (error) {
+    console.warn(
+      "Client schedule sync skipped:",
+      error
+    );
+  }
+
   return {
     id: paymentId,
     ...payment,
     ...payload,
+    client,
   };
 }
 
@@ -717,23 +846,10 @@ export async function updatePayment({
   }
 
   if (
-    !canEditPayment(
+    !canApplyPaymentUpdates(
       payment,
-      userData
-    ) &&
-    !(
-      canEditPaymentStartDate(
-        payment,
-        userData
-      ) &&
-      updates.startDate !== undefined
-    ) &&
-    !(
-      canEditCuratorStartDate(
-        payment,
-        userData
-      ) &&
-      updates.curatorStartDate !== undefined
+      userData,
+      updates
     )
   ) {
     throw new Error(
@@ -878,7 +994,7 @@ export async function updatePayment({
     }
   }
 
-  const client =
+  let client =
     payment.clientId &&
     !shouldSkipClientRecalcForPaymentUpdates(
       updates
@@ -887,6 +1003,36 @@ export async function updatePayment({
           payment.clientId
         )
       : null;
+
+  if (
+    !client &&
+    payment.clientId &&
+    shouldSkipClientRecalcForPaymentUpdates(
+      updates
+    )
+  ) {
+    try {
+      client =
+        await syncClientScheduleAfterStartDateChange(
+          {
+            ...payment,
+            ...payload,
+            id: paymentId,
+          },
+          {
+            startDate:
+              payload.startDate,
+            curatorStartDate:
+              payload.curatorStartDate,
+          }
+        );
+    } catch (error) {
+      console.warn(
+        "Client schedule sync skipped:",
+        error
+      );
+    }
+  }
 
   return {
     id: paymentId,
@@ -898,8 +1044,8 @@ export async function updatePayment({
 
 export async function updatePaymentWithClient({
   paymentId,
-  paymentUpdates,
-  clientUpdates,
+  paymentUpdates = {},
+  clientUpdates = {},
   userData,
 }) {
   const payment =
@@ -911,21 +1057,113 @@ export async function updatePaymentWithClient({
     );
   }
 
-  const result = await updatePayment({
-    paymentId,
-    updates: paymentUpdates,
-    userData,
-  });
+  const hasPaymentUpdates =
+    Object.keys(paymentUpdates).length > 0;
+  const hasClientUpdates =
+    Object.keys(clientUpdates).length > 0;
+  const deferredProfileOnly =
+    isDeferredProfileOnlyUpdates(
+      paymentUpdates,
+      clientUpdates
+    );
+  const clientCoreProfileOnly =
+    isClientCoreProfileUpdates(
+      clientUpdates
+    ) &&
+    Object.keys(paymentUpdates).length === 0;
+  const canDeferredProfile =
+    canEditDeferredPaymentProfile(
+      payment,
+      userData
+    );
+  const canCoreProfile =
+    canEditPaymentCoreFields(
+      payment,
+      userData
+    );
 
   if (
-    clientUpdates &&
-    Object.keys(clientUpdates).length &&
+    hasClientUpdates &&
+    !hasPaymentUpdates &&
+    deferredProfileOnly &&
+    !canDeferredProfile &&
+    !canCoreProfile
+  ) {
+    throw new Error(
+      "Нет прав на редактирование"
+    );
+  }
+
+  if (
+    hasClientUpdates &&
+    !hasPaymentUpdates &&
+    clientCoreProfileOnly &&
+    !canCoreProfile
+  ) {
+    throw new Error(
+      "Нет прав на редактирование"
+    );
+  }
+
+  let result = payment;
+
+  if (hasPaymentUpdates) {
+    result = await updatePayment({
+      paymentId,
+      updates: paymentUpdates,
+      userData,
+    });
+  } else if (
+    hasClientUpdates &&
+    !clientCoreProfileOnly &&
+    !deferredProfileOnly &&
+    !canEditPayment(
+      payment,
+      userData
+    ) &&
+    !canEditPaymentCoreFields(
+      payment,
+      userData
+    )
+  ) {
+    throw new Error(
+      "Нет прав на редактирование"
+    );
+  }
+
+  if (
+    hasClientUpdates &&
     payment.clientId
   ) {
     await updateClient(
       payment.clientId,
       clientUpdates
     );
+  }
+
+  if (
+    hasClientUpdates &&
+    !hasPaymentUpdates &&
+    paymentHasExportedTtRow(payment) &&
+    (
+      clientUpdates.budget !== undefined ||
+      clientUpdates.tariff !== undefined
+    )
+  ) {
+    await updateDoc(
+      doc(db, "payments", paymentId),
+      {
+        ttRowResyncPending: true,
+        ...buildUpdateAudit(
+          resolveAuditUser(userData)
+        ),
+      }
+    );
+
+    result = {
+      ...result,
+      ttRowResyncPending: true,
+    };
   }
 
   const startDateOnlyUpdate =
@@ -935,6 +1173,7 @@ export async function updatePaymentWithClient({
 
   const client =
     payment.clientId &&
+    hasPaymentUpdates &&
     !startDateOnlyUpdate
       ? await recalculateClientAmount(
           payment.clientId
@@ -1110,6 +1349,7 @@ export async function applyPaymentToClient({
   client,
   paymentAmount,
   paymentDate,
+  dealType = "",
 }) {
   const newAmount =
     Number(client.amount || 0) +
@@ -1132,7 +1372,8 @@ export async function applyPaymentToClient({
     nextPaymentDate,
     ...buildSubscriptionOutcomeUpdate(
       client,
-      newAmount
+      newAmount,
+      resolveDealTypeId(dealType)
     ),
   });
 
@@ -1408,6 +1649,7 @@ export async function createPayment({
       client: clientForApply,
       paymentAmount,
       paymentDate,
+      dealType,
     });
 
   if (

@@ -15,6 +15,10 @@ import { usePermissions }
 from "../hooks/usePermissions";
 
 import {
+  getClientsForUser,
+} from "../services/clientService";
+
+import {
   getPaymentsForUser,
   getPaymentById,
   updatePaymentStartDate,
@@ -27,11 +31,13 @@ import {
   canEditPayment,
   canDeletePayment,
   canEditPaymentStartDate,
+  canEditPaymentCoreFields,
   getPaymentEditTimeLeft,
 } from "../domain/payment/paymentPermissions";
 
 import {
   paymentMatchesSearch,
+  enrichPaymentForSearch,
 } from "../domain/payment/paymentSearch";
 
 import {
@@ -48,7 +54,7 @@ import {
 } from "../domain/payment/legacyPayment";
 
 import {
-  isOptionalStartDateDealType,
+  canChangePaymentStreamDealType,
 } from "../constants/dealTypes";
 
 import PageHeader
@@ -116,6 +122,10 @@ export default function PaymentsPage({
     reload,
   } = usePageLoad(getPaymentsForUser);
 
+  const {
+    data: clients,
+  } = usePageLoad(getClientsForUser);
+
   const [editPayment, setEditPayment] =
     useState(null);
 
@@ -142,15 +152,38 @@ export default function PaymentsPage({
   const paymentList =
     payments || [];
 
+  const clientsById = useMemo(() => {
+    const map = new Map();
+
+    (clients || []).forEach((client) => {
+      map.set(client.id, client);
+    });
+
+    return map;
+  }, [clients]);
+
   const filteredPayments = useMemo(
     () =>
-      paymentList.filter((payment) =>
-        paymentMatchesSearch(
-          payment,
+      paymentList.filter((payment) => {
+        const client = payment.clientId
+          ? clientsById.get(
+              payment.clientId
+            )
+          : null;
+
+        return paymentMatchesSearch(
+          enrichPaymentForSearch(
+            payment,
+            client
+          ),
           search
-        )
-      ),
-    [paymentList, search]
+        );
+      }),
+    [
+      paymentList,
+      clientsById,
+      search,
+    ]
   );
 
   const hasSearch =
@@ -436,9 +469,16 @@ export default function PaymentsPage({
                   userData
                 );
 
+              const canEditCoreFields =
+                canEditPaymentCoreFields(
+                  payment,
+                  userData
+                );
+
               const showEditActions =
                 editable ||
-                canEditStartDate;
+                canEditStartDate ||
+                canEditCoreFields;
 
               const deletable =
                 canDeletePayment(
@@ -476,7 +516,14 @@ export default function PaymentsPage({
                       <div className="text-neutral-400 mt-2 text-sm break-all">
                         {legacy
                           ? `${payment.course || "—"} · ${payment.dialogLink || "—"}`
-                          : `${payment.course} · ${payment.manager}`}
+                          : `${payment.course || "—"} · ${enrichPaymentForSearch(
+                              payment,
+                              payment.clientId
+                                ? clientsById.get(
+                                    payment.clientId
+                                  )
+                                : null
+                            ).dialogLink || payment.manager || "—"}`}
                       </div>
 
                       {!legacy && (
@@ -559,8 +606,11 @@ export default function PaymentsPage({
                         {legacy
                           ? "—"
                           : payment.startDate ||
-                            (isOptionalStartDateDealType(
+                            (canChangePaymentStreamDealType(
                               payment.dealType
+                            ) ||
+                            canChangePaymentStreamDealType(
+                              payment.dealTypeId
                             )
                               ? "не указан"
                               : "—")}

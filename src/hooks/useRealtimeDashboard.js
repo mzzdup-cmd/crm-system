@@ -26,6 +26,8 @@ import {
 import {
   isOverdue,
   getRemain,
+  indexPaymentsByClientId,
+  resolveOverdueInstallmentAmount,
 } from "../domain/client/clientStatus";
 
 import {
@@ -166,7 +168,11 @@ export function useDashboardRealtime() {
       return;
     }
 
-    syncClientReminders(userData, clients);
+    syncClientReminders(
+      userData,
+      clients,
+      payments
+    );
 
     // Missing VK reminder sync disabled.
 
@@ -179,7 +185,7 @@ export function useDashboardRealtime() {
         ),
       });
     }
-  }, [userData, clients, schedule, isManager, today]);
+  }, [userData, clients, payments, schedule, isManager, today]);
 
   useEffect(() => {
     if (
@@ -216,13 +222,38 @@ export function useDashboardRealtime() {
         managerName: displayName,
       });
 
-    const overdueClients = clients.filter(
-      (client) => isOverdue(client)
-    );
+    const paymentsByClientId =
+      indexPaymentsByClientId(payments);
 
-    const tasks = buildTodayTasks(clients);
+    const overdueClients = clients
+      .filter((client) =>
+        isOverdue(
+          client,
+          new Date(),
+          paymentsByClientId
+        )
+      )
+      .map((client) => ({
+        ...client,
+        overdueAmount:
+          resolveOverdueInstallmentAmount(
+            client,
+            paymentsByClientId
+          ),
+        totalRemain: getRemain(client),
+      }));
+
+    const tasks = buildTodayTasks(
+      clients,
+      new Date(),
+      payments
+    );
     const activeSubscriptions =
-      buildActiveSubscriptions(clients);
+      buildActiveSubscriptions(
+        clients,
+        new Date(),
+        payments
+      );
 
     const shiftInfo = managerId
       ? getManagerShiftInfo(
@@ -319,10 +350,6 @@ export function useSubscriptionsRealtime() {
         (items) => {
           setClients(items);
           markReady();
-          syncClientReminders(
-            userData,
-            items
-          );
         }
       );
 
@@ -348,12 +375,18 @@ export function useSubscriptionsRealtime() {
       clients,
       payments
     );
+    const paymentsByClientId =
+      indexPaymentsByClientId(payments);
 
     const enrich = (items) =>
       items.map((client) => ({
         ...client,
         remain: getRemain(client),
-        overdue: isOverdue(client),
+        overdue: isOverdue(
+          client,
+          new Date(),
+          paymentsByClientId
+        ),
       }));
 
     return {
@@ -564,9 +597,16 @@ export function useAdminAnalyticsSummary() {
         payments,
         clients,
       });
+    const paymentsByClientId =
+      indexPaymentsByClientId(payments);
 
     const overdue = clients.filter(
-      (client) => isOverdue(client)
+      (client) =>
+        isOverdue(
+          client,
+          new Date(),
+          paymentsByClientId
+        )
     ).length;
 
     return {

@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import {
   isDeferredPaymentProfileDealType,
   isOptionalStartDateDealType,
+  canChangePaymentStreamDealType,
   needsBudgetFieldForExistingDeal,
 } from "../../src/constants/dealTypes.js";
 
@@ -50,6 +51,31 @@ describe("isDeferredPaymentProfileDealType", () => {
     );
     assert.equal(
       isDeferredPaymentProfileDealType("topup_bb"),
+      false
+    );
+  });
+});
+
+describe("canChangePaymentStreamDealType", () => {
+  it("allows stream change only for bb, upsell, mailing", () => {
+    assert.equal(
+      canChangePaymentStreamDealType("ББ"),
+      true
+    );
+    assert.equal(
+      canChangePaymentStreamDealType("Апсэйл"),
+      true
+    );
+    assert.equal(
+      canChangePaymentStreamDealType("Рассылка"),
+      true
+    );
+    assert.equal(
+      canChangePaymentStreamDealType("Доплата ББ"),
+      false
+    );
+    assert.equal(
+      canChangePaymentStreamDealType("Новая"),
       false
     );
   });

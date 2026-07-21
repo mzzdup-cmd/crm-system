@@ -7,12 +7,9 @@ import {
 } from "../../services/ttSyncService";
 
 const SYNC_SLOTS = [
-  "03:00",
+  "00:00",
   "10:00",
-  "13:00",
-  "17:00",
-  "20:00",
-  "23:00",
+  "16:00",
 ];
 
 export default function TtSyncPanel({
@@ -58,7 +55,7 @@ export default function TtSyncPanel({
           <p className="text-neutral-400 text-sm mt-2 max-w-2xl">
             Новые оплаты из CRM автоматически добавляются
             в ТТ-таблицу каждого менеджера в{" "}
-            {SYNC_SLOTS.join(", ")} МСК.
+            {SYNC_SLOTS.join(", ")} МСК (3 раза в день).
             Уже выгруженные оплаты не дублируются.
           </p>
         </div>
@@ -118,7 +115,7 @@ export default function TtSyncPanel({
       >
         {loading
           ? "Выгрузка..."
-          : "Выгрузить новые оплаты сейчас"}
+          : "Выгрузить в ТТ сейчас (ручная)"}
       </button>
 
       <p className="text-neutral-500 text-xs mt-3">

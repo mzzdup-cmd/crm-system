@@ -45,10 +45,32 @@ function canonicalManagerId(managerId) {
     alexander: "alexander_simanov",
     sergey: "sergey_grebenshchikov",
     polina_plamadyala: "polina_plamadya",
-    vilu_petrova: "violeta_petrova",
+    vilu_petrova: "vilu_petrova",
+    violeta_petrova: "vilu_petrova",
   };
 
   return aliases[managerId] || managerId;
+}
+
+const SUBSCRIPTION_CYCLE_DAYS = 14;
+
+function getNextPaymentDate(dateString) {
+  if (!dateString) {
+    return "";
+  }
+
+  const date = new Date(dateString);
+  date.setDate(date.getDate() + SUBSCRIPTION_CYCLE_DAYS);
+  return date.toISOString().split("T")[0];
+}
+
+function resolvePlannedStartDate(payment, client = null) {
+  return (
+    payment?.curatorStartDate?.trim() ||
+    payment?.startDate?.trim() ||
+    client?.startDate?.trim() ||
+    ""
+  );
 }
 
 function paymentAccessibleByUser(payment, user) {
@@ -84,7 +106,7 @@ function paymentAccessibleByUser(payment, user) {
     return true;
   }
 
-  return true;
+  return false;
 }
 
 async function updatePaymentStartDateHandler(request) {
@@ -152,7 +174,7 @@ async function updatePaymentStartDateHandler(request) {
   ) {
     throw new HttpsError(
       "failed-precondition",
-      "Дата старта доступна только для ББ и Рассылки"
+      "Смена потока доступна только для ББ, Апсэйл и Рассылка"
     );
   }
 
@@ -177,9 +199,6 @@ async function updatePaymentStartDateHandler(request) {
   };
 
   if (user.managerId) {
-    payload.managerId = canonicalManagerId(
-      user.managerId
-    );
     payload.manager =
       user.name || payment.manager || "";
   }
@@ -200,6 +219,39 @@ async function updatePaymentStartDateHandler(request) {
   }
 
   await paymentRef.update(payload);
+
+  if (payment.clientId) {
+    const clientRef = db
+      .collection("clients")
+      .doc(payment.clientId);
+    const clientSnap = await clientRef.get();
+
+    if (clientSnap.exists) {
+      const client = clientSnap.data();
+      const mergedPayment = {
+        ...payment,
+        startDate,
+      };
+      const effectiveStart =
+        resolvePlannedStartDate(
+          mergedPayment,
+          client
+        );
+      const clientUpdate = {
+        startDate: effectiveStart,
+        updatedAt: Date.now(),
+      };
+
+      if (effectiveStart) {
+        clientUpdate.nextPaymentDate =
+          getNextPaymentDate(
+            effectiveStart
+          );
+      }
+
+      await clientRef.update(clientUpdate);
+    }
+  }
 
   return {
     ok: true,

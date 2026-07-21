@@ -122,7 +122,7 @@ function resolveManagerIdFromDisplayName(name) {
       return "alexander_simanov";
     case "Виолетта Петрова":
     case "Виолетта П":
-      return "violeta_petrova";
+      return "vilu_petrova";
     default:
       return null;
   }
@@ -166,7 +166,7 @@ function managerIdFromAuthEmail(authEmail) {
     case "vilu_petrova":
     case "violeta":
     case "violeta_petrova":
-      return "violeta_petrova";
+      return "vilu_petrova";
     default:
       return null;
   }
@@ -437,8 +437,8 @@ export function resolveOwnershipManagerFieldsForWrite(
   }
 
   const managerId =
-    getEffectiveOwnerManagerId(userData) ??
     getFirestoreManagerId(userData) ??
+    getEffectiveOwnerManagerId(userData) ??
     getCurrentManagerId(userData);
 
   if (managerId) {

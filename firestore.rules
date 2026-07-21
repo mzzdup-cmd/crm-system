@@ -82,8 +82,10 @@ service cloud.firestore {
       return managerId == 'polina_plamadyala'
         ? 'polina_plamadya'
         : managerId == 'vilu_petrova'
-          ? 'violeta_petrova'
-          : managerId == 'denis'
+          ? 'vilu_petrova'
+          : managerId == 'violeta_petrova'
+            ? 'vilu_petrova'
+            : managerId == 'denis'
             ? 'denis_manuilov'
             : managerId == 'ruslan'
               ? 'ruslan_romanyuk'
@@ -148,7 +150,7 @@ service cloud.firestore {
                         || authEmailLocalPart() == 'violeta'
                         || authEmailLocalPart()
                           == 'violeta_petrova'
-                        ? 'violeta_petrova'
+                        ? 'vilu_petrova'
                         : null;
     }
 
@@ -314,7 +316,7 @@ service cloud.firestore {
                       ? 'alexander_simanov'
                       : name == 'Виолетта Петрова'
                         || name == 'Виолетта П'
-                        ? 'violeta_petrova'
+                        ? 'vilu_petrova'
                         : null;
     }
 
@@ -358,7 +360,10 @@ service cloud.firestore {
         || (
           ownerId != null
           && dataId != null
-          && dataId == ownerId
+          && managerIdsMatch(
+            ownerId,
+            dataId
+          )
         )
         || (
           ownerName != null
@@ -495,6 +500,12 @@ service cloud.firestore {
           && (
             ownsManagerRecord(data)
             || clientOwnershipForPayment(data)
+            || paymentCreatedByRequestUser(data)
+            || (
+              data.manager != null
+              && data.manager != ''
+              && isLegacyOwner(data.manager)
+            )
           )
         );
     }
@@ -537,6 +548,52 @@ service cloud.firestore {
           'managerId',
           'manager',
         ]);
+    }
+
+    function isCorePaymentFieldPatchUpdate() {
+      return request.resource.data
+        .diff(resource.data)
+        .affectedKeys()
+        .hasOnly([
+          'amount',
+          'paymentDate',
+          'startDate',
+          'invoiceNumber',
+          'paymentSystem',
+          'tariff',
+          'budget',
+          'updatedAt',
+          'updatedByUid',
+          'managerId',
+          'manager',
+          'ttRowResyncPending',
+          'ttStartDateResyncPending',
+        ]);
+    }
+
+    function canPatchPaymentCoreFields() {
+      return isSignedIn()
+        && isCorePaymentFieldPatchUpdate()
+        && resource.data.deletedAt == null
+        && request.resource.data.deletedAt == null
+        && paymentManagerIdUnchanged()
+        && optionalFieldEquals(
+          request.resource.data.clientId,
+          resource.data.clientId
+        )
+        && optionalFieldEquals(
+          request.resource.data.dealType,
+          resource.data.dealType
+        )
+        && (
+          paymentPatchOwnershipOk()
+          || (
+            isOperationalUser()
+            && canAccessPaymentInRules(
+              resource.data
+            )
+          )
+        );
     }
 
     function isCuratorStartHandoffPatchUpdate() {
@@ -590,7 +647,18 @@ service cloud.firestore {
         || resolveDealTypeId(dealType)
           == 'mailing'
         || resolveDealTypeId(dealType)
-          == 'upsell';
+          == 'upsell'
+        || (
+          dealType is string
+          && (
+            dealType.lower().matches('.*апсейл.*')
+            || dealType.lower().matches('.*апсэйл.*')
+          )
+        );
+    }
+
+    function paymentCreatedByRequestUser(data) {
+      return data.createdByUid == request.auth.uid;
     }
 
     function ownsPaymentRecord(data) {
@@ -687,6 +755,22 @@ service cloud.firestore {
         && request.resource.data.deletedAt == null;
     }
 
+    function paymentSchedulePatchAllowed() {
+      return resource.data.deletedAt == null
+        && request.resource.data.deletedAt == null
+        && paymentManagerIdUnchanged()
+        && (
+          paymentPatchOwnershipOk()
+          || isLeadership()
+          || (
+            isOperationalUser()
+            && canAccessPaymentInRules(
+              resource.data
+            )
+          )
+        );
+    }
+
     // Cheap path: no get() calls — avoids rule evaluation limits.
     function canPatchOptionalStartDate() {
       return isSignedIn()
@@ -694,7 +778,7 @@ service cloud.firestore {
         && paymentHasOptionalStartDate(
           resource.data
         )
-        && paymentPatchOwnershipOk();
+        && paymentSchedulePatchAllowed();
     }
 
     function canPatchVkResyncQueue() {
@@ -707,7 +791,7 @@ service cloud.firestore {
     function canPatchCuratorStartDate() {
       return isSignedIn()
         && isCuratorStartDatePatchUpdate()
-        && paymentPatchOwnershipOk();
+        && paymentSchedulePatchAllowed();
     }
 
     function canPatchCuratorStartHandoff() {
@@ -728,6 +812,7 @@ service cloud.firestore {
           || canPatchVkResyncQueue()
           ||           canPatchCuratorStartDate()
           || canPatchCuratorStartHandoff()
+          || canPatchPaymentCoreFields()
           || isLeadership()
           || managerCanEditPayment()
         );
@@ -749,10 +834,24 @@ service cloud.firestore {
       allow create, update, delete: if isLeadership();
     }
 
+    function managerCanPatchScheduleOffDays() {
+      return isStaffMember()
+        && request.resource.data
+          .diff(resource.data)
+          .affectedKeys()
+          .hasOnly([
+            'offDays',
+            'updatedAt',
+          ]);
+    }
+
     match /schedule/{dateId} {
       allow read: if isSignedIn();
 
-      allow create, update, delete: if isLeadership();
+      allow create, delete: if isLeadership();
+
+      allow update: if isLeadership()
+        || managerCanPatchScheduleOffDays();
     }
 
     match /syncLog/{logId} {
@@ -775,7 +874,10 @@ service cloud.firestore {
 
     match /notifications/{notificationId} {
       allow read: if isSignedIn()
-        && resource.data.userId == request.auth.uid;
+        && (
+          resource.data.userId == request.auth.uid
+          || isLeadership()
+        );
 
       allow create: if isSignedIn()
         && (

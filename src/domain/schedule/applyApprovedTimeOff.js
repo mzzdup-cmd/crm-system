@@ -42,18 +42,32 @@ async function applyOffDayForDate(
       { existing }
     );
 
-  const traffic =
-    await getTrafficByDate(date);
+  try {
+    const traffic =
+      await getTrafficByDate(date);
 
-  await updateTrafficAmount(
-    date,
-    schedule,
-    Number(traffic?.trafficAmount || 0)
-  );
+    await updateTrafficAmount(
+      date,
+      schedule,
+      Number(traffic?.trafficAmount || 0)
+    );
+  } catch (error) {
+    console.warn(
+      "Traffic sync after time-off skipped:",
+      error
+    );
+  }
 
-  await syncSubstitutionNotifications({
-    schedule,
-  });
+  try {
+    await syncSubstitutionNotifications({
+      schedule,
+    });
+  } catch (error) {
+    console.warn(
+      "Substitution notifications skipped:",
+      error
+    );
+  }
 
   return schedule;
 }
@@ -78,18 +92,32 @@ async function removeOffDayForDate(
       { existing }
     );
 
-  const traffic =
-    await getTrafficByDate(date);
+  try {
+    const traffic =
+      await getTrafficByDate(date);
 
-  await updateTrafficAmount(
-    date,
-    schedule,
-    Number(traffic?.trafficAmount || 0)
-  );
+    await updateTrafficAmount(
+      date,
+      schedule,
+      Number(traffic?.trafficAmount || 0)
+    );
+  } catch (error) {
+    console.warn(
+      "Traffic sync after time-off removal skipped:",
+      error
+    );
+  }
 
-  await syncSubstitutionNotifications({
-    schedule,
-  });
+  try {
+    await syncSubstitutionNotifications({
+      schedule,
+    });
+  } catch (error) {
+    console.warn(
+      "Substitution notifications skipped:",
+      error
+    );
+  }
 
   return schedule;
 }

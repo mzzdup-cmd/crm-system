@@ -1,6 +1,13 @@
 import {
+  getNextPaymentDate,
   resolveNextPaymentDate,
 } from "../client/clientDates";
+
+import {
+  getBbPaymentsForClient,
+  isBbBookingClient,
+  resolvePlannedStartDate,
+} from "../client/bbBookingLogic";
 
 import {
   buildSubscriptionOutcomeUpdate,
@@ -70,7 +77,7 @@ export function buildClientAmountUpdate(
   const latestPayment =
     getLatestActivePayment(payments);
 
-  const nextPaymentDate =
+  let nextPaymentDate =
     resolveNextPaymentDate({
       amount: totalAmount,
       budget: client.budget,
@@ -78,6 +85,35 @@ export function buildClientAmountUpdate(
         latestPayment?.paymentDate ||
         latestPayment?.createdAt,
     });
+
+  if (
+    isBbBookingClient(
+      client,
+      payments
+    )
+  ) {
+    const bbPayments =
+      getBbPaymentsForClient(
+        client.id,
+        payments
+      );
+    const latestBb =
+      getLatestActivePayment(
+        bbPayments
+      );
+    const plannedStart =
+      resolvePlannedStartDate(
+        latestBb,
+        client
+      );
+
+    if (plannedStart) {
+      nextPaymentDate =
+        getNextPaymentDate(
+          plannedStart
+        );
+    }
+  }
 
   return {
     amount: totalAmount,

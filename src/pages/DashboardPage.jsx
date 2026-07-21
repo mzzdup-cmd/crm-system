@@ -1499,7 +1499,10 @@ function DashboardPageContent() {
 
                         <div className="text-sm text-neutral-400 mt-1">
 
-                          {getRemain(client)} ₽
+                          {client.overdueAmount ??
+                            client.debt ??
+                            getRemain(client)}{" "}
+                          ₽
 
                         </div>
 

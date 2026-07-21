@@ -72,10 +72,18 @@ export async function createNotificationIfMissing(
     docId
   );
 
-  const existing = await getDoc(ref);
+  try {
+    const existing = await getDoc(ref);
 
-  if (existing.exists()) {
-    return existing.id;
+    if (existing.exists()) {
+      return existing.id;
+    }
+  } catch (error) {
+    if (error?.code === "permission-denied") {
+      return null;
+    }
+
+    throw error;
   }
 
   await setDoc(ref, normalizeNotificationPayload({

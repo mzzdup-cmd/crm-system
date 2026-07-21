@@ -55,6 +55,32 @@ test("resolveTtBudgetAmount uses client budget for bb deals", () => {
   );
 });
 
+test("resolveTtBudgetAmount omits budget for refunds", () => {
+  assert.equal(
+    resolveTtBudgetAmount({
+      payment: {
+        dealType: "Возврат",
+        amount: 5000,
+      },
+      client: { budget: 22000 },
+    }),
+    ""
+  );
+});
+
+test("resolveTtBudgetAmount uses client budget for upsell when payment budget is zero", () => {
+  assert.equal(
+    resolveTtBudgetAmount({
+      payment: {
+        dealType: "Апсэйл",
+        budget: 0,
+      },
+      client: { budget: 30000 },
+    }),
+    30000
+  );
+});
+
 test("resolveTtBudgetAmount omits empty budget for deferred profile deals", () => {
   assert.equal(
     resolveTtBudgetAmount({

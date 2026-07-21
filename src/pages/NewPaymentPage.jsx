@@ -1,6 +1,7 @@
 import {
   useState,
   useEffect,
+  useMemo,
 } from "react";
 
 import {
@@ -26,6 +27,7 @@ import {
   createPayment,
   createLegacyClientPayment,
   findLegacySubscriber,
+  getPaymentsByClientId,
 } from "../services/paymentService";
 
 import {
@@ -72,6 +74,16 @@ import {
 import {
   suggestLegacyTopupDealTypeId,
 } from "../domain/payment/legacySubscriberLookup";
+
+import {
+  buildInstallmentBreakdown,
+  resolveNextInstallmentDue,
+  resolveSuggestedTopupDealType,
+} from "../domain/payment/paymentInstallmentPlan";
+
+import {
+  resolveSchedulePlan,
+} from "../domain/client/bluesalesSchedule";
 
 import { COURSES } from "../constants/courses";
 import { TARIFFS } from "../constants/tariffs";
@@ -181,6 +193,136 @@ function DeferredFieldHint({ visible }) {
   );
 }
 
+function ClientInCrmBadge({ client }) {
+  if (!client) {
+    return null;
+  }
+
+  return (
+    <div className="bg-green-500/10 border border-green-500/30 p-4 rounded-xl text-sm space-y-2">
+      <div className="text-green-400 font-bold">
+        ✓ Есть в CRM
+      </div>
+      <div>
+        {client.name || "—"} ·{" "}
+        {client.course || "—"}
+      </div>
+      <div className="text-neutral-400">
+        Остаток: {getRemain(client)} ₽
+      </div>
+      {client.clientNote && (
+        <div className="text-neutral-400">
+          ID БС: {client.clientNote}
+        </div>
+      )}
+      {client.fromTt && (
+        <div className="text-violet-300 text-xs">
+          Из ТТ
+        </div>
+      )}
+      <p className="text-neutral-500 text-xs pt-1">
+        Тип сделки выберите сами — может быть
+        доплата, отказ или другой.
+      </p>
+    </div>
+  );
+}
+
+function PaymentPlanModeBlock({
+  paymentPlanMode,
+  setPaymentPlanMode,
+  nextInstallmentDue,
+  planRemain,
+  effectiveBudget,
+  isBbDeal,
+  paymentAmount,
+  setPaymentAmount,
+}) {
+  const bookingAmount =
+    isBbDeal &&
+    paymentPlanMode === "partial"
+      ? parseMoneyNumber(paymentAmount)
+      : 0;
+
+  return (
+    <div className="mb-4 bg-surface-raised/80 border border-neutral-700/60 rounded-xl p-4 space-y-3">
+      <div className="text-sm font-semibold">
+        Оплата полная или частями
+      </div>
+      <div className="flex flex-wrap gap-3">
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input
+            type="radio"
+            name="paymentPlanMode"
+            checked={
+              paymentPlanMode === "partial"
+            }
+            onChange={() =>
+              setPaymentPlanMode("partial")
+            }
+          />
+          <span>
+            {isBbDeal
+              ? "Частями (бронь + доплаты"
+              : "Частями"}
+            {!isBbDeal && (
+              <>
+                {" "}
+                (
+                {formatMoney(
+                  nextInstallmentDue
+                )}
+                )
+              </>
+            )}
+            {isBbDeal && ")"}
+          </span>
+        </label>
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input
+            type="radio"
+            name="paymentPlanMode"
+            checked={
+              paymentPlanMode === "full"
+            }
+            onChange={() => {
+              setPaymentPlanMode("full");
+              setPaymentAmount(
+                String(planRemain)
+              );
+            }}
+          />
+          <span>
+            Полная (
+            {formatMoney(planRemain)})
+          </span>
+        </label>
+      </div>
+      {paymentPlanMode === "partial" &&
+        effectiveBudget > 0 && (
+          <div className="text-xs text-neutral-400 space-y-1">
+            {buildInstallmentBreakdown({
+              budget: effectiveBudget,
+              bookingAmount,
+            }).lines.map((line) => (
+              <div key={line.label}>
+                {line.label}:{" "}
+                {formatMoney(line.amount)}
+              </div>
+            ))}
+            {isBbDeal && (
+              <p className="text-neutral-500 pt-1">
+                Для брони укажите сумму в поле
+                ниже — в разбивке она учтётся
+                автоматически.
+              </p>
+            )}
+          </div>
+        )}
+    </div>
+  );
+}
+
 function LegacyTtDealTypeSelect({
   value,
   onChange,
@@ -251,6 +393,15 @@ export default function NewPaymentPage() {
   const [foundClient, setFoundClient] =
     useState(null);
 
+  const [dialogLookupStatus, setDialogLookupStatus] =
+    useState("");
+
+  const [dialogBlockedOwner, setDialogBlockedOwner] =
+    useState(null);
+
+  const [dialogCollision, setDialogCollision] =
+    useState(null);
+
   const [clientName, setClientName] =
     useState("");
 
@@ -290,6 +441,12 @@ export default function NewPaymentPage() {
   const [paymentAmount, setPaymentAmount] =
     useState("");
 
+  const [paymentPlanMode, setPaymentPlanMode] =
+    useState("partial");
+
+  const [clientPayments, setClientPayments] =
+    useState([]);
+
   const [paymentSystem, setPaymentSystem] =
     useState("");
 
@@ -315,6 +472,9 @@ export default function NewPaymentPage() {
     useState(null);
 
   const [isLegacyClientMode, setIsLegacyClientMode] =
+    useState(false);
+
+  const [isFromTtImportMode, setIsFromTtImportMode] =
     useState(false);
 
   const [
@@ -498,6 +658,115 @@ export default function NewPaymentPage() {
       );
     }
   }, [dealTypeId, isLegacy]);
+
+  useEffect(() => {
+    if (!foundClient?.id) {
+      setClientPayments([]);
+      return;
+    }
+
+    let cancelled = false;
+
+    getPaymentsByClientId(
+      foundClient.id
+    )
+      .then((payments) => {
+        if (!cancelled) {
+          setClientPayments(payments);
+        }
+      })
+      .catch((error) => {
+        console.warn(
+          "Client payments load failed:",
+          error
+        );
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [foundClient?.id]);
+
+  const effectiveBudget = Number(
+    budget ||
+      foundClient?.budget ||
+      0
+  );
+
+  const planRemain = foundClient
+    ? getRemain(foundClient)
+    : effectiveBudget;
+
+  const showPaymentPlanMode =
+    !isRejectDeal &&
+    !isLegacy &&
+    !isLegacyClientMode &&
+    effectiveBudget > 0 &&
+    (isNewClient ||
+      (Boolean(foundClient) &&
+        planRemain > 0));
+
+  const nextInstallmentDue = useMemo(() => {
+    if (!showPaymentPlanMode) {
+      return 0;
+    }
+
+    if (foundClient) {
+      return resolveNextInstallmentDue(
+        foundClient,
+        clientPayments
+      );
+    }
+
+    return (
+      resolveSchedulePlan(
+        effectiveBudget
+      ).amount || 0
+    );
+  }, [
+    showPaymentPlanMode,
+    foundClient,
+    clientPayments,
+    effectiveBudget,
+  ]);
+
+  const suggestedTopupDealType =
+    foundClient
+      ? resolveSuggestedTopupDealType(
+          foundClient,
+          clientPayments
+        )
+      : null;
+
+  useEffect(() => {
+    if (
+      !showPaymentPlanMode ||
+      paymentPlanMode !== "partial" ||
+      !nextInstallmentDue ||
+      isBbDeal
+    ) {
+      return;
+    }
+
+    setPaymentAmount(
+      String(nextInstallmentDue)
+    );
+
+    if (suggestedTopupDealType) {
+      setDealTypeId(
+        suggestedTopupDealType
+      );
+    }
+  }, [
+    showPaymentPlanMode,
+    paymentPlanMode,
+    nextInstallmentDue,
+    suggestedTopupDealType,
+    foundClient?.id,
+    isNewClient,
+    effectiveBudget,
+    isBbDeal,
+  ]);
 
   function resetLegacyEntryMode() {
     setDealTypeId("");
@@ -816,31 +1085,99 @@ export default function NewPaymentPage() {
     );
   }
 
-  async function findClient(link) {
-    setDialogLink(link);
-    setIsLegacyClientMode(false);
+  function enableLegacyClientMode() {
+    setIsLegacyClientMode(true);
+    setIsFromTtImportMode(false);
+    setFoundClient(null);
+    setDialogLookupStatus("");
+    setDialogBlockedOwner(null);
+    setDialogCollision(null);
+  }
 
-    const client =
+  function enableFromTtImportMode() {
+    setIsFromTtImportMode(true);
+    setIsLegacyClientMode(false);
+    setFoundClient(null);
+    setDialogLookupStatus("");
+    setDialogBlockedOwner(null);
+    setDialogCollision(null);
+  }
+
+  async function findClient(
+    link,
+    bsIdOverride = clientNote
+  ) {
+    setDialogLink(link);
+
+    if (isLegacyClientMode) {
+      setFoundClient(null);
+      setDialogLookupStatus("");
+      setDialogBlockedOwner(null);
+      setDialogCollision(null);
+      return;
+    }
+
+    setDialogLookupStatus("");
+    setDialogBlockedOwner(null);
+    setDialogCollision(null);
+
+    const lookup =
       await findClientByDialogLink(
         link,
-        userData
+        userData,
+        {
+          bsId: bsIdOverride?.trim?.() ||
+            clientNote.trim(),
+        }
       );
 
-    setFoundClient(client);
+    setFoundClient(lookup.client);
+    setDialogLookupStatus(
+      lookup.status || ""
+    );
+    setDialogBlockedOwner(
+      lookup.blockedOwner || null
+    );
+    setDialogCollision(
+      lookup.collision || null
+    );
 
-    if (client) {
-      applyClientSource(client);
+    if (lookup.client && !isNewClient) {
+      applyClientSource(lookup.client);
 
       const clientManager =
-        client.manager ||
+        lookup.client.manager ||
         getManagerNameById(
-          client.managerId
+          lookup.client.managerId
         );
 
       if (clientManager) {
         setManager(clientManager);
       }
     }
+
+    if (lookup.client && isNewClient) {
+      if (lookup.client.name) {
+        setClientName(lookup.client.name);
+      }
+      if (lookup.client.vkLink) {
+        setVkLink(lookup.client.vkLink);
+      }
+      if (lookup.client.clientNote) {
+        setClientNote(lookup.client.clientNote);
+      }
+    }
+  }
+
+  async function findClientWithBsId(bsId) {
+    if (!dialogLink.trim()) {
+      return;
+    }
+
+    await findClient(
+      dialogLink,
+      bsId
+    );
   }
 
   function resetAfterSubmit() {
@@ -854,6 +1191,9 @@ export default function NewPaymentPage() {
     setCuratorStartDate("");
     setSelectedStream("");
     setIsLegacyClientMode(false);
+    setIsFromTtImportMode(false);
+    setDialogLookupStatus("");
+    setDialogCollision(null);
   }
 
   function showVkSuccessHint(client) {
@@ -1331,6 +1671,150 @@ export default function NewPaymentPage() {
     }
   }
 
+  async function addFromTtClientAndPayment() {
+    if (!actor || !isFromTtImportMode) {
+      return;
+    }
+
+    if (!dialogLink.trim()) {
+      toast.error(
+        "Укажите ссылку на диалог"
+      );
+      return;
+    }
+
+    if (!clientName.trim()) {
+      toast.error("Укажите имя клиента");
+      return;
+    }
+
+    if (!clientNote.trim()) {
+      toast.error(
+        "Укажите ID клиента из БС"
+      );
+      return;
+    }
+
+    if (!course) {
+      toast.error("Выберите курс");
+      return;
+    }
+
+    if (
+      !isRejectDeal &&
+      needsBudgetFieldForExistingDeal(
+        dealTypeId
+      ) &&
+      !parseMoneyNumber(budget)
+    ) {
+      toast.error("Укажите бюджет");
+      return;
+    }
+
+    const validationError =
+      validateCommonFields();
+
+    if (validationError) {
+      toast.error(validationError);
+      return;
+    }
+
+    setSubmitting(true);
+
+    try {
+      const dealTypeLabel =
+        getDealTypeLabel(dealTypeId);
+      const startDate =
+        getStartDateValue();
+      const paymentAmountValue =
+        resolvePaymentAmount();
+
+      const client = await addClient({
+        name: clientName.trim(),
+        dialogLink: dialogLink.trim(),
+        vkLink: vkLink.trim(),
+        course,
+        tariff,
+        budget: parseMoneyNumber(budget),
+        amount: 0,
+        email: email.trim(),
+        firstContact,
+        clientNote: clientNote.trim(),
+        manager,
+        dealType: dealTypeLabel,
+        paymentDate,
+        startDate,
+        fromTt: true,
+        ...getSourcePayload(),
+        userData: actor,
+        createdByUid,
+      });
+
+      const paymentResult =
+        await createPayment({
+          client,
+          dealType: dealTypeLabel,
+          paymentAmount:
+            paymentAmountValue,
+          paymentSystem,
+          invoiceNumber,
+          comment: paymentComment,
+          clientNote:
+            clientNote.trim(),
+          manager,
+          paymentDate,
+          startDate,
+          curatorStartDate,
+          budget:
+            needsBudgetFieldForExistingDeal(
+              dealTypeId
+            )
+              ? parseMoneyNumber(
+                  budget
+                )
+              : null,
+          ...getSourcePayload(),
+          userData: actor,
+          createdByUid,
+        });
+
+      toast.success(
+        isRejectDeal
+          ? `${dealTypeLabel} сохранён`
+          : `Клиент из ТТ сохранён: ${formatMoney(
+              paymentAmountValue
+            )}`
+      );
+
+      setIsFromTtImportMode(false);
+      resetAfterSubmit();
+    } catch (error) {
+      console.error(error);
+      toast.error(
+        error.message ||
+          "Ошибка при сохранении"
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  function requestSaveFromTt() {
+    if (!actor || !isFromTtImportMode) {
+      return;
+    }
+
+    const validationError =
+      validateCommonFields();
+
+    if (validationError) {
+      toast.error(validationError);
+      return;
+    }
+
+    setConfirmSave("fromTt");
+  }
+
   async function addPaymentForNewClient() {
     if (!actor) {
       return;
@@ -1606,6 +2090,8 @@ export default function NewPaymentPage() {
       await addLegacyPayment();
     } else if (confirmSave === "legacyClient") {
       await addLegacyClientPayment();
+    } else if (confirmSave === "fromTt") {
+      await addFromTtClientAndPayment();
     }
 
     setConfirmSave(null);
@@ -1804,7 +2290,7 @@ export default function NewPaymentPage() {
                   />
 
                   <input
-                    placeholder="Ссылка на диалог *"
+                    placeholder="Ссылка на диалог или ID диалога (например 106329923) *"
                     value={dialogLink}
                     onChange={(e) =>
                       handleLegacyPaymentDialogLinkChange(
@@ -2040,7 +2526,7 @@ export default function NewPaymentPage() {
                   )}
 
                   <input
-                    placeholder="Ссылка на диалог *"
+                    placeholder="Ссылка на диалог или ID диалога (например 106329923) *"
                     value={dialogLink}
                     onChange={(e) =>
                       setDialogLink(
@@ -2264,14 +2750,6 @@ export default function NewPaymentPage() {
                 )}
               </select>
 
-              <MoneyInput
-                placeholder="Сумма оплаты *"
-                required
-                value={paymentAmount}
-                onChange={setPaymentAmount}
-                className={inputClass}
-              />
-
               <select
                 value={course}
                 onChange={(e) =>
@@ -2329,6 +2807,39 @@ export default function NewPaymentPage() {
                 onChange={setBudget}
                 className={inputClass}
               />
+
+              {showPaymentPlanMode && (
+                <PaymentPlanModeBlock
+                  paymentPlanMode={
+                    paymentPlanMode
+                  }
+                  setPaymentPlanMode={
+                    setPaymentPlanMode
+                  }
+                  nextInstallmentDue={
+                    nextInstallmentDue
+                  }
+                  planRemain={planRemain}
+                  effectiveBudget={
+                    effectiveBudget
+                  }
+                  isBbDeal={isBbDeal}
+                  paymentAmount={
+                    paymentAmount
+                  }
+                  setPaymentAmount={
+                    setPaymentAmount
+                  }
+                />
+              )}
+
+              <MoneyInput
+                placeholder="Сумма оплаты *"
+                required
+                value={paymentAmount}
+                onChange={setPaymentAmount}
+                className={inputClass}
+              />
             </FormSection>
 
             <FormSection title="Клиент">
@@ -2344,13 +2855,19 @@ export default function NewPaymentPage() {
                   placeholder="https://..."
                   value={dialogLink}
                   onChange={(e) =>
-                    setDialogLink(
+                    findClient(
                       e.target.value
                     )
                   }
                   className={inputClass}
                 />
               </label>
+
+              {foundClient && (
+                <ClientInCrmBadge
+                  client={foundClient}
+                />
+              )}
 
               <input
                 placeholder="Имя клиента"
@@ -2621,64 +3138,47 @@ export default function NewPaymentPage() {
                   />
                 </label>
 
-                {foundClient && (
-                  <div className="bg-surface-raised/60 p-4 rounded-xl text-sm space-y-2">
-                    <div className="text-green-400 font-bold">
-                      Клиент найден ✅
-                    </div>
-                    <div>
-                      {foundClient.name ||
-                        "—"}{" "}
-                      · {foundClient.course}
-                    </div>
-                    <div className="text-neutral-400">
-                      Остаток:{" "}
-                      {getRemain(
-                        foundClient
-                      )}{" "}
-                      ₽
-                    </div>
-                    {(foundClient.sourceName ||
-                      foundClient.source) && (
-                      <div className="text-neutral-400">
-                        Traffic:{" "}
-                        {foundClient.sourceName ||
-                          foundClient.source}
-                      </div>
-                    )}
-                    <VkLinkHint
-                      visible={
-                        !foundClient.vkLink?.trim()
-                      }
-                    />
-                  </div>
+                {foundClient &&
+                  !isLegacyClientMode &&
+                  !isFromTtImportMode && (
+                  <ClientInCrmBadge
+                    client={foundClient}
+                  />
                 )}
 
                 {dialogLink &&
                   !foundClient &&
-                  !isLegacyClientMode && (
-                    <div className="bg-amber-500/10 border border-amber-500/30 p-4 rounded-xl text-sm text-amber-100 space-y-3">
+                  !isLegacyClientMode &&
+                  !isFromTtImportMode &&
+                  dialogLookupStatus ===
+                    "bs_id_mismatch" && (
+                    <div className="bg-amber-500/10 border border-amber-500/30 p-4 rounded-xl text-sm text-amber-100 space-y-2">
                       <p>
-                        Клиент не найден по ссылке на
-                        диалог.
+                        По ссылке в CRM числится{" "}
+                        <strong>
+                          {dialogCollision?.client
+                            ?.name ||
+                            "другой клиент"}
+                        </strong>
+                        {dialogCollision?.paymentBsId
+                          ? ` (ID БС ${dialogCollision.paymentBsId})`
+                          : ""}
+                        , но вы вносите ID БС{" "}
+                        <strong>
+                          {clientNote.trim()}
+                        </strong>
+                        . Это разные люди.
                       </p>
                       <p>
-                        Если это клиент из Google ТТ
-                        (июнь и раньше) — выберите
-                        сделку{" "}
-                        <strong>
-                          «Клиент из таблицы (без
-                          карточки CRM)»
-                        </strong>
-                        . Ссылка на диалог та же, но
-                        карточки клиента в CRM нет.
+                        Если клиент только в Google ТТ
+                        — нажмите «Продолжить как
+                        старый клиент» и заполните
+                        данные вручную.
                       </p>
                       <button
                         type="button"
-                        onClick={() =>
-                          setIsLegacyClientMode(
-                            true
-                          )
+                        onClick={
+                          enableLegacyClientMode
                         }
                         className="
                           w-full bg-amber-500/20
@@ -2688,11 +3188,136 @@ export default function NewPaymentPage() {
                           text-amber-50
                         "
                       >
-                        Продолжить как старый
-                        клиент (здесь)
+                        Продолжить как старый клиент
                       </button>
                     </div>
                   )}
+
+                {dialogLink &&
+                  !foundClient &&
+                  !isLegacyClientMode &&
+                  dialogLookupStatus ===
+                    "dialog_client_mismatch" && (
+                    <div className="bg-amber-500/10 border border-amber-500/30 p-4 rounded-xl text-sm text-amber-100 space-y-2">
+                      <p>
+                        В CRM есть битая запись: у
+                        оплаты указана эта ссылка (
+                        {dialogCollision?.paymentDialogId ||
+                          "?"}
+                        ), но в карточке клиента{" "}
+                        <strong>
+                          {dialogCollision?.client
+                            ?.name ||
+                            "другой человек"}
+                        </strong>{" "}
+                        — другая (
+                        {dialogCollision?.clientDialogId ||
+                          "?"}
+                        ). Карточка клиента важнее
+                        старой оплаты.
+                      </p>
+                      <p>
+                        Если это ваш лид только из
+                        Google ТТ — нажмите «Продолжить
+                        как старый клиент».
+                      </p>
+                      <button
+                        type="button"
+                        onClick={
+                          enableLegacyClientMode
+                        }
+                        className="
+                          w-full bg-amber-500/20
+                          hover:bg-amber-500/30
+                          border border-amber-500/40
+                          p-3 rounded-xl font-semibold
+                          text-amber-50
+                        "
+                      >
+                        Продолжить как старый клиент
+                      </button>
+                    </div>
+                  )}
+
+                {dialogLink &&
+                  !foundClient &&
+                  !isLegacyClientMode &&
+                  dialogLookupStatus ===
+                    "access_denied" && (
+                    <div className="bg-red-500/10 border border-red-500/30 p-4 rounded-xl text-sm text-red-100 space-y-2">
+                      <p>
+                        По этой ссылке в CRM уже есть
+                        запись
+                        {dialogBlockedOwner?.managerLabel
+                          ? ` у менеджера ${dialogBlockedOwner.managerLabel}`
+                          : " у другого менеджера"}
+                        {dialogBlockedOwner?.dealType
+                          ? ` (${dialogBlockedOwner.dealType})`
+                          : ""}
+                        . Это не обязательно ваша
+                        продажа — коллега мог внести
+                        этого клиента раньше.
+                      </p>
+                      <p>
+                        Если клиент из Google ТТ и вы
+                        его ещё не вносили — вернитесь
+                        на шаг «Тип сделки» и выберите{" "}
+                        <strong>
+                          «Клиент из таблицы (без
+                          карточки CRM)»
+                        </strong>
+                        , затем снова вставьте ссылку.
+                      </p>
+                      <p>
+                        Если это ваш диалог, а менеджер
+                        указан неверно — напишите
+                        руководителю.
+                      </p>
+                    </div>
+                  )}
+
+                {dialogLink &&
+                  !foundClient &&
+                  !isLegacyClientMode &&
+                  dialogLookupStatus !==
+                    "access_denied" &&
+                  dialogLookupStatus !==
+                    "bs_id_mismatch" &&
+                  dialogLookupStatus !==
+                    "dialog_client_mismatch" && (
+                    <div className="bg-amber-500/10 border border-amber-500/30 p-4 rounded-xl text-sm text-amber-100 space-y-3">
+                      <p>
+                        Клиент не найден в CRM по
+                        этой ссылке. Если он был в
+                        Google ТТ — нажмите кнопку
+                        ниже и заполните карточку.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={
+                          enableFromTtImportMode
+                        }
+                        className="
+                          w-full bg-amber-500/20
+                          hover:bg-amber-500/30
+                          border border-amber-500/40
+                          p-3 rounded-xl font-semibold
+                          text-amber-50
+                        "
+                      >
+                        Продолжить как из ТТ
+                      </button>
+                    </div>
+                  )}
+
+                {isFromTtImportMode && (
+                  <div className="bg-violet-500/10 border border-violet-500/30 p-4 rounded-xl text-sm text-violet-100">
+                    ☑ Клиент из Google ТТ — будет
+                    создана карточка с пометкой{" "}
+                    <strong>«Из ТТ»</strong>.
+                    Заполните данные полностью.
+                  </div>
+                )}
 
                 {isLegacyClientMode && (
                   <div className="bg-violet-500/10 border border-violet-500/30 p-4 rounded-xl text-sm text-violet-100">
@@ -2704,7 +3329,8 @@ export default function NewPaymentPage() {
                   </div>
                 )}
 
-                {isLegacyClientMode && (
+                {(isLegacyClientMode ||
+                  isFromTtImportMode) && (
                   <>
                     <input
                       placeholder="Имя клиента *"
@@ -2773,17 +3399,27 @@ export default function NewPaymentPage() {
                 <input
                   placeholder="Примечание (ID клиента из БС) *"
                   value={clientNote}
-                  onChange={(e) =>
-                    setClientNote(
-                      e.target.value
-                    )
-                  }
+                  onChange={(e) => {
+                    const value =
+                      e.target.value;
+                    setClientNote(value);
+
+                    if (
+                      !isLegacyClientMode &&
+                      dialogLink.trim()
+                    ) {
+                      findClientWithBsId(
+                        value
+                      );
+                    }
+                  }}
                   className={inputClass}
                 />
               </FormSection>
 
               {(foundClient ||
-                isLegacyClientMode) && (
+                isLegacyClientMode ||
+                isFromTtImportMode) && (
                 <>
                   {!isRejectDeal && (
                     <FormSection title="Сделка">
@@ -2822,6 +3458,33 @@ export default function NewPaymentPage() {
                             )}
                           />
                         </label>
+                      )}
+
+                      {showPaymentPlanMode && (
+                        <PaymentPlanModeBlock
+                          paymentPlanMode={
+                            paymentPlanMode
+                          }
+                          setPaymentPlanMode={
+                            setPaymentPlanMode
+                          }
+                          nextInstallmentDue={
+                            nextInstallmentDue
+                          }
+                          planRemain={
+                            planRemain
+                          }
+                          effectiveBudget={
+                            effectiveBudget
+                          }
+                          isBbDeal={isBbDeal}
+                          paymentAmount={
+                            paymentAmount
+                          }
+                          setPaymentAmount={
+                            setPaymentAmount
+                          }
+                        />
                       )}
 
                       <label className="block">
@@ -3051,9 +3714,11 @@ export default function NewPaymentPage() {
                     <button
                       type="button"
                       onClick={
-                        isLegacyClientMode
-                          ? requestSaveLegacyClient
-                          : requestSaveExisting
+                        isFromTtImportMode
+                          ? requestSaveFromTt
+                          : isLegacyClientMode
+                            ? requestSaveLegacyClient
+                            : requestSaveExisting
                       }
                       disabled={submitting}
                       className="
@@ -3065,13 +3730,17 @@ export default function NewPaymentPage() {
                     >
                       {submitting
                         ? "Сохранение..."
-                        : isLegacyClientMode
+                        : isFromTtImportMode
                           ? isRejectDeal
-                            ? "Сохранить отказ"
-                            : "Сохранить оплату (старый клиент)"
-                          : pendingSale
-                            ? "Подтвердить и добавить оплату"
-                            : "Добавить оплату"}
+                            ? "Сохранить отказ (из ТТ)"
+                            : "Сохранить клиента из ТТ"
+                          : isLegacyClientMode
+                            ? isRejectDeal
+                              ? "Сохранить отказ"
+                              : "Сохранить оплату (старый клиент)"
+                            : pendingSale
+                              ? "Подтвердить и добавить оплату"
+                              : "Добавить оплату"}
                     </button>
                   </FormSection>
                 </>

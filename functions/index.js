@@ -131,10 +131,14 @@ exports.triggerTtSheetsSync = onCall(
 
     const userData = userSnap.data();
 
-    if (!userData || userData.role !== "admin") {
+    if (
+      !userData ||
+      (userData.role !== "admin" &&
+        userData.role !== "rop")
+    ) {
       throw new HttpsError(
         "permission-denied",
-        "Admin access required"
+        "Доступ только для руководства"
       );
     }
 

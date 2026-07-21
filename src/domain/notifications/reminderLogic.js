@@ -9,6 +9,9 @@ import {
   isOverdue,
   hasDebt,
   getDaysUntilPayment,
+  resolveOverdueDeadline,
+  indexPaymentsByClientId,
+  resolveOverdueInstallmentAmount,
 } from "../client/clientStatus";
 
 import {
@@ -17,14 +20,25 @@ import {
 
 export function getDaysOverdue(
   client,
-  today = new Date()
+  today = new Date(),
+  paymentsOrMap = null
 ) {
-  if (!isOverdue(client, today)) {
+  if (
+    !isOverdue(
+      client,
+      today,
+      paymentsOrMap
+    )
+  ) {
     return 0;
   }
 
   const paymentDate = new Date(
-    client.nextPaymentDate
+    resolveOverdueDeadline(
+      client,
+      today,
+      paymentsOrMap
+    ) || client.nextPaymentDate
   );
 
   return Math.ceil(
@@ -35,10 +49,20 @@ export function getDaysOverdue(
 
 export function buildOverdueNotification(
   client,
-  userId
+  userId,
+  today = new Date(),
+  paymentsOrMap = null
 ) {
-  const daysOverdue = getDaysOverdue(client);
-  const debt = getRemain(client);
+  const daysOverdue = getDaysOverdue(
+    client,
+    today,
+    paymentsOrMap
+  );
+  const overdueAmount =
+    resolveOverdueInstallmentAmount(
+      client,
+      paymentsOrMap
+    );
   const managerName =
     client.manager ||
     getManagerNameById(client.managerId) ||
@@ -49,7 +73,7 @@ export function buildOverdueNotification(
     type: NOTIFICATION_TYPES.OVERDUE_PAYMENT,
     dedupKey: `overdue_${client.id}`,
     title: "Просроченная подписка",
-    body: `${client.name || client.course || "Клиент"} · долг ${debt.toLocaleString("ru-RU")} ₽ · ${daysOverdue} дн.`,
+    body: `${client.name || client.course || "Клиент"} · просрочка ${overdueAmount.toLocaleString("ru-RU")} ₽ · ${daysOverdue} дн.`,
     priority: NOTIFICATION_PRIORITY.HIGH,
     link: `/client/${client.id}`,
     data: {
@@ -58,7 +82,8 @@ export function buildOverdueNotification(
       course: client.course || "",
       manager: managerName,
       managerId: client.managerId || "",
-      debt,
+      debt: overdueAmount,
+      overdueAmount,
       daysOverdue,
     },
     channels: ["in_app"],
@@ -106,14 +131,28 @@ export function buildPaymentReminderNotification(
 export function buildReminderNotificationsFromClients(
   clients,
   userId,
-  today = new Date()
+  today = new Date(),
+  payments = []
 ) {
   const notifications = [];
+  const paymentsByClientId =
+    indexPaymentsByClientId(payments);
 
   clients.forEach((client) => {
-    if (isOverdue(client, today)) {
+    if (
+      isOverdue(
+        client,
+        today,
+        paymentsByClientId
+      )
+    ) {
       notifications.push(
-        buildOverdueNotification(client, userId)
+        buildOverdueNotification(
+          client,
+          userId,
+          today,
+          paymentsByClientId
+        )
       );
       return;
     }
@@ -144,17 +183,42 @@ export function buildReminderNotificationsFromClients(
   return notifications;
 }
 
-export function buildTodayTasks(clients, today = new Date()) {
+export function buildTodayTasks(
+  clients,
+  today = new Date(),
+  payments = []
+) {
   const overdue = [];
   const dueToday = [];
   const dueTomorrow = [];
+  const paymentsByClientId =
+    indexPaymentsByClientId(payments);
 
   clients.forEach((client) => {
-    if (isOverdue(client, today)) {
+    if (
+      isOverdue(
+        client,
+        today,
+        paymentsByClientId
+      )
+    ) {
       overdue.push({
         ...client,
-        daysOverdue: getDaysOverdue(client, today),
-        debt: getRemain(client),
+        daysOverdue: getDaysOverdue(
+          client,
+          today,
+          paymentsByClientId
+        ),
+        debt: resolveOverdueInstallmentAmount(
+          client,
+          paymentsByClientId
+        ),
+        overdueAmount:
+          resolveOverdueInstallmentAmount(
+            client,
+            paymentsByClientId
+          ),
+        totalRemain: getRemain(client),
       });
       return;
     }
@@ -192,12 +256,23 @@ export function buildTodayTasks(clients, today = new Date()) {
   };
 }
 
-export function buildActiveSubscriptions(clients) {
+export function buildActiveSubscriptions(
+  clients,
+  today = new Date(),
+  payments = []
+) {
+  const paymentsByClientId =
+    indexPaymentsByClientId(payments);
+
   return clients
     .filter((client) => hasDebt(client))
     .map((client) => ({
       ...client,
       debt: getRemain(client),
-      overdue: isOverdue(client),
+      overdue: isOverdue(
+        client,
+        today,
+        paymentsByClientId
+      ),
     }));
 }

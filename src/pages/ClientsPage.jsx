@@ -19,6 +19,10 @@ import {
   matchesStatusFilter,
 } from "../domain/client/clientStatus";
 
+import {
+  clientMatchesSearch,
+} from "../domain/client/recordDialogSearch";
+
 import { MANAGERS } from "../constants/managers";
 import { COURSES } from "../constants/courses";
 
@@ -77,22 +81,10 @@ export default function ClientsPage({
     clients.filter((client) => {
 
       const matchesSearch =
-
-        client.manager
-          ?.toLowerCase()
-
-          .includes(
-            search.toLowerCase()
-          )
-
-        ||
-
-        client.course
-          ?.toLowerCase()
-
-          .includes(
-            search.toLowerCase()
-          );
+        clientMatchesSearch(
+          client,
+          search
+        );
 
       const matchesManager =
 
@@ -332,6 +324,17 @@ export default function ClientsPage({
                       <div>
 
                         <div className="text-2xl font-bold mb-2">
+
+                          {
+
+                            client.name ||
+                            "Без имени"
+
+                          }
+
+                        </div>
+
+                        <div className="text-neutral-500 mb-1 text-sm">
 
                           {
 

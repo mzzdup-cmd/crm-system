@@ -32,6 +32,7 @@ import {
 import {
   isOverdue,
   hasDebt,
+  indexPaymentsByClientId,
 } from "../domain/client/clientStatus";
 
 import {
@@ -102,8 +103,16 @@ export function useManagerDashboard() {
       (client) => hasDebt(client)
     ).length;
 
+    const paymentsByClientId =
+      indexPaymentsByClientId(payments);
+
     const overdueCount = clients.filter(
-      (client) => isOverdue(client)
+      (client) =>
+        isOverdue(
+          client,
+          new Date(),
+          paymentsByClientId
+        )
     ).length;
 
     const revenue = clients.reduce(

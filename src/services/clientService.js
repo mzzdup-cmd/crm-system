@@ -13,6 +13,7 @@ import { auth, db } from "./firebase";
 import {
   getManagerByName,
   getManagerById,
+  getManagerNameById,
 } from "../constants/managers";
 import {
   normalizeManagerFields,
@@ -20,6 +21,7 @@ import {
 import {
   isLeadership,
   getCurrentManagerId,
+  getManagerIdsForScopedQuery,
   resolveManagerFieldsForWrite,
 } from "../domain/auth/roleHelpers";
 import {
@@ -27,11 +29,17 @@ import {
 } from "../domain/audit/auditFields";
 import {
   canAccessClient,
+  canAccessPayment,
 } from "../domain/auth/permissionHelpers";
 import {
   dialogLinksMatch,
   getDialogLinkLookupVariants,
+  extractDialogId,
+  resolveDialogLookupId,
 } from "../domain/client/dialogLinkUtils";
+import {
+  recordMatchesDialogSearch,
+} from "../domain/client/recordDialogSearch";
 import { resolveNextPaymentDate } from "../domain/client/clientDates";
 import { getClientStatus, getRemain } from "../domain/client/clientStatus";
 import { resolveMissingVkRemindersForClient } from "./missingVkReminderService";
@@ -51,13 +59,22 @@ function mapClientDoc(snapshot) {
 export function normalizeClientPayload(data) {
   const { managerId, manager } =
     normalizeManagerFields(data);
+  const dialogLink =
+    data.dialogLink?.trim() || "";
+  const dialogId =
+    data.dialogId?.trim() ||
+    extractDialogId(dialogLink) ||
+    "";
 
   return {
     ...data,
     manager,
     managerId,
+    dialogLink,
+    dialogId,
     amount: Number(data.amount || 0),
     budget: Number(data.budget || 0),
+    fromTt: data.fromTt === true,
   };
 }
 
@@ -84,26 +101,44 @@ export async function getClientsForUser(userData) {
     return getAllClients();
   }
 
-  const managerId =
-    getCurrentManagerId(userData);
+  const managerIds =
+    getManagerIdsForScopedQuery(userData);
 
-  if (!managerId) {
+  if (!managerIds.length) {
     return [];
   }
 
-  const clientsQuery = query(
-    collection(db, "clients"),
-    where(
-      "managerId",
-      "==",
-      managerId
-    )
-  );
+  const clientMap = new Map();
 
-  const snapshot =
-    await getDocs(clientsQuery);
+  for (const managerId of managerIds) {
+    try {
+      const clientsQuery = query(
+        collection(db, "clients"),
+        where(
+          "managerId",
+          "==",
+          managerId
+        )
+      );
 
-  return snapshot.docs.map(mapClientDoc);
+      const snapshot =
+        await getDocs(clientsQuery);
+
+      snapshot.docs.forEach((clientDoc) => {
+        clientMap.set(
+          clientDoc.id,
+          mapClientDoc(clientDoc)
+        );
+      });
+    } catch (error) {
+      console.warn(
+        `[clientService] clients query failed for ${managerId}:`,
+        error
+      );
+    }
+  }
+
+  return [...clientMap.values()];
 }
 
 export async function getClientById(id) {
@@ -139,118 +174,793 @@ export async function getClientByIdForUser(
   }
 }
 
-export async function findClientByDialogLink(
-  dialogLink,
-  userData = null
+function resolveRecordOwnerLabel(data = {}) {
+  return (
+    data.manager?.trim() ||
+    getManagerNameById(data.managerId) ||
+    data.managerId ||
+    "другой менеджер"
+  );
+}
+
+function pickBlockedOwner(
+  current,
+  candidate
 ) {
-  if (!dialogLink) {
-    return null;
+  if (!candidate?.managerLabel) {
+    return current;
   }
 
-  try {
-    const variants =
-      getDialogLinkLookupVariants(
-        dialogLink
-      );
+  if (!current?.managerLabel) {
+    return candidate;
+  }
 
-    for (const variant of variants) {
-      const clientsQuery = query(
-        collection(db, "clients"),
-        where(
-          "dialogLink",
-          "==",
-          variant
+  return current;
+}
+
+async function tryResolveClientFromPayment(
+  paymentData,
+  userData,
+  blockedOwner
+) {
+  if (
+    userData &&
+    !canAccessPayment(
+      userData,
+      paymentData
+    )
+  ) {
+    return {
+      client: null,
+      accessDenied: true,
+      blockedOwner: pickBlockedOwner(
+        blockedOwner,
+        {
+          managerLabel:
+            resolveRecordOwnerLabel(
+              paymentData
+            ),
+          dealType:
+            paymentData.dealType || "",
+          source: "payment",
+        }
+      ),
+    };
+  }
+
+  if (!paymentData.clientId) {
+    return {
+      client: null,
+      accessDenied: false,
+      blockedOwner,
+    };
+  }
+
+  let client = null;
+
+  try {
+    client = await getClientById(
+      paymentData.clientId
+    );
+  } catch (error) {
+    if (
+      error?.code === "permission-denied"
+    ) {
+      return {
+        client: null,
+        accessDenied: true,
+        blockedOwner: pickBlockedOwner(
+          blockedOwner,
+          {
+            managerLabel:
+              resolveRecordOwnerLabel(
+                paymentData
+              ),
+            dealType:
+              paymentData.dealType || "",
+            source: "payment",
+          }
+        ),
+      };
+    }
+
+    throw error;
+  }
+
+  if (!client) {
+    return {
+      client: null,
+      accessDenied: false,
+      blockedOwner,
+    };
+  }
+
+  if (
+    userData &&
+    !canAccessClient(
+      userData,
+      client
+    )
+  ) {
+    return {
+      client: null,
+      accessDenied: true,
+      blockedOwner: pickBlockedOwner(
+        blockedOwner,
+        {
+          managerLabel:
+            resolveRecordOwnerLabel(
+              client
+            ),
+          source: "client",
+        }
+      ),
+    };
+  }
+
+  return {
+    client,
+    accessDenied: false,
+    blockedOwner,
+  };
+}
+
+async function queryDocsSafely(firestoreQuery) {
+  try {
+    return await getDocs(firestoreQuery);
+  } catch (error) {
+    if (error?.code === "permission-denied") {
+      return null;
+    }
+
+    throw error;
+  }
+}
+
+function getPaymentBsId(payment = {}) {
+  return String(
+    payment.legacyClientBsId ||
+      payment.clientNote ||
+      ""
+  ).trim();
+}
+
+function bsIdsMatch(left, right) {
+  const a = String(left || "").trim();
+  const b = String(right || "").trim();
+
+  return Boolean(a && b && a === b);
+}
+
+function clientMatchesBsId(
+  client,
+  bsId
+) {
+  if (!bsId) {
+    return true;
+  }
+
+  return bsIdsMatch(
+    client?.clientNote,
+    bsId
+  );
+}
+
+/** Client card dialog is source of truth — stale payment dialogLink must not win. */
+function clientCanonicalDialogMatches(
+  client,
+  dialogLink,
+  dialogId
+) {
+  if (!client) {
+    return false;
+  }
+
+  const clientDialogId =
+    String(
+      client.dialogId ||
+        extractDialogId(
+          client.dialogLink
+        ) ||
+        ""
+    ).trim();
+
+  if (dialogId && clientDialogId) {
+    return clientDialogId === dialogId;
+  }
+
+  if (
+    dialogLink &&
+    client.dialogLink?.trim()
+  ) {
+    return dialogLinksMatch(
+      client.dialogLink,
+      dialogLink
+    );
+  }
+
+  if (!clientDialogId && !client.dialogLink?.trim()) {
+    return true;
+  }
+
+  return recordMatchesDialogSearch(
+    client,
+    dialogLink
+  );
+}
+
+async function searchPaymentsByBsId({
+  bsId,
+  userData,
+  blockedOwner,
+}) {
+  if (!bsId) {
+    return {
+      accessDenied: false,
+      blockedOwner,
+    };
+  }
+
+  let accessDenied = false;
+  let owner = blockedOwner;
+  const candidates = [];
+
+  for (const field of [
+    "clientNote",
+    "legacyClientBsId",
+  ]) {
+    const snapshot =
+      await queryDocsSafely(
+        query(
+          collection(db, "payments"),
+          where(field, "==", bsId)
         )
       );
 
-      const snapshot =
-        await getDocs(clientsQuery);
-
-      if (!snapshot.empty) {
-        const client = mapClientDoc(
-          snapshot.docs[0]
-        );
-
-        if (
-          userData &&
-          !canAccessClient(
-            userData,
-            client
-          )
-        ) {
-          return null;
-        }
-
-        return client;
-      }
+    if (!snapshot) {
+      continue;
     }
 
-    for (const variant of variants) {
-      const paymentsQuery = query(
+    for (const paymentDoc of snapshot.docs) {
+      const paymentData =
+        paymentDoc.data();
+
+      if (paymentData.deletedAt) {
+        continue;
+      }
+
+      const resolved =
+        await tryResolveClientFromPayment(
+          paymentData,
+          userData,
+          owner
+        );
+
+      owner = resolved.blockedOwner;
+
+      if (resolved.accessDenied) {
+        accessDenied = true;
+        continue;
+      }
+
+      if (resolved.client) {
+        candidates.push({
+          client: resolved.client,
+          payment: paymentData,
+          bsIdMatch: true,
+        });
+      }
+    }
+  }
+
+  if (candidates.length) {
+    return {
+      client: candidates[0].client,
+      status: "found",
+      accessDenied,
+      blockedOwner: owner,
+    };
+  }
+
+  return {
+    accessDenied,
+    blockedOwner: owner,
+  };
+}
+
+async function searchOwnedClientsByBsId(
+  bsId,
+  userData
+) {
+  if (!bsId || !userData) {
+    return null;
+  }
+
+  const ownedClients =
+    await getClientsForUser(userData);
+
+  return (
+    ownedClients.find((client) =>
+      clientMatchesBsId(
+        client,
+        bsId
+      )
+    ) || null
+  );
+}
+
+async function searchPaymentsForDialog({
+  dialogId,
+  variants,
+  dialogLink,
+  userData,
+  blockedOwner,
+  bsId = "",
+}) {
+  let accessDenied = false;
+  let owner = blockedOwner;
+  const candidates = [];
+  const dialogCollisions = [];
+
+  const paymentQueries = [];
+
+  if (dialogId) {
+    paymentQueries.push(
+      query(
+        collection(db, "payments"),
+        where("dialogId", "==", dialogId)
+      )
+    );
+  }
+
+  for (const variant of variants) {
+    paymentQueries.push(
+      query(
         collection(db, "payments"),
         where(
           "dialogLink",
           "==",
           variant
         )
-      );
+      )
+    );
+  }
 
-      const paymentsSnapshot =
-        await getDocs(paymentsQuery);
+  for (const paymentQuery of paymentQueries) {
+    const snapshot =
+      await queryDocsSafely(paymentQuery);
 
-      for (const paymentDoc of paymentsSnapshot.docs) {
-        const paymentData =
-          paymentDoc.data();
+    if (!snapshot) {
+      continue;
+    }
 
+    for (const paymentDoc of snapshot.docs) {
+      const paymentData =
+        paymentDoc.data();
+
+      if (paymentData.deletedAt) {
+        continue;
+      }
+
+      if (
+        dialogLink &&
+        dialogId &&
+        !paymentData.dialogId &&
+        !dialogLinksMatch(
+          paymentData.dialogLink,
+          dialogLink
+        )
+      ) {
+        continue;
+      }
+
+      const resolved =
+        await tryResolveClientFromPayment(
+          paymentData,
+          userData,
+          owner
+        );
+
+      owner = resolved.blockedOwner;
+
+      if (resolved.accessDenied) {
+        accessDenied = true;
+        continue;
+      }
+
+      if (resolved.client) {
         if (
-          paymentData.deletedAt ||
-          !paymentData.clientId
+          dialogId &&
+          !clientCanonicalDialogMatches(
+            resolved.client,
+            dialogLink,
+            dialogId
+          )
         ) {
+          dialogCollisions.push({
+            client: resolved.client,
+            payment: paymentData,
+          });
           continue;
         }
 
-        const client =
-          await getClientById(
-            paymentData.clientId
+        const paymentBsId =
+          getPaymentBsId(paymentData);
+        const bsIdMatch =
+          !bsId ||
+          bsIdsMatch(paymentBsId, bsId) ||
+          clientMatchesBsId(
+            resolved.client,
+            bsId
           );
 
-        if (!client) {
+        if (bsId && paymentBsId && !bsIdMatch) {
           continue;
         }
 
-        if (
-          userData &&
-          !canAccessClient(
-            userData,
-            client
-          )
-        ) {
-          continue;
-        }
+        candidates.push({
+          client: resolved.client,
+          payment: paymentData,
+          bsIdMatch,
+        });
+      }
+    }
+  }
 
-        if (
-          dialogLinksMatch(
-            client.dialogLink,
-            dialogLink
-          ) ||
-          dialogLinksMatch(
-            paymentData.dialogLink,
-            dialogLink
-          )
-        ) {
-          return client;
-        }
+  if (candidates.length) {
+    if (bsId) {
+      const byBsId = candidates.find(
+        (item) => item.bsIdMatch
+      );
+
+      if (byBsId) {
+        return {
+          client: byBsId.client,
+          status: "found",
+        };
+      }
+
+      return {
+        accessDenied,
+        blockedOwner: owner,
+        collision: {
+          client: candidates[0].client,
+          paymentBsId: getPaymentBsId(
+            candidates[0].payment
+          ),
+        },
+      };
+    }
+
+    return {
+      client: candidates[0].client,
+      status: "found",
+    };
+  }
+
+  if (dialogCollisions.length) {
+    return {
+      accessDenied,
+      blockedOwner: owner,
+      collision: {
+        client:
+          dialogCollisions[0].client,
+        paymentDialogId:
+          dialogCollisions[0].payment
+            ?.dialogId ||
+          extractDialogId(
+            dialogCollisions[0].payment
+              ?.dialogLink
+          ),
+        clientDialogId:
+          dialogCollisions[0].client
+            ?.dialogId ||
+          extractDialogId(
+            dialogCollisions[0].client
+              ?.dialogLink
+          ),
+        kind: "dialog_client_mismatch",
+      },
+    };
+  }
+
+  return {
+    accessDenied,
+    blockedOwner: owner,
+  };
+}
+
+async function searchClientsForDialog({
+  dialogId,
+  variants,
+  userData,
+  blockedOwner,
+}) {
+  if (!isLeadership(userData)) {
+    return {
+      client: null,
+      accessDenied: false,
+      blockedOwner,
+    };
+  }
+
+  let accessDenied = false;
+  let owner = blockedOwner;
+
+  const clientQueries = [];
+
+  if (dialogId) {
+    clientQueries.push(
+      query(
+        collection(db, "clients"),
+        where("dialogId", "==", dialogId)
+      )
+    );
+  }
+
+  for (const variant of variants) {
+    clientQueries.push(
+      query(
+        collection(db, "clients"),
+        where(
+          "dialogLink",
+          "==",
+          variant
+        )
+      )
+    );
+  }
+
+  for (const clientQuery of clientQueries) {
+    const snapshot =
+      await queryDocsSafely(clientQuery);
+
+    if (!snapshot) {
+      continue;
+    }
+
+    for (const clientDoc of snapshot.docs) {
+      const client = mapClientDoc(clientDoc);
+
+      if (
+        userData &&
+        !canAccessClient(
+          userData,
+          client
+        )
+      ) {
+        accessDenied = true;
+        owner = pickBlockedOwner(owner, {
+          managerLabel:
+            resolveRecordOwnerLabel(
+              client
+            ),
+          source: "client",
+        });
+        continue;
+      }
+
+      return {
+        client,
+        status: "found",
+        accessDenied: false,
+        blockedOwner: owner,
+      };
+    }
+  }
+
+  return {
+    client: null,
+    accessDenied,
+    blockedOwner: owner,
+  };
+}
+
+async function searchOwnedClientsForDialog(
+  dialogLink,
+  userData
+) {
+  if (!userData) {
+    return null;
+  }
+
+  const ownedClients =
+    await getClientsForUser(userData);
+
+  return (
+    ownedClients.find((client) =>
+      recordMatchesDialogSearch(
+        client,
+        dialogLink
+      )
+    ) || null
+  );
+}
+
+export async function findClientByDialogLink(
+  dialogLink,
+  userData = null,
+  options = {}
+) {
+  const bsId = String(
+    options.bsId || ""
+  ).trim();
+
+  if (!dialogLink && !bsId) {
+    return {
+      client: null,
+      status: "empty",
+    };
+  }
+
+  try {
+    if (bsId) {
+      const ownedByBsId =
+        await searchOwnedClientsByBsId(
+          bsId,
+          userData
+        );
+
+      if (ownedByBsId) {
+        return {
+          client: ownedByBsId,
+          status: "found",
+        };
+      }
+
+      const paymentByBsId =
+        await searchPaymentsByBsId({
+          bsId,
+          userData,
+          blockedOwner: null,
+        });
+
+      if (paymentByBsId.status === "found") {
+        return {
+          client: paymentByBsId.client,
+          status: "found",
+        };
       }
     }
 
-    return null;
+    if (!dialogLink) {
+      return {
+        client: null,
+        status: "not_found",
+      };
+    }
+
+    const dialogId =
+      resolveDialogLookupId(dialogLink);
+    const variants =
+      getDialogLinkLookupVariants(
+        dialogLink
+      );
+
+    const paymentResult =
+      await searchPaymentsForDialog({
+        dialogId,
+        variants,
+        dialogLink,
+        userData,
+        blockedOwner: null,
+        bsId,
+      });
+
+    if (paymentResult.status === "found") {
+      return paymentResult;
+    }
+
+    if (paymentResult.collision) {
+      return {
+        client: null,
+        status:
+          paymentResult.collision.kind ===
+          "dialog_client_mismatch"
+            ? "dialog_client_mismatch"
+            : "bs_id_mismatch",
+        collision:
+          paymentResult.collision,
+      };
+    }
+
+    const clientResult =
+      await searchClientsForDialog({
+        dialogId,
+        variants,
+        userData,
+        blockedOwner:
+          paymentResult.blockedOwner,
+      });
+
+    if (clientResult.status === "found") {
+      const client = clientResult.client;
+
+      if (
+        bsId &&
+        !clientMatchesBsId(
+          client,
+          bsId
+        )
+      ) {
+        return {
+          client: null,
+          status: "bs_id_mismatch",
+          collision: {
+            client,
+            paymentBsId:
+              client.clientNote || "",
+          },
+        };
+      }
+
+      return {
+        client,
+        status: "found",
+      };
+    }
+
+    const accessDenied =
+      paymentResult.accessDenied ||
+      clientResult.accessDenied;
+    const blockedOwner =
+      clientResult.blockedOwner ||
+      paymentResult.blockedOwner;
+
+    if (accessDenied && blockedOwner) {
+      return {
+        client: null,
+        status: "access_denied",
+        blockedOwner,
+      };
+    }
+
+    const ownedClient =
+      await searchOwnedClientsForDialog(
+        dialogLink,
+        userData
+      );
+
+    if (ownedClient) {
+      if (
+        bsId &&
+        !clientMatchesBsId(
+          ownedClient,
+          bsId
+        )
+      ) {
+        return {
+          client: null,
+          status: "bs_id_mismatch",
+          collision: {
+            client: ownedClient,
+            paymentBsId:
+              ownedClient.clientNote || "",
+          },
+        };
+      }
+
+      return {
+        client: ownedClient,
+        status: "found",
+      };
+    }
+
+    return {
+      client: null,
+      status: "not_found",
+    };
   } catch (error) {
     console.warn(
       "Client lookup by dialog link failed:",
       error
     );
 
-    return null;
+    return {
+      client: null,
+      status: "error",
+      error,
+    };
   }
 }
 
@@ -339,6 +1049,14 @@ export async function updateClient(id, data) {
 
   if ("vkLink" in data) {
     payload.vkLink = data.vkLink;
+  }
+
+  if ("dialogLink" in data) {
+    payload.dialogLink =
+      data.dialogLink?.trim() || "";
+    payload.dialogId =
+      extractDialogId(payload.dialogLink) ||
+      "";
   }
 
   await updateDoc(ref, payload);

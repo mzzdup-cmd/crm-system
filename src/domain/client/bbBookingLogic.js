@@ -1,10 +1,14 @@
 import {
   resolveDealTypeId,
-} from "../../constants/dealTypes";
+} from "../../constants/dealTypes.js";
+
+import {
+  getNextPaymentDate,
+} from "./clientDates.js";
 
 import {
   resolveSchedulePlan,
-} from "./bluesalesSchedule";
+} from "./bluesalesSchedule.js";
 
 const MONTHS_NOMINATIVE = [
   "январь",
@@ -189,6 +193,85 @@ export function resolvePlannedStartDate(
     payment?.startDate?.trim() ||
     client?.startDate?.trim() ||
     ""
+  );
+}
+
+function toLocalDateString(
+  date = new Date()
+) {
+  return date.toISOString().split("T")[0];
+}
+
+function buildOverdueStateFromPlannedStart(
+  plannedStart,
+  today = new Date()
+) {
+  const todayStr = toLocalDateString(today);
+  const deadline = getNextPaymentDate(
+    plannedStart
+  );
+
+  if (todayStr < plannedStart) {
+    return {
+      kind: "waiting",
+      deadline,
+    };
+  }
+
+  return {
+    kind: "active",
+    deadline,
+  };
+}
+
+/**
+ * BB booking overdue follows planned stream start, not payment date + 14.
+ * Returns null when default client.nextPaymentDate logic should apply.
+ */
+export function resolveBbBookingOverdueState(
+  client,
+  payments = [],
+  today = new Date()
+) {
+  if (
+    client?.subscriptionStage ===
+    BB_BOOKING_STAGE
+  ) {
+    const plannedStart =
+      client.startDate?.trim();
+
+    if (plannedStart) {
+      return buildOverdueStateFromPlannedStart(
+        plannedStart,
+        today
+      );
+    }
+  }
+
+  if (
+    !isBbBookingClient(
+      client,
+      payments
+    )
+  ) {
+    return null;
+  }
+
+  const item =
+    buildBbBookingItemFromClient(
+      client,
+      payments
+    );
+  const plannedStart =
+    item?.plannedStartDate?.trim();
+
+  if (!plannedStart) {
+    return null;
+  }
+
+  return buildOverdueStateFromPlannedStart(
+    plannedStart,
+    today
   );
 }
 

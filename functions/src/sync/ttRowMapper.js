@@ -17,6 +17,8 @@ const {
 
 const {
   isOptionalStartDateDeal,
+  isRejectDeal,
+  resolveTtAmount,
   resolveTtBudgetAmount,
 } = require("./dealTypeHelpers");
 
@@ -141,9 +143,9 @@ function mapPaymentToTtRow({
     payment.isLegacy === true &&
     !isLegacyClient;
 
-  const isRejectDeal = String(
-    payment.dealType || ""
-  ).startsWith("Отказ");
+  const rejectDeal = isRejectDeal(
+    payment.dealType
+  );
 
   const rawStartDate = isMinimalLegacy
     ? ""
@@ -154,12 +156,10 @@ function mapPaymentToTtRow({
       : payment.startDate ||
         getStartDate(payment.paymentDate);
 
-  const budget = isRejectDeal
-    ? ""
-    : resolveTtBudgetAmount({
-        payment,
-        client,
-      });
+  const budget = resolveTtBudgetAmount({
+    payment,
+    client,
+  });
 
   return [
     formatDateRu(payment.paymentDate),
@@ -170,10 +170,8 @@ function mapPaymentToTtRow({
     payment.vkLink ||
       client.vkLink ||
       "",
-    isRejectDeal
-      ? ""
-      : Number(payment.amount || 0),
-    isRejectDeal ? "" : budget,
+    resolveTtAmount(payment),
+    budget,
     formatDateRu(rawStartDate),
     formatDateRu(
       payment.firstContact ||

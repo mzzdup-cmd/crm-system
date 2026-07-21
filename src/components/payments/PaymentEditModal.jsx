@@ -11,6 +11,8 @@ import {
   canEditPayment,
   canEditPaymentStartDate,
   canEditCuratorStartDate,
+  canEditDeferredPaymentProfile,
+  canEditPaymentCoreFields,
 } from "../../domain/payment/paymentPermissions";
 
 import {
@@ -21,7 +23,9 @@ import { COURSES } from "../../constants/courses";
 import { TARIFFS } from "../../constants/tariffs";
 
 import {
-  isOptionalStartDateDealType,
+  canChangePaymentStreamDealType,
+  needsBudgetFieldForExistingDeal,
+  PAYMENT_STREAM_CHANGE_DEAL_TYPES_LABEL,
 } from "../../constants/dealTypes";
 
 import {
@@ -168,7 +172,24 @@ export default function PaymentEditModal({
   const editable =
     canEditPayment(payment, userData);
 
+  const coreEditable =
+    canEditPaymentCoreFields(
+      payment,
+      userData
+    );
+
+  const profileEditable =
+    editable ||
+    canEditDeferredPaymentProfile(
+      payment,
+      userData
+    );
+
+  const fieldEditable =
+    editable || coreEditable;
+
   const canEditStartDate =
+    fieldEditable ||
     canEditPaymentStartDate(
       payment,
       userData
@@ -182,13 +203,29 @@ export default function PaymentEditModal({
 
   const canSave =
     editable ||
+    coreEditable ||
+    profileEditable ||
     canEditStartDate ||
     canEditCuratorDate;
 
-  const optionalStartDate =
-    isOptionalStartDateDealType(
+  const storesBudgetOnPayment =
+    needsBudgetFieldForExistingDeal(
       payment.dealType
+    ) ||
+    needsBudgetFieldForExistingDeal(
+      payment.dealTypeId
     );
+
+  const canChangeStream =
+    canChangePaymentStreamDealType(
+      payment.dealType
+    ) ||
+    canChangePaymentStreamDealType(
+      payment.dealTypeId
+    );
+
+  const optionalStartDate =
+    canChangeStream;
 
   function handleChange(field, value) {
     setForm((current) => ({
@@ -198,6 +235,10 @@ export default function PaymentEditModal({
   }
 
   function buildPayload() {
+    const parsedBudget = parseMoneyNumber(
+      form.budget
+    );
+
     return {
       paymentUpdates: {
         amount: parseMoneyNumber(
@@ -219,11 +260,12 @@ export default function PaymentEditModal({
         sourceId: form.sourceId || null,
         sourceName:
           form.sourceName?.trim() || "",
+        ...(storesBudgetOnPayment
+          ? { budget: parsedBudget }
+          : {}),
       },
       clientUpdates: {
-        budget: parseMoneyNumber(
-          form.budget
-        ),
+        budget: parsedBudget,
         course: form.course,
         tariff: form.tariff,
         vkLink: (form.vkLink ?? "").trim(),
@@ -234,10 +276,44 @@ export default function PaymentEditModal({
     };
   }
 
+  function buildCoreFieldPayload() {
+    const parsedBudget = parseMoneyNumber(
+      form.budget
+    );
+
+    return {
+      paymentUpdates: {
+        amount: parseMoneyNumber(
+          form.amount
+        ),
+        paymentDate:
+          form.paymentDate,
+        startDate: form.startDate,
+        invoiceNumber:
+          form.invoiceNumber,
+        paymentSystem:
+          form.paymentSystem,
+        tariff: form.tariff,
+        ...(storesBudgetOnPayment
+          ? { budget: parsedBudget }
+          : {}),
+      },
+      clientUpdates: {
+        budget: parsedBudget,
+        tariff: form.tariff,
+      },
+    };
+  }
+
   async function handleSubmit(event) {
     event.preventDefault();
 
     if (!canSave) {
+      return;
+    }
+
+    if (!editable && coreEditable) {
+      setConfirmOpen(true);
       return;
     }
 
@@ -260,6 +336,20 @@ export default function PaymentEditModal({
         },
         clientUpdates: {},
       });
+
+      if (
+        profileEditable &&
+        Object.keys(
+          buildPayload().clientUpdates
+        ).length
+      ) {
+        await onSave({
+          paymentUpdates: {},
+          clientUpdates:
+            buildPayload().clientUpdates,
+        });
+      }
+
       return;
     }
 
@@ -297,6 +387,19 @@ export default function PaymentEditModal({
       return;
     }
 
+    if (
+      !editable &&
+      profileEditable &&
+      !startDateChanged &&
+      !curatorStartDateChanged
+    ) {
+      await onSave({
+        paymentUpdates: {},
+        clientUpdates: buildPayload().clientUpdates,
+      });
+      return;
+    }
+
     if (!editable) {
       return;
     }
@@ -306,6 +409,14 @@ export default function PaymentEditModal({
 
   async function handleConfirmSave() {
     const payload = buildPayload();
+
+    if (!editable && coreEditable) {
+      await onSave(
+        buildCoreFieldPayload()
+      );
+      setConfirmOpen(false);
+      return;
+    }
 
     if (!editable && canSave) {
       const paymentUpdates = {};
@@ -332,6 +443,11 @@ export default function PaymentEditModal({
         await onSave({
           paymentUpdates,
           clientUpdates: {},
+        });
+      } else if (profileEditable) {
+        await onSave({
+          paymentUpdates: {},
+          clientUpdates: payload.clientUpdates,
         });
       }
 
@@ -370,13 +486,24 @@ export default function PaymentEditModal({
             {payment.clientName}
             {!isAdmin && editable && (
               <span className="block mt-1 text-amber-400">
-                Доступно 30 минут после
-                создания
+                Полная правка — 30 минут после
+                создания. Сумма, дата, бюджет,
+                счёт, платёжка, тариф и старт —
+                всегда.
               </span>
             )}
             {!isAdmin &&
-              canEditStartDate &&
+              coreEditable &&
               !editable && (
+                <span className="block mt-1 text-brand">
+                  Можно изменить сумму, дату
+                  оплаты, бюджет, старт, счёт,
+                  платёжку и тариф
+                </span>
+              )}
+            {!isAdmin &&
+              canEditStartDate &&
+              !fieldEditable && (
                 <span className="block mt-1 text-brand">
                   Можно изменить только дату
                   старта — строка в ТТ
@@ -403,7 +530,7 @@ export default function PaymentEditModal({
               </span>
               <MoneyInput
                 required
-                disabled={!editable}
+                disabled={!fieldEditable}
                 value={form.amount}
                 onChange={(value) =>
                   handleChange(
@@ -420,7 +547,7 @@ export default function PaymentEditModal({
                 Бюджет клиента
               </span>
               <MoneyInput
-                disabled={!editable}
+                disabled={!profileEditable && !coreEditable}
                 value={form.budget}
                 onChange={(value) =>
                   handleChange(
@@ -438,7 +565,7 @@ export default function PaymentEditModal({
               </span>
               <select
                 value={form.course}
-                disabled={!editable}
+                disabled={!profileEditable}
                 onChange={(e) =>
                   handleChange(
                     "course",
@@ -467,7 +594,10 @@ export default function PaymentEditModal({
               </span>
               <select
                 value={form.tariff}
-                disabled={!editable}
+                disabled={
+                  !profileEditable &&
+                  !coreEditable
+                }
                 onChange={(e) =>
                   handleChange(
                     "tariff",
@@ -543,7 +673,7 @@ export default function PaymentEditModal({
               <input
                 type="date"
                 required
-                disabled={!editable}
+                disabled={!fieldEditable}
                 value={form.paymentDate}
                 onChange={(e) =>
                   handleChange(
@@ -565,7 +695,6 @@ export default function PaymentEditModal({
                   !optionalStartDate
                 }
                 disabled={
-                  !editable &&
                   !canEditStartDate
                 }
                 value={form.startDate}
@@ -579,8 +708,8 @@ export default function PaymentEditModal({
               />
               {optionalStartDate && (
                 <p className="text-xs text-neutral-500 mt-1">
-                  Для ББ и Рассылки можно
-                  указать позже
+                  Для {PAYMENT_STREAM_CHANGE_DEAL_TYPES_LABEL}{" "}
+                  можно указать позже
                 </p>
               )}
             </label>
@@ -624,7 +753,7 @@ export default function PaymentEditModal({
               </span>
               <select
                 value={form.paymentSystem}
-                disabled={!editable}
+                disabled={!fieldEditable}
                 onChange={(e) =>
                   handleChange(
                     "paymentSystem",
@@ -654,7 +783,7 @@ export default function PaymentEditModal({
                 Номер счёта
               </span>
               <input
-                disabled={!editable}
+                disabled={!fieldEditable}
                 value={form.invoiceNumber}
                 onChange={(e) =>
                   handleChange(

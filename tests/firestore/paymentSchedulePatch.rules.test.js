@@ -185,4 +185,61 @@ describe("payments update — schedule field patches", () => {
       })
     );
   });
+
+  it("PASS: Denis patches amount on old payment via core fields", async () => {
+    const db = authed(
+      DENIS_UID,
+      DENIS_EMAIL
+    ).firestore();
+
+    await assertSucceeds(
+      updateDoc(doc(db, "payments", PAYMENT_ID), {
+        amount: 55000,
+        updatedAt: Date.now(),
+        updatedByUid: DENIS_UID,
+      })
+    );
+  });
+
+  it("PASS: Polina patches startDate on Апсейл payment", async () => {
+    const POLINA_UID = "polina-pl-uid";
+    const POLINA_EMAIL = "polina.pl@crm-school.ru";
+
+    await seedUser(POLINA_UID, {
+      role: "manager",
+      managerId: "polina_plamadyala",
+      name: "Полина Пламадяла",
+      email: POLINA_EMAIL,
+    });
+
+    await seedPayment("payment-polina-upsell", {
+      clientId: "client-polina",
+      clientName: "d",
+      dealType: "Апсейл",
+      amount: 22000,
+      paymentDate: "2026-07-01",
+      startDate: "",
+      managerId: "polina_plamadyala",
+      manager: "Полина Пламадяла",
+      createdAt: Date.now() - 86400000 * 3,
+      createdByUid: POLINA_UID,
+      deletedAt: null,
+    });
+
+    const db = authed(
+      POLINA_UID,
+      POLINA_EMAIL
+    ).firestore();
+
+    await assertSucceeds(
+      updateDoc(
+        doc(db, "payments", "payment-polina-upsell"),
+        {
+          startDate: "2026-06-29",
+          updatedAt: Date.now(),
+          updatedByUid: POLINA_UID,
+        }
+      )
+    );
+  });
 });

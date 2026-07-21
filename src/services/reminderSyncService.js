@@ -2,6 +2,7 @@ import {
   createNotificationIfMissing,
   notifySubstitutionReminder,
   upsertReminderNotifications,
+  resolveNotificationByDedupKey,
 } from "./notificationService";
 
 import {
@@ -12,6 +13,11 @@ import {
   getManagerShiftInfo,
   getTodayDateString,
 } from "../domain/schedule/scheduleLogic";
+
+import {
+  isOverdue,
+  indexPaymentsByClientId,
+} from "../domain/client/clientStatus";
 
 import {
   TRAFFIC_OVERLOAD_THRESHOLD,
@@ -33,16 +39,45 @@ import {
 let lastSyncKey = "";
 let syncInProgress = false;
 
+function buildReminderSyncKey(
+  userData,
+  clients,
+  payments,
+  today
+) {
+  const paymentsByClientId =
+    indexPaymentsByClientId(payments);
+  const overdueIds = clients
+    .filter((client) =>
+      isOverdue(
+        client,
+        new Date(`${today}T12:00:00`),
+        paymentsByClientId
+      )
+    )
+    .map((client) => client.id)
+    .sort()
+    .join(",");
+
+  return `${userData.uid}_${today}_${clients.length}_${payments.length}_${overdueIds}`;
+}
+
 export async function syncClientReminders(
   userData,
-  clients
+  clients,
+  payments = []
 ) {
   if (!userData?.uid || !clients?.length) {
     return;
   }
 
   const today = getTodayDateString();
-  const syncKey = `${userData.uid}_${today}_${clients.length}`;
+  const syncKey = buildReminderSyncKey(
+    userData,
+    clients,
+    payments,
+    today
+  );
 
   if (syncKey === lastSyncKey || syncInProgress) {
     return;
@@ -51,14 +86,45 @@ export async function syncClientReminders(
   syncInProgress = true;
 
   try {
+    const todayDate = new Date(`${today}T12:00:00`);
+    const paymentsByClientId =
+      indexPaymentsByClientId(payments);
+
     const notifications =
       buildReminderNotificationsFromClients(
         clients,
-        userData.uid
+        userData.uid,
+        todayDate,
+        payments
       );
 
     await upsertReminderNotifications(
       notifications
+    );
+
+    const activeOverdueIds = new Set(
+      clients
+        .filter((client) =>
+          isOverdue(
+            client,
+            todayDate,
+            paymentsByClientId
+          )
+        )
+        .map((client) => client.id)
+    );
+
+    await Promise.all(
+      clients.map((client) => {
+        if (activeOverdueIds.has(client.id)) {
+          return null;
+        }
+
+        return resolveNotificationByDedupKey(
+          userData.uid,
+          `overdue_${client.id}`
+        );
+      })
     );
 
     lastSyncKey = syncKey;

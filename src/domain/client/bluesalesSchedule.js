@@ -1,6 +1,6 @@
 import {
   SUBSCRIPTION_CYCLE_DAYS,
-} from "./clientDates";
+} from "./clientDates.js";
 
 const MONTHS_GENITIVE = [
   "января",
