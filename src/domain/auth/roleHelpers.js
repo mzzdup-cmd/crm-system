@@ -377,25 +377,22 @@ export function normalizeUserRole(userData) {
   }
 
   if (role === ROLES.MANAGER) {
-    if (!managerId && name) {
+    const fromEmail =
+      resolveManagerIdFromEmail(
+        userData.email
+      );
+
+    if (fromEmail) {
+      managerId = canonicalManagerId(
+        fromEmail
+      );
+    } else if (!managerId && name) {
       const resolved =
         resolveManagerIdFromLegacy(name);
 
       if (resolved) {
         managerId =
           canonicalManagerId(resolved);
-      }
-    }
-
-    if (!managerId && userData.email) {
-      const fromEmail =
-        resolveManagerIdFromEmail(
-          userData.email
-        );
-
-      if (fromEmail) {
-        managerId =
-          canonicalManagerId(fromEmail);
       }
     }
 
@@ -437,7 +434,6 @@ export function resolveOwnershipManagerFieldsForWrite(
   }
 
   const managerId =
-    getFirestoreManagerId(userData) ??
     getEffectiveOwnerManagerId(userData) ??
     getCurrentManagerId(userData);
 

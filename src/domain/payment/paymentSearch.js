@@ -31,10 +31,61 @@ export function enrichPaymentForSearch(
     ...payment,
     dialogLink,
     dialogId,
+    vkLink:
+      payment.vkLink ||
+      client?.vkLink ||
+      "",
     clientName:
       payment.clientName ||
       client?.name ||
       "",
+  };
+}
+
+export function enrichPaymentForDisplay(
+  payment,
+  client = null
+) {
+  const enriched =
+    enrichPaymentForSearch(
+      payment,
+      client
+    );
+
+  const bsId = String(
+    enriched.clientNote ||
+      enriched.legacyClientBsId ||
+      client?.clientNote ||
+      ""
+  ).trim();
+
+  const displayName = String(
+    enriched.legacyClientName ||
+      enriched.clientName ||
+      client?.name ||
+      ""
+  ).trim();
+
+  const course =
+    enriched.course ||
+    client?.course ||
+    "";
+
+  return {
+    ...enriched,
+    displayBsId: bsId,
+    displayName,
+    displayTitle:
+      displayName ||
+      bsId ||
+      "Без имени",
+    displaySubtitleName:
+      displayName &&
+      bsId &&
+      displayName !== bsId
+        ? bsId
+        : "",
+    displayCourse: course,
   };
 }
 
@@ -144,6 +195,7 @@ export function paymentMatchesSearch(
     payment?.course,
     payment?.paymentSystem,
     payment?.dialogLink,
+    payment?.vkLink,
     payment?.comment,
     payment?.amount,
     payment?.paymentDate,

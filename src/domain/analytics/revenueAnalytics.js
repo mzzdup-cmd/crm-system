@@ -6,13 +6,20 @@ import {
   resolveCanonicalManagerKey,
 } from "../auth/managerMigration";
 
+import {
+  getPaymentRevenueContribution,
+  countsAsKpiSale,
+} from "../payment/paymentRevenue";
+
 export function aggregateRevenue(
   payments
 ) {
   return payments.reduce(
     (sum, payment) =>
       sum +
-      Number(payment.amount || 0),
+      getPaymentRevenueContribution(
+        payment
+      ),
     0
   );
 }
@@ -41,11 +48,14 @@ export function aggregateByManager(
       };
     }
 
-    stats[key].revenue += Number(
-      payment.amount || 0
-    );
+    stats[key].revenue +=
+      getPaymentRevenueContribution(
+        payment
+      );
 
-    stats[key].deals += 1;
+    if (countsAsKpiSale(payment)) {
+      stats[key].deals += 1;
+    }
   });
 
   return Object.values(stats).sort(
@@ -70,11 +80,14 @@ export function aggregateByCourse(
       };
     }
 
-    stats[course].revenue += Number(
-      payment.amount || 0
-    );
+    stats[course].revenue +=
+      getPaymentRevenueContribution(
+        payment
+      );
 
-    stats[course].deals += 1;
+    if (countsAsKpiSale(payment)) {
+      stats[course].deals += 1;
+    }
   });
 
   return Object.values(stats).sort(
@@ -104,11 +117,14 @@ export function aggregateByTariff(
     const bucket =
       stats[tariff] || stats.Other;
 
-    bucket.revenue += Number(
-      payment.amount || 0
-    );
+    bucket.revenue +=
+      getPaymentRevenueContribution(
+        payment
+      );
 
-    bucket.count += 1;
+    if (countsAsKpiSale(payment)) {
+      bucket.count += 1;
+    }
   });
 
   return stats;

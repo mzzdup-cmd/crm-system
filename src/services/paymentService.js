@@ -19,6 +19,9 @@ import {
 import {
   normalizeManagerFields,
   resolveCanonicalManagerKey,
+  canonicalManagerId,
+  managerIdsMatch,
+  resolveManagerIdFromLegacy,
 } from "../domain/auth/managerMigration";
 import {
   isLeadership,
@@ -26,6 +29,7 @@ import {
   getFirestoreManagerId,
   getManagerIdsForScopedQuery,
   resolveManagerFieldsForWrite,
+  getEffectiveOwnerManagerId,
 } from "../domain/auth/roleHelpers";
 import {
   canAccessPayment,
@@ -105,6 +109,10 @@ import {
   buildSalaryReportBundle,
   filterSalaryRowsForManager,
 } from "../domain/salary/salaryPeriod";
+import {
+  countsAsKpiSale,
+  getPaymentRevenueContribution,
+} from "../domain/payment/paymentRevenue";
 import { MANAGERS } from "../constants/managers";
 
 function mapPaymentDoc(snapshot) {
@@ -1270,20 +1278,40 @@ export async function addPaymentRecord({
         managerId: client?.managerId,
       });
 
-  if (client?.managerId) {
-    const clientManagerFields =
-      normalizeManagerFields({
-        managerId: client.managerId,
-        manager:
-          client.manager ||
-          managerFields.manager,
-      });
+  if (client?.managerId && userData) {
+    const ownerId =
+      getEffectiveOwnerManagerId(
+        userData
+      );
+    const clientManagerId =
+      canonicalManagerId(
+        resolveManagerIdFromLegacy(
+          client.managerId
+        ) || client.managerId
+      );
 
-    managerFields.managerId =
-      clientManagerFields.managerId;
-    managerFields.manager =
-      clientManagerFields.manager ||
-      managerFields.manager;
+    if (
+      ownerId &&
+      clientManagerId &&
+      managerIdsMatch(
+        ownerId,
+        clientManagerId
+      )
+    ) {
+      const clientManagerFields =
+        normalizeManagerFields({
+          managerId: client.managerId,
+          manager:
+            client.manager ||
+            managerFields.manager,
+        });
+
+      managerFields.managerId =
+        clientManagerFields.managerId;
+      managerFields.manager =
+        clientManagerFields.manager ||
+        managerFields.manager;
+    }
   }
 
   const resolvedSourceName =
@@ -1744,11 +1772,14 @@ export function buildManagersStats(payments) {
       };
     }
 
-    managersStats[managerKey].revenue += Number(
-      payment.amount || 0
-    );
+    managersStats[managerKey].revenue +=
+      getPaymentRevenueContribution(
+        payment
+      );
 
-    managersStats[managerKey].deals += 1;
+    if (countsAsKpiSale(payment)) {
+      managersStats[managerKey].deals += 1;
+    }
   });
 
   return managersStats;

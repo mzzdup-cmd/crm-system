@@ -196,10 +196,46 @@ export function subscribeOperationalPayments(
     return () => {};
   }
 
-  // All payments — used for team leaderboard on manager dashboard.
+  const paymentsQuery =
+    buildScopedPaymentsQuery(
+      userData,
+      maxCount
+    );
+
+  if (!paymentsQuery) {
+    callback([]);
+    return () => {};
+  }
+
+  return onSnapshot(
+    paymentsQuery,
+    (snapshot) => {
+      callback(
+        mapScopedPayments(
+          snapshot,
+          userData
+        )
+      );
+    },
+    (error) => {
+      console.error(
+        "Operational payments subscription error:",
+        error
+      );
+      callback([]);
+    }
+  );
+}
+
+/** Cheap pending-TT counter: only unsynced rows, not the full payments feed. */
+export function subscribeUnsyncedPayments(
+  maxCount,
+  callback
+) {
   const paymentsQuery = query(
     collection(db, "payments"),
-    orderBy("createdAt", "desc"),
+    where("syncedToSheets", "==", false),
+    orderBy("createdAt", "asc"),
     limit(maxCount)
   );
 
@@ -207,14 +243,16 @@ export function subscribeOperationalPayments(
     paymentsQuery,
     (snapshot) => {
       callback(
-        snapshot.docs.map(
-          mapPaymentFromSnapshot
-        )
+        snapshot.docs
+          .map(mapPaymentFromSnapshot)
+          .filter(
+            (payment) => !payment.deletedAt
+          )
       );
     },
     (error) => {
       console.error(
-        "Operational payments subscription error:",
+        "Unsynced payments subscription error:",
         error
       );
       callback([]);

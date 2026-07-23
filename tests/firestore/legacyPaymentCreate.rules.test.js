@@ -318,6 +318,46 @@ describe("payments create — legacy old client", () => {
     );
   });
 
+  it("PASS: Polina Plamadya auth email wins over stale profile managerId", async () => {
+    const UID = "polina-pl-stale-uid";
+    const EMAIL = "polina.pl@crm-school.ru";
+
+    await seedUser(UID, {
+      role: "manager",
+      managerId: "katya_bakaeva",
+      name: "Полина Пламадяла",
+      email: EMAIL,
+    });
+
+    const now = Date.now();
+
+    await assertSucceeds(
+      addDoc(
+        collection(
+          authed(UID, EMAIL).firestore(),
+          "payments"
+        ),
+        {
+          clientId: null,
+          clientName: "Test",
+          dealType: "Доплата Новая",
+          amount: 5000,
+          paymentSystem: "Prodamus",
+          invoiceNumber: "123",
+          manager: "Полина Пламадяла",
+          managerId: "polina_plamadya",
+          paymentDate: "2026-07-21",
+          startDate: "2026-05-04",
+          syncedToSheets: false,
+          createdAt: now,
+          updatedAt: now,
+          createdByUid: UID,
+          updatedByUid: UID,
+        }
+      )
+    );
+  });
+
   it("PASS: Denis Manuilov legacy top-up after subscriber lookup", async () => {
     const UID = "denis-uid";
     const EMAIL = "denis@crm-school.ru";

@@ -237,6 +237,87 @@ describe("clients create — addPaymentForNewClient path", () => {
     );
   });
 
+  it("PASS: Polina Plamadya from-TT client create with auth email ownership", async () => {
+    const UID = "polina-pl-client-uid";
+    const EMAIL = "polina.pl@crm-school.ru";
+
+    await seedUser(UID, {
+      role: "manager",
+      managerId: "katya_bakaeva",
+      name: "Полина Пламадяла",
+      email: EMAIL,
+    });
+
+    const payload = {
+      name: "Maks",
+      dialogLink:
+        "https://bluesales.ru/app/Messenger/?dialogId=103951707",
+      vkLink: "https://vk.com/id247938612",
+      course: "Монтаж",
+      tariff: "Стандарт",
+      budget: 28000,
+      amount: 0,
+      manager: "Полина Пламадяла",
+      managerId: "polina_plamadya",
+      dealType: "Доплата Новая",
+      paymentDate: "2026-07-22",
+      firstContact: "2026-07-01",
+      fromTt: true,
+      sourceId: "3",
+      sourceName: "3",
+      nextPaymentDate: null,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      createdByUid: UID,
+      updatedByUid: UID,
+    };
+
+    await assertSucceeds(
+      tryCreateClient(
+        authed(UID, EMAIL),
+        payload
+      )
+    );
+  });
+
+  it("FAIL: Polina Plamadya cannot create client under wrong managerId", async () => {
+    const UID = "polina-pl-wrong-uid";
+    const EMAIL = "polina.pl@crm-school.ru";
+
+    await seedUser(UID, {
+      role: "manager",
+      managerId: "polina_plamadya",
+      name: "Полина Пламадяла",
+      email: EMAIL,
+    });
+
+    const payload = {
+      name: "Maks",
+      dialogLink:
+        "https://bluesales.ru/app/Messenger/?dialogId=103951707",
+      course: "Монтаж",
+      tariff: "Стандарт",
+      budget: 28000,
+      amount: 0,
+      manager: "Катя Бакаева",
+      managerId: "katya_bakaeva",
+      dealType: "Доплата Новая",
+      paymentDate: "2026-07-22",
+      nextPaymentDate: null,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      createdByUid: UID,
+      updatedByUid: UID,
+    };
+
+    await assertFails(
+      tryCreateClient(
+        authed(UID, EMAIL),
+        payload
+      )
+    );
+  });
+
   it("FAIL: ownsManagerRecord — wrong managerId in payload vs auth email", async () => {
     await seedUser(UID, {
       ...USER_PROFILE,

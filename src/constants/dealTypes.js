@@ -300,6 +300,15 @@ export function isRefundDealType(value) {
   );
 }
 
+/** Доплаты, отказы и возвраты наследуют поток клиента. */
+export function inheritsClientStream(value) {
+  return (
+    isTopupDealType(value) ||
+    isRejectDealType(value) ||
+    isRefundDealType(value)
+  );
+}
+
 /** Поле бюджета при оплате существующего клиента — только апсэйл (необязательно). */
 export function needsBudgetFieldForExistingDeal(
   value

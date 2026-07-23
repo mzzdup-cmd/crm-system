@@ -6,9 +6,10 @@ import {
 } from "react";
 
 import {
-  getAuth,
   onAuthStateChanged,
 } from "firebase/auth";
+
+import { auth } from "../services/firebase";
 
 import {
   getUserData,
@@ -32,8 +33,6 @@ export function AuthProvider({
     useState(true);
 
   useEffect(() => {
-
-    const auth = getAuth();
 
     const unsubscribe =
       onAuthStateChanged(

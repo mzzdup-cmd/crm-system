@@ -6,6 +6,11 @@ import {
   resolveManagerDisplayName,
 } from "../../services/clientService";
 
+import {
+  countsAsKpiSale,
+  getPaymentRevenueContribution,
+} from "../payment/paymentRevenue";
+
 function resolvePaymentSource(
   payment,
   client
@@ -111,10 +116,14 @@ export function buildTrafficSourceAnalytics({
 
     const row = statsMap.get(source.key);
 
-    row.salesCount += 1;
-    row.revenue += Number(
-      payment.amount || 0
-    );
+    if (countsAsKpiSale(payment)) {
+      row.salesCount += 1;
+    }
+
+    row.revenue +=
+      getPaymentRevenueContribution(
+        payment
+      );
 
     const managerKey =
       payment.managerId ||

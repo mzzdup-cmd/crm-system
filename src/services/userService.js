@@ -15,6 +15,7 @@ import {
 } from "../domain/auth/roleHelpers";
 import {
   expandManagerIdAliases,
+  canonicalManagerId,
 } from "../domain/auth/managerMigration";
 import {
   getProvisionProfileForEmail,
@@ -59,13 +60,32 @@ async function repairProvisionProfile(
     template.role === "rop";
   const roleMismatch =
     raw.role !== template.role;
-  const hasStaleManagerId =
+  const hasStaleLeadershipManagerId =
     isLeadershipProfile &&
     Boolean(raw.managerId);
+  const expectedManagerId =
+    template.managerId
+      ? canonicalManagerId(
+          template.managerId
+        )
+      : null;
+  const currentManagerId = raw.managerId
+    ? canonicalManagerId(raw.managerId)
+    : null;
+  const hasWrongManagerId =
+    !isLeadershipProfile &&
+    Boolean(expectedManagerId) &&
+    currentManagerId !== expectedManagerId;
+  const hasWrongName =
+    Boolean(template.name) &&
+    String(raw.name || "").trim() !==
+      template.name;
 
   if (
     !roleMismatch &&
-    !hasStaleManagerId
+    !hasStaleLeadershipManagerId &&
+    !hasWrongManagerId &&
+    !hasWrongName
   ) {
     return raw;
   }
@@ -73,20 +93,16 @@ async function repairProvisionProfile(
   const patch = {
     role: template.role,
     name:
-      raw.name ||
       template.name ||
+      raw.name ||
       "",
     updatedAt: Date.now(),
   };
 
   if (isLeadershipProfile) {
     patch.managerId = deleteField();
-  } else if (
-    template.managerId &&
-    !raw.managerId
-  ) {
-    patch.managerId =
-      template.managerId;
+  } else if (expectedManagerId) {
+    patch.managerId = expectedManagerId;
   }
 
   try {

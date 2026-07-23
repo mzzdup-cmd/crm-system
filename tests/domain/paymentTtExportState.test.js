@@ -82,6 +82,16 @@ test("resync badge is hidden without row metadata", () => {
       syncedToSheets: false,
       ttRowResyncPending: true,
     }),
+    "Ждёт ссылку VK — потом уйдёт в ТТ"
+  );
+});
+
+test("unsynced payment with VK waits for export label", () => {
+  assert.equal(
+    getPaymentTtSyncStatusLabel({
+      syncedToSheets: false,
+      vkLink: "https://vk.com/id1",
+    }),
     "Ожидает выгрузки в ТТ"
   );
 });

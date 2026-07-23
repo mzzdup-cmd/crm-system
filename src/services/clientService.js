@@ -862,46 +862,15 @@ export async function findClientByDialogLink(
       };
     }
 
-    const paymentResult =
-      await searchPaymentsForDialog({
-        dialogId,
-        variants,
-        dialogLink,
-        userData,
-        blockedOwner:
-          clientResult.blockedOwner,
-        bsId,
-      });
-
-    if (paymentResult.status === "found") {
-      return paymentResult;
-    }
-
-    if (paymentResult.collision) {
-      return {
-        client: null,
-        status:
-          paymentResult.collision.kind ===
-          "dialog_client_mismatch"
-            ? "dialog_client_mismatch"
-            : "bs_id_mismatch",
-        collision:
-          paymentResult.collision,
-      };
-    }
-
-    const accessDenied =
-      paymentResult.accessDenied ||
-      clientResult.accessDenied;
-    const blockedOwner =
-      clientResult.blockedOwner ||
-      paymentResult.blockedOwner;
-
-    if (accessDenied && blockedOwner) {
+    if (
+      clientResult.accessDenied &&
+      clientResult.blockedOwner
+    ) {
       return {
         client: null,
         status: "access_denied",
-        blockedOwner,
+        blockedOwner:
+          clientResult.blockedOwner,
       };
     }
 

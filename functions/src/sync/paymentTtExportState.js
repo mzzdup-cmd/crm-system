@@ -125,6 +125,35 @@ function paymentNeedsTtAppend(
   return false;
 }
 
+function paymentHasVkForTt(payment, client = null) {
+  const paymentVk = String(
+    payment?.vkLink || ""
+  ).trim();
+  const clientVk = String(
+    client?.vkLink || ""
+  ).trim();
+
+  return Boolean(paymentVk || clientVk);
+}
+
+/** First-time TT append only when payment is complete enough (has VK). */
+function paymentReadyForTtAppend(
+  payment,
+  client = null,
+  paymentsByClient = null
+) {
+  if (
+    !paymentNeedsTtAppend(
+      payment,
+      paymentsByClient
+    )
+  ) {
+    return false;
+  }
+
+  return paymentHasVkForTt(payment, client);
+}
+
 function paymentCanProcessTtResync(
   payment,
   paymentsByClient = {}
@@ -192,6 +221,8 @@ module.exports = {
   topupHasBorrowedTtRow,
   topupNeedsOwnTtAppend,
   paymentNeedsTtAppend,
+  paymentHasVkForTt,
+  paymentReadyForTtAppend,
   paymentCanProcessTtResync,
   shouldRecoverMisroutedTopup,
 };

@@ -14,7 +14,7 @@ import { useTrafficSources }
 from "../hooks/useTrafficSources";
 
 import {
-  getAllPayments,
+  getRecentPayments,
 } from "../services/paymentService";
 
 import {
@@ -109,7 +109,7 @@ export default function TrafficPage({
           paymentItems,
           clientItems,
         ] = await Promise.all([
-          getAllPayments(),
+          getRecentPayments(2500),
           getAllClients(),
         ]);
 

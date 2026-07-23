@@ -38,6 +38,7 @@ import {
 import {
   paymentMatchesSearch,
   enrichPaymentForSearch,
+  enrichPaymentForDisplay,
 } from "../domain/payment/paymentSearch";
 
 import {
@@ -71,6 +72,9 @@ from "../components/ui/ConfirmModal";
 
 import PaymentEditModal
 from "../components/payments/PaymentEditModal";
+
+import PaymentContactLinks
+from "../components/payments/PaymentContactLinks";
 
 function formatTimeLeft(ms) {
   const minutes = Math.ceil(ms / 60000);
@@ -400,7 +404,7 @@ export default function PaymentsPage({
       {!loading && !error && (
         <input
           type="search"
-          placeholder="Поиск по счёту, клиенту, сумме..."
+          placeholder="Поиск по счёту, ссылке на диалог, клиенту, сумме..."
           value={search}
           onChange={(event) =>
             setSearch(
@@ -494,6 +498,18 @@ export default function PaymentsPage({
               const legacy =
                 isLegacyPayment(payment);
 
+              const client = payment.clientId
+                ? clientsById.get(
+                    payment.clientId
+                  )
+                : null;
+
+              const display =
+                enrichPaymentForDisplay(
+                  payment,
+                  client
+                );
+
               return (
                 <div
                   key={payment.id}
@@ -505,32 +521,51 @@ export default function PaymentsPage({
                   <div className="flex flex-col sm:flex-row sm:justify-between gap-4">
                     <div>
                       <div className="text-xl md:text-2xl font-bold">
-                        {legacy
-                          ? payment.legacyClientName ||
-                            payment.clientName ||
-                            "Legacy подписчик"
-                          : payment.clientName ||
-                            "Без имени"}
+                        {display.displayTitle}
                       </div>
 
-                      <div className="text-neutral-400 mt-2 text-sm break-all">
-                        {legacy
-                          ? `${payment.course || "—"} · ${payment.dialogLink || "—"}`
-                          : `${payment.course || "—"} · ${enrichPaymentForSearch(
-                              payment,
-                              payment.clientId
-                                ? clientsById.get(
-                                    payment.clientId
-                                  )
-                                : null
-                            ).dialogLink || payment.manager || "—"}`}
-                      </div>
-
-                      {!legacy && (
+                      {display.displaySubtitleName && (
                         <div className="text-neutral-500 mt-1 text-sm">
-                          {payment.manager}
+                          {display.displaySubtitleName}
                         </div>
                       )}
+
+                      {display.dialogLink ||
+                      display.vkLink ? (
+                        <PaymentContactLinks
+                          dialogLink={
+                            display.dialogLink
+                          }
+                          vkLink={
+                            display.vkLink
+                          }
+                          course={
+                            display.displayCourse
+                          }
+                          onCopied={() =>
+                            toast.success(
+                              "Ссылка скопирована"
+                            )
+                          }
+                        />
+                      ) : (
+                        <div className="text-neutral-400 mt-2 text-sm break-all">
+                          {display.displayCourse ||
+                            "—"}
+                          {!legacy &&
+                            payment.manager &&
+                            ` · ${payment.manager}`}
+                        </div>
+                      )}
+
+                      {!legacy &&
+                        payment.manager &&
+                        (display.dialogLink ||
+                          display.vkLink) && (
+                          <div className="text-neutral-500 mt-1 text-sm">
+                            {payment.manager}
+                          </div>
+                        )}
                     </div>
 
                     <div className="text-left sm:text-right">

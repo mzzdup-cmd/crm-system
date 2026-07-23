@@ -5,7 +5,9 @@ const {
   buildPaymentsByClient,
   paymentCanProcessTtResync,
   paymentHasTtRowMetadata,
+  paymentHasVkForTt,
   paymentNeedsTtAppend,
+  paymentReadyForTtAppend,
   shouldRecoverMisroutedTopup,
   topupHasBorrowedTtRow,
 } = require("./paymentTtExportState");
@@ -55,6 +57,36 @@ test("unsynced payment needs append", () => {
     paymentNeedsTtAppend({
       syncedToSheets: false,
     }),
+    true
+  );
+});
+
+test("payment without VK is not ready for first append", () => {
+  assert.equal(
+    paymentHasVkForTt({
+      syncedToSheets: false,
+    }),
+    false
+  );
+
+  assert.equal(
+    paymentReadyForTtAppend({
+      syncedToSheets: false,
+    }),
+    false
+  );
+});
+
+test("payment with client VK is ready for append", () => {
+  assert.equal(
+    paymentReadyForTtAppend(
+      {
+        syncedToSheets: false,
+      },
+      {
+        vkLink: "https://vk.com/id1",
+      }
+    ),
     true
   );
 });

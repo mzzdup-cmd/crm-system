@@ -15,6 +15,11 @@ import {
   resolveCanonicalManagerKey,
 } from "../auth/managerMigration";
 
+import {
+  getPaymentRevenueContribution,
+  countsAsKpiSale,
+} from "../payment/paymentRevenue";
+
 export function buildManagerKpiStats(
   payments,
   clientsById = {}
@@ -46,12 +51,16 @@ export function buildManagerKpiStats(
     }
 
     const entry = stats[key];
-    const amount = Number(
-      payment.amount || 0
-    );
+    const amount =
+      getPaymentRevenueContribution(
+        payment
+      );
 
     entry.revenue += amount;
-    entry.deals += 1;
+
+    if (countsAsKpiSale(payment)) {
+      entry.deals += 1;
+    }
 
     const category = getDealCategory(
       payment.dealType

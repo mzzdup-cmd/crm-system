@@ -1,11 +1,8 @@
 import {
   dialogLinksMatch,
   extractDialogId,
+  resolveDialogLookupId,
 } from "./dialogLinkUtils.js";
-
-import {
-  recordMatchesDialogSearch,
-} from "./recordDialogSearch.js";
 
 export function getClientDialogId(client) {
   return String(
@@ -61,18 +58,25 @@ export function clientCanonicalDialogMatches(
     return false;
   }
 
-  return recordMatchesDialogSearch(
-    client,
-    dialogLink
-  );
+  return false;
 }
 
 export function clientMatchesDialogLookup(
   client,
   dialogLink
 ) {
-  return recordMatchesDialogSearch(
-    client,
-    dialogLink
+  const queryDialogId =
+    resolveDialogLookupId(dialogLink);
+
+  if (!queryDialogId) {
+    return false;
+  }
+
+  const clientDialogId =
+    getClientDialogId(client);
+
+  return (
+    Boolean(clientDialogId) &&
+    clientDialogId === queryDialogId
   );
 }

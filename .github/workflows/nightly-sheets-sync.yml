@@ -2,12 +2,12 @@ name: CRM → TT Sheets Sync
 
 on:
   schedule:
-    # 3 slots MSK (UTC+3)
-    # 00:00 MSK = 21:00 UTC (prev calendar day in UTC)
-    - cron: "0 21 * * *"
+    # Three daily slots MSK (UTC+3):
+    # 00:00 MSK = 21:00 UTC (prev day)
     # 10:00 MSK = 07:00 UTC
-    - cron: "0 7 * * *"
     # 16:00 MSK = 13:00 UTC
+    - cron: "0 21 * * *"
+    - cron: "0 7 * * *"
     - cron: "0 13 * * *"
   workflow_dispatch:
 

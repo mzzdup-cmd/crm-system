@@ -37,17 +37,6 @@ export function normalizeDialogLink(link) {
   }
 }
 
-function dialogIdsMatch(left, right) {
-  const leftId = extractDialogId(left);
-  const rightId = extractDialogId(right);
-
-  return (
-    Boolean(leftId) &&
-    Boolean(rightId) &&
-    leftId === rightId
-  );
-}
-
 export function dialogLinksMatch(
   left,
   right
@@ -60,8 +49,15 @@ export function dialogLinksMatch(
     return true;
   }
 
-  if (dialogIdsMatch(left, right)) {
-    return true;
+  const leftId = extractDialogId(left);
+  const rightId = extractDialogId(right);
+
+  if (leftId && rightId) {
+    return leftId === rightId;
+  }
+
+  if (leftId || rightId) {
+    return false;
   }
 
   return (

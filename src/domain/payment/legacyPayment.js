@@ -6,6 +6,10 @@ import {
   isPaymentDeleted,
 } from "./paymentPermissions";
 
+import {
+  getPaymentRevenueContribution,
+} from "./paymentRevenue";
+
 export function isLegacyClientPayment(
   payment
 ) {
@@ -53,7 +57,9 @@ export function sumOperationalRevenue(
     .reduce(
       (sum, payment) =>
         sum +
-        Number(payment.amount || 0),
+        getPaymentRevenueContribution(
+          payment
+        ),
       0
     );
 }

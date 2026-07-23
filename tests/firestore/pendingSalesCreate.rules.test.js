@@ -1,6 +1,6 @@
 import {
-  execSync,
-} from "node:child_process";
+  readFileSync,
+} from "node:fs";
 import {
   after,
   before,
@@ -24,9 +24,9 @@ import {
 } from "../helpers/buildClientWritePayload.js";
 
 const PROJECT_ID = "crm-pending-sales-rules-test";
-const RULES = execSync(
-  "git show HEAD:firestore.rules",
-  { encoding: "utf8" }
+const RULES = readFileSync(
+  "firestore.rules",
+  "utf8"
 );
 
 let testEnv;

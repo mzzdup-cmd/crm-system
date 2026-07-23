@@ -18,10 +18,10 @@ export const MANAGER_EMAIL_LOCAL_IDS = {
   "polina.p": "polina_penkova",
   "polina.pl": "polina_plamadya",
   katya: "katya_bakaeva",
-  vilu: "violeta_petrova",
-  vilu_petrova: "violeta_petrova",
-  violeta: "violeta_petrova",
-  violeta_petrova: "violeta_petrova",
+  vilu: "vilu_petrova",
+  vilu_petrova: "vilu_petrova",
+  violeta: "vilu_petrova",
+  violeta_petrova: "vilu_petrova",
 };
 
 export const LEGACY_MANAGER_ALIASES = {
@@ -210,7 +210,7 @@ export function canonicalManagerId(managerId) {
     case "violeta_petrova":
     case "vilu":
     case "violeta":
-      return "violeta_petrova";
+      return "vilu_petrova";
     case "denis":
       return "denis_manuilov";
     case "ruslan":

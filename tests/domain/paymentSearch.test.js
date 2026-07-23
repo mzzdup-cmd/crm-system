@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import {
   paymentMatchesSearch,
   enrichPaymentForSearch,
+  enrichPaymentForDisplay,
 } from "../../src/domain/payment/paymentSearch.js";
 
 const basePayment = {
@@ -154,5 +155,65 @@ test("does not match unrelated query", () => {
       "99999999"
     ),
     false
+  );
+});
+
+test("enrichPaymentForDisplay uses client name as title", () => {
+  const display = enrichPaymentForDisplay(
+    {
+      clientNote: "158900810",
+      legacyClientName: "Монтаж",
+      course: "Монтаж",
+      dialogLink:
+        "https://bluesales.ru/app/Messenger/?dialogId=103738396",
+    },
+    null
+  );
+
+  assert.equal(
+    display.displayTitle,
+    "Монтаж"
+  );
+  assert.equal(
+    display.displaySubtitleName,
+    "158900810"
+  );
+  assert.equal(
+    display.displayCourse,
+    "Монтаж"
+  );
+});
+
+test("enrichPaymentForDisplay inherits vkLink from client", () => {
+  const display = enrichPaymentForDisplay(
+    {
+      clientId: "c1",
+      clientNote: "158900810",
+      clientName: "Maks",
+    },
+    {
+      id: "c1",
+      name: "Maks",
+      dialogLink:
+        "https://bluesales.ru/app/Messenger/?dialogId=103738396",
+      vkLink: "https://vk.com/id123",
+    }
+  );
+
+  assert.equal(
+    display.displayTitle,
+    "Maks"
+  );
+  assert.equal(
+    display.displaySubtitleName,
+    "158900810"
+  );
+  assert.equal(
+    display.vkLink,
+    "https://vk.com/id123"
+  );
+  assert.equal(
+    display.dialogLink,
+    "https://bluesales.ru/app/Messenger/?dialogId=103738396"
   );
 });

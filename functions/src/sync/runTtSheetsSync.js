@@ -40,11 +40,13 @@ const {
   buildPaymentsByClient,
   paymentCanProcessTtResync,
   paymentNeedsTtAppend,
+  paymentReadyForTtAppend,
   shouldRecoverMisroutedTopup,
 } = require("./paymentTtExportState");
 
-const STALE_VK_BATCH_LIMIT = 50;
 const TT_ROW_DELETION_BATCH_LIMIT = 30;
+const APPEND_BATCH_LIMIT = 500;
+const PENDING_QUERY_LIMIT = 500;
 const APPEND_RETRY_ATTEMPTS = 2;
 const FIRESTORE_RETRY_ATTEMPTS = 4;
 
@@ -84,10 +86,11 @@ async function withFirestoreRetry(
     } catch (error) {
       lastError = error;
 
-      if (
-        !isFirestoreQuotaError(error) ||
-        attempt >= FIRESTORE_RETRY_ATTEMPTS
-      ) {
+      if (isFirestoreQuotaError(error)) {
+        throw error;
+      }
+
+      if (attempt >= FIRESTORE_RETRY_ATTEMPTS) {
         throw error;
       }
 
@@ -95,7 +98,7 @@ async function withFirestoreRetry(
         attempt * attempt * 2000;
 
       console.warn(
-        `[tt-sync] Firestore quota hit during ${label}, retry ${attempt}/${FIRESTORE_RETRY_ATTEMPTS} in ${delayMs}ms`
+        `[tt-sync] Transient Firestore error during ${label}, retry ${attempt}/${FIRESTORE_RETRY_ATTEMPTS} in ${delayMs}ms`
       );
 
       await sleep(delayMs);
@@ -152,7 +155,7 @@ function getDb() {
 function filterUnsyncedPayments(
   allPayments = [],
   paymentsByClient = null,
-  limit = 500
+  limit = APPEND_BATCH_LIMIT
 ) {
   return allPayments
     .filter((payment) =>
@@ -164,9 +167,93 @@ function filterUnsyncedPayments(
     .slice(0, limit);
 }
 
+function mapPaymentDocs(snapshot) {
+  return snapshot.docs
+    .map((docSnap) => ({
+      id: docSnap.id,
+      ...docSnap.data(),
+    }))
+    .filter((payment) => !payment.deletedAt);
+}
+
+async function fetchPaymentsByFlag(
+  field,
+  limit = PENDING_QUERY_LIMIT
+) {
+  const snapshot = await withFirestoreRetry(
+    `fetchPaymentsByFlag:${field}`,
+    () =>
+      getDb()
+        .collection("payments")
+        .where(field, "==", true)
+        .limit(limit)
+        .get()
+  );
+
+  return mapPaymentDocs(snapshot);
+}
+
+async function fetchUnsyncedPaymentsQuery(
+  limit = APPEND_BATCH_LIMIT
+) {
+  const snapshot = await withFirestoreRetry(
+    "fetchUnsyncedPaymentsQuery",
+    () =>
+      getDb()
+        .collection("payments")
+        .where("syncedToSheets", "==", false)
+        .orderBy("createdAt", "asc")
+        .limit(limit)
+        .get()
+  );
+
+  return mapPaymentDocs(snapshot);
+}
+
+async function fetchPaymentsByClientIds(
+  clientIds = []
+) {
+  const uniqueIds = [
+    ...new Set(
+      clientIds.filter(Boolean)
+    ),
+  ];
+
+  if (!uniqueIds.length) {
+    return [];
+  }
+
+  const payments = [];
+
+  for (
+    let index = 0;
+    index < uniqueIds.length;
+    index += 10
+  ) {
+    const chunk = uniqueIds.slice(
+      index,
+      index + 10
+    );
+    const snapshot = await withFirestoreRetry(
+      "fetchPaymentsByClientIds",
+      () =>
+        getDb()
+          .collection("payments")
+          .where("clientId", "in", chunk)
+          .get()
+    );
+
+    payments.push(
+      ...mapPaymentDocs(snapshot)
+    );
+  }
+
+  return payments;
+}
+
 async function fetchUnsyncedPayments(
   paymentsByClient = null,
-  limit = 500,
+  limit = APPEND_BATCH_LIMIT,
   allPayments = null
 ) {
   if (Array.isArray(allPayments)) {
@@ -177,26 +264,7 @@ async function fetchUnsyncedPayments(
     );
   }
 
-  const snapshot = await withFirestoreRetry(
-    "fetchUnsyncedPayments",
-    () =>
-      getDb()
-        .collection("payments")
-        .get()
-  );
-
-  const payments = snapshot.docs.map(
-    (docSnap) => ({
-      id: docSnap.id,
-      ...docSnap.data(),
-    })
-  );
-
-  return filterUnsyncedPayments(
-    payments,
-    paymentsByClient,
-    limit
-  );
+  return fetchUnsyncedPaymentsQuery(limit);
 }
 
 async function recoverMisroutedTopupPayments(
@@ -418,49 +486,16 @@ async function fetchVkResyncPayments() {
     );
 }
 
-function findStaleVkTtRows(
-  payments = [],
-  clientsById = {}
-) {
-  return payments.filter((payment) => {
-    if (
-      payment.deletedAt ||
-      payment.syncedToSheets !== true ||
-      payment.ttVkResyncPending === true
-    ) {
-      return false;
-    }
-
-    if (!parseTtRowNumber(payment)) {
-      return false;
-    }
-
-    const client =
-      clientsById[payment.clientId] || {};
-    const clientVk = (
-      client.vkLink || ""
-    ).trim();
-
-    if (!clientVk) {
-      return false;
-    }
-
-    const paymentVk = (
-      payment.vkLink || ""
-    ).trim();
-
-    return clientVk !== paymentVk;
-  });
-}
-
 async function processVkResyncs({
   clientsById,
   cycleMap,
   summary,
+  payments: preloadedPayments = null,
   extraPayments = [],
 }) {
   const flagged =
-    await fetchVkResyncPayments();
+    preloadedPayments ||
+    (await fetchVkResyncPayments());
 
   const seen = new Set();
   const payments = [];
@@ -580,9 +615,11 @@ async function processStartDateResyncs({
   clientsById,
   cycleMap,
   summary,
+  payments: preloadedPayments = null,
 }) {
   const payments =
-    await fetchStartDateResyncPayments();
+    preloadedPayments ||
+    (await fetchStartDateResyncPayments());
 
   for (const payment of payments) {
     summary.processed += 1;
@@ -705,11 +742,13 @@ async function processTtRowResyncs({
   cycleMap,
   summary,
   paymentsByClient = {},
+  payments: preloadedPayments = null,
 }) {
   const payments =
-    await fetchTtRowResyncPayments(
+    preloadedPayments ||
+    (await fetchTtRowResyncPayments(
       paymentsByClient
-    );
+    ));
 
   for (const payment of payments) {
     summary.processed += 1;
@@ -957,14 +996,112 @@ async function fetchAllActivePayments() {
         .get()
   );
 
-  return snapshot.docs
-    .map((docSnap) => ({
-      id: docSnap.id,
-      ...docSnap.data(),
-    }))
-    .filter(
-      (payment) => !payment.deletedAt
+  return mapPaymentDocs(snapshot);
+}
+
+async function loadPendingSyncWork() {
+  const [
+    unsyncedPayments,
+    startDatePayments,
+    vkPayments,
+    rowResyncPayments,
+  ] = await Promise.all([
+    fetchUnsyncedPaymentsQuery(
+      APPEND_BATCH_LIMIT
+    ),
+    fetchStartDateResyncPayments(),
+    fetchVkResyncPayments(),
+    fetchPaymentsByFlag(
+      "ttRowResyncPending",
+      PENDING_QUERY_LIMIT
+    ),
+  ]);
+
+  const seedPayments = [
+    ...unsyncedPayments,
+    ...startDatePayments,
+    ...vkPayments,
+    ...rowResyncPayments,
+  ];
+
+  const clientIds = seedPayments
+    .map((payment) => payment.clientId)
+    .filter(Boolean);
+
+  const siblingPayments =
+    await fetchPaymentsByClientIds(
+      clientIds
     );
+
+  const byId = new Map();
+
+  for (const payment of [
+    ...seedPayments,
+    ...siblingPayments,
+  ]) {
+    byId.set(payment.id, payment);
+  }
+
+  const relatedPayments = [
+    ...byId.values(),
+  ];
+  const paymentsByClient =
+    buildPaymentsByClient(relatedPayments);
+
+  const recoveredIds =
+    await recoverMisroutedTopupPayments(
+      relatedPayments
+    );
+
+  const activeRelated =
+    applyRecoveryInMemory(
+      relatedPayments,
+      recoveredIds
+    );
+
+  const paymentsByClientAfter =
+    buildPaymentsByClient(activeRelated);
+
+  const appendCandidates =
+    filterUnsyncedPayments(
+      activeRelated,
+      paymentsByClientAfter,
+      APPEND_BATCH_LIMIT
+    );
+
+  const rowResyncCandidates =
+    activeRelated.filter((payment) =>
+      paymentCanProcessTtResync(
+        payment,
+        paymentsByClientAfter
+      )
+    );
+
+  const startDateCandidates =
+    activeRelated.filter(
+      (payment) =>
+        payment.ttStartDateResyncPending ===
+          true &&
+        canResyncStartDateInTt(
+          payment.dealType
+        )
+    );
+
+  const vkCandidates = activeRelated.filter(
+    (payment) =>
+      payment.ttVkResyncPending === true &&
+      parseTtRowNumber(payment)
+  );
+
+  return {
+    relatedPayments: activeRelated,
+    paymentsByClient: paymentsByClientAfter,
+    appendCandidates,
+    startDateCandidates,
+    vkCandidates,
+    rowResyncCandidates,
+    recoveredIds,
+  };
 }
 
 async function runTtSheetsSync({
@@ -999,84 +1136,60 @@ async function runTtSheetsSync({
 
     await processTtRowDeletions(summary);
 
-    const allPayments =
-      await fetchAllActivePayments();
+    const pendingWork =
+      await loadPendingSyncWork();
 
-    const recoveredIds =
-      await recoverMisroutedTopupPayments(
-        allPayments
-      );
-
-    const activePayments =
-      applyRecoveryInMemory(
-        allPayments,
-        recoveredIds
-      );
-
-    const paymentsByClient =
-      buildPaymentsByClient(activePayments);
-
-    const payments =
-      await fetchUnsyncedPayments(
-        paymentsByClient,
-        500,
-        activePayments
-      );
-
-    const resyncPayments =
-      await fetchStartDateResyncPayments();
-
-    const vkResyncPayments =
-      await fetchVkResyncPayments();
-
-    const syncedForVkCheck =
-      activePayments.filter(
-        (payment) =>
-          payment.syncedToSheets === true &&
-          payment.clientId &&
-          parseTtRowNumber(payment)
-      );
-
-    const clientsById =
-      await fetchClientsForPayments([
-        ...payments,
-        ...resyncPayments,
-        ...vkResyncPayments,
-        ...syncedForVkCheck,
-        ...activePayments.filter(
-          (payment) =>
-            isUpsellDeal(payment.dealType) &&
-            payment.budget > 0
-        ),
-      ]);
-
-    const budgetRepairIds =
-      await queueBudgetRepairResyncs({
-        allPayments: activePayments,
-        clientsById,
-      });
-
-    if (budgetRepairIds.length) {
+    if (pendingWork.recoveredIds.length) {
       console.log(
-        "[tt-sync] Queued budget repair resync:",
-        budgetRepairIds.length,
-        "payment(s)"
+        "[tt-sync] Recovered misrouted top-ups:",
+        pendingWork.recoveredIds.length
       );
     }
 
-    const cycleMap =
-      buildPaymentCycleMap(activePayments);
+    const {
+      relatedPayments,
+      paymentsByClient,
+      appendCandidates,
+      startDateCandidates,
+      vkCandidates,
+      rowResyncCandidates,
+    } = pendingWork;
 
-    const staleVkRows =
-      findStaleVkTtRows(
-        syncedForVkCheck,
-        clientsById
-      );
+    const clientsById =
+      await fetchClientsForPayments([
+        ...appendCandidates,
+        ...startDateCandidates,
+        ...vkCandidates,
+        ...rowResyncCandidates,
+      ]);
+
+    if (
+      process.env.TT_ENABLE_BUDGET_REPAIR ===
+      "1"
+    ) {
+      const budgetRepairIds =
+        await queueBudgetRepairResyncs({
+          allPayments: relatedPayments,
+          clientsById,
+        });
+
+      if (budgetRepairIds.length) {
+        console.log(
+          "[tt-sync] Queued budget repair resync:",
+          budgetRepairIds.length,
+          "payment(s)"
+        );
+      }
+    }
+
+    const cycleMap =
+      buildPaymentCycleMap(relatedPayments);
 
     await processStartDateResyncs({
       clientsById,
       cycleMap,
       summary,
+      payments: startDateCandidates,
     });
 
     await processTtRowResyncs({
@@ -1084,20 +1197,70 @@ async function runTtSheetsSync({
       cycleMap,
       summary,
       paymentsByClient,
+      payments: rowResyncCandidates,
     });
 
     await processVkResyncs({
       clientsById,
       cycleMap,
       summary,
-      extraPayments: staleVkRows.slice(
-        0,
-        STALE_VK_BATCH_LIMIT
-      ),
+      payments: vkCandidates,
+      extraPayments: [],
     });
 
-    const sorted = sortPayments(payments);
+    const readyAppends = [];
+    const waitingForVk = [];
+
+    for (const payment of appendCandidates) {
+      const client =
+        clientsById[payment.clientId] ||
+        {};
+
+      if (
+        paymentReadyForTtAppend(
+          payment,
+          client,
+          paymentsByClient
+        )
+      ) {
+        readyAppends.push(payment);
+      } else if (
+        paymentNeedsTtAppend(
+          payment,
+          paymentsByClient
+        )
+      ) {
+        waitingForVk.push(payment);
+      }
+    }
+
+    for (const payment of waitingForVk) {
+      summary.processed += 1;
+      summary.skipped += 1;
+      summary.skipReasons.missing_vk =
+        (summary.skipReasons.missing_vk ||
+          0) + 1;
+
+      await getDb()
+        .collection("payments")
+        .doc(payment.id)
+        .update({
+          lastTtSyncSkipReason: "missing_vk",
+          lastTtSyncSkippedAt: Date.now(),
+        });
+    }
+
+    const sorted = sortPayments(readyAppends);
     summary.pendingBefore = sorted.length;
+
+    console.log(
+      "[tt-sync] Pending work:",
+      `append=${sorted.length}`,
+      `waitVk=${waitingForVk.length}`,
+      `vkUpdate=${vkCandidates.length}`,
+      `rowEdit=${rowResyncCandidates.length}`,
+      `startDate=${startDateCandidates.length}`
+    );
 
     for (const payment of sorted) {
       summary.processed += 1;
@@ -1364,6 +1527,8 @@ async function runTtSheetsSync({
 module.exports = {
   runTtSheetsSync,
   fetchUnsyncedPayments,
+  fetchUnsyncedPaymentsQuery,
+  loadPendingSyncWork,
   recoverMisroutedTopupPayments,
   queueBudgetRepairResyncs,
 };

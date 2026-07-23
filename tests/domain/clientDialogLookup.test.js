@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 
 import {
   clientCanonicalDialogMatches,
+  clientMatchesDialogLookup,
 } from "../../src/domain/client/clientDialogLookup.js";
 
 const MISHAS_DIALOG =
@@ -63,6 +64,31 @@ test("matches client card dialog regardless of payment", () => {
       {
         dialogId: "105631789",
       }
+    ),
+    true
+  );
+});
+
+test("clientMatchesDialogLookup requires exact dialogId on client card", () => {
+  const misha = {
+    name: "Миша",
+    dialogLink: MISHAS_DIALOG,
+    dialogId: "105631789",
+    clientNote: "160881977",
+  };
+
+  assert.equal(
+    clientMatchesDialogLookup(
+      misha,
+      "https://bluesales.ru/app/Messenger/?dialogId=106292200"
+    ),
+    false
+  );
+
+  assert.equal(
+    clientMatchesDialogLookup(
+      misha,
+      "https://bluesales.ru/app/Messenger/?dialogId=105631789"
     ),
     true
   );

@@ -43,6 +43,11 @@ import {
 } from "../salary/salaryCalculator";
 
 import {
+  countsAsKpiSale,
+  getPaymentRevenueContribution,
+} from "../payment/paymentRevenue";
+
+import {
   filterSalaryDataByRange,
 } from "../salary/salaryPeriod";
 
@@ -144,7 +149,9 @@ export function buildAnalyticsReport({
     aggregateRevenue(periodPayments);
 
   const totalDeals =
-    periodPayments.length;
+    periodPayments.filter(
+      countsAsKpiSale
+    ).length;
 
   const managerStats =
     aggregateByManager(periodPayments);
@@ -177,7 +184,9 @@ export function buildAnalyticsReport({
     range,
     parsePaymentDate,
     (payment) =>
-      Number(payment.amount || 0)
+      getPaymentRevenueContribution(
+        payment
+      )
   );
 
   const managerNames =

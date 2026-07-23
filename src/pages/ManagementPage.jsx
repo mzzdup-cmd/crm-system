@@ -36,7 +36,7 @@ import {
 } from "../services/reminderSyncService";
 
 import {
-  subscribeOperationalPayments,
+  subscribeUnsyncedPayments,
 } from "../services/realtimeService";
 
 import {
@@ -132,9 +132,8 @@ export default function ManagementPage() {
       return undefined;
     }
 
-    return subscribeOperationalPayments(
-      userData,
-      3000,
+    return subscribeUnsyncedPayments(
+      500,
       (payments) => {
         setPendingTtCount(
           countUnsyncedPayments(payments)

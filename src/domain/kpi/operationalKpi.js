@@ -23,6 +23,11 @@ import {
 } from "../payment/paymentPermissions";
 
 import {
+  getPaymentRevenueContribution,
+  countsAsKpiSale,
+} from "../payment/paymentRevenue";
+
+import {
   resolveCanonicalManagerKey,
   expandManagerIdAliases,
   resolveManagerIdFromLegacy,
@@ -66,7 +71,9 @@ export function sumPaymentRevenue(
   ).reduce(
     (sum, payment) =>
       sum +
-      Number(payment.amount || 0),
+      getPaymentRevenueContribution(
+        payment
+      ),
     0
   );
 }
@@ -168,9 +175,13 @@ export function buildManagerStatsFromPayments(
       }
 
       stats[managerKey].revenue +=
-        Number(payment.amount || 0);
+        getPaymentRevenueContribution(
+          payment
+        );
 
-      stats[managerKey].deals += 1;
+      if (countsAsKpiSale(payment)) {
+        stats[managerKey].deals += 1;
+      }
     }
   );
 
@@ -238,7 +249,9 @@ export function buildPersonalMonthKpi({
     );
 
   const deals =
-    personalPayments.length;
+    personalPayments.filter(
+      countsAsKpiSale
+    ).length;
 
   const goal =
     getRevenueGoalProgress(revenue);
@@ -464,7 +477,9 @@ export function buildOperationalSummary({
     sumPaymentRevenue(monthPayments);
 
   const totalDeals =
-    monthPayments.length;
+    monthPayments.filter(
+      countsAsKpiSale
+    ).length;
 
   const personalKpi =
     buildPersonalMonthKpi({

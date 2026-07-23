@@ -210,7 +210,8 @@ function PersonalKpiCard({ kpi }) {
           Мои KPI · {kpi.range.label.toLowerCase()}
         </h2>
         <p className="text-neutral-400 text-sm mt-1">
-          Все типы оплат: новые, доплаты, апсейлы, возвраты, legacy
+          Новые, доплаты, апсейлы; возвраты и
+          отказы не считаются
         </p>
       </div>
 

@@ -42,6 +42,20 @@ export function paymentNeedsTtAppend(payment) {
   return false;
 }
 
+export function paymentHasVkForTt(
+  payment,
+  client = null
+) {
+  const paymentVk = String(
+    payment?.vkLink || ""
+  ).trim();
+  const clientVk = String(
+    client?.vkLink || ""
+  ).trim();
+
+  return Boolean(paymentVk || clientVk);
+}
+
 function paymentHasQueuedTtResync(payment) {
   if (payment?.ttRowResyncPending !== true) {
     return false;
@@ -58,6 +72,13 @@ function paymentHasQueuedTtResync(payment) {
   return true;
 }
 
+function paymentHasQueuedVkResync(payment) {
+  return (
+    payment?.ttVkResyncPending === true &&
+    paymentHasTtRowMetadata(payment)
+  );
+}
+
 const SKIP_REASON_LABELS = {
   manager_unresolved:
     "Менеджер не определён — строка не выгружена",
@@ -65,6 +86,8 @@ const SKIP_REASON_LABELS = {
     "Нет ТТ-таблицы для менеджера",
   missing_tt_row:
     "Строка в ТТ не найдена — нужна повторная выгрузка",
+  missing_vk:
+    "Ждёт ссылку VK — потом уйдёт в ТТ",
 };
 
 export function getPaymentTtSyncStatusLabel(
@@ -94,11 +117,23 @@ export function getPaymentTtSyncStatusLabel(
       return "Ошибка синхронизации — повторная выгрузка";
     }
 
+    if (!paymentHasVkForTt(payment)) {
+      return SKIP_REASON_LABELS.missing_vk;
+    }
+
     return "Ожидает выгрузки в ТТ";
+  }
+
+  if (paymentHasQueuedVkResync(payment)) {
+    return "Обновление VK в ТТ";
   }
 
   if (paymentHasQueuedTtResync(payment)) {
     return "Обновление строки в ТТ";
+  }
+
+  if (payment?.ttStartDateResyncPending === true) {
+    return "Обновление потока в ТТ";
   }
 
   return "В ТТ";

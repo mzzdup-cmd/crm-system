@@ -10,6 +10,11 @@ import {
 } from "../auth/managerMigration";
 
 import {
+  getPaymentRevenueContribution,
+  countsAsKpiSale,
+} from "../payment/paymentRevenue";
+
+import {
   getManagerNameById,
 } from "../../constants/managers";
 
@@ -92,8 +97,14 @@ export function buildManagerSalaryStats({
 
     const stats = ensureManagerStats(managerKey);
 
-    stats.revenue += Number(payment.amount || 0);
-    stats.deals += 1;
+    stats.revenue +=
+      getPaymentRevenueContribution(
+        payment
+      );
+
+    if (countsAsKpiSale(payment)) {
+      stats.deals += 1;
+    }
   });
 
   nightShifts.forEach((shift) => {

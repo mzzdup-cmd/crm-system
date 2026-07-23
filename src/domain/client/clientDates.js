@@ -151,4 +151,36 @@ export function resolvePaymentStartDate({
   );
 }
 
+/** Поток клиента: карточка → первая оплата с startDate. */
+export function resolveClientStreamStartDate(
+  client,
+  payments = []
+) {
+  const fromClient =
+    client?.startDate?.trim();
+
+  if (fromClient) {
+    return fromClient;
+  }
+
+  const withStream = payments
+    .filter(
+      (payment) =>
+        !payment?.deletedAt &&
+        payment?.startDate?.trim()
+    )
+    .sort((left, right) =>
+      String(
+        left.paymentDate || ""
+      ).localeCompare(
+        String(right.paymentDate || "")
+      )
+    );
+
+  return (
+    withStream[0]?.startDate?.trim() ||
+    ""
+  );
+}
+
 export { SUBSCRIPTION_CYCLE_DAYS };

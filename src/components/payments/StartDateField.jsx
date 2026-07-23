@@ -1,7 +1,6 @@
 import {
-  generateStreamOptions,
   getDefaultStream,
-  resolveStreamOptionWeeks,
+  getStartDate,
 } from "../../domain/client/clientDates";
 
 import {
@@ -85,19 +84,6 @@ export default function StartDateField({
     );
   }
 
-  const { weeksBefore, weeksAfter } =
-    resolveStreamOptionWeeks({
-      dealTypeId: resolvedDealTypeId,
-      isLegacyClientMode,
-    });
-
-  const streamOptions =
-    generateStreamOptions(
-      paymentDate,
-      weeksBefore,
-      weeksAfter
-    );
-
   const suggestedStream =
     getDefaultStream(paymentDate);
 
@@ -107,6 +93,19 @@ export default function StartDateField({
       ? ""
       : suggestedStream);
 
+  function handleStreamDateChange(
+    value
+  ) {
+    if (!value) {
+      onSelectedStreamChange("");
+      return;
+    }
+
+    onSelectedStreamChange(
+      getStartDate(value)
+    );
+  }
+
   return (
     <label className="block">
       <span className="text-sm text-neutral-400">
@@ -114,58 +113,53 @@ export default function StartDateField({
         {!isOptionalStartDate && " *"}
       </span>
 
-      <select
+      <input
+        type="date"
         required={!isOptionalStartDate}
         value={activeStream}
         onChange={(e) =>
-          onSelectedStreamChange(
+          handleStreamDateChange(
             e.target.value
           )
         }
         className={inputClass}
-      >
-        {isOptionalStartDate && (
-          <option value="">
-            Указать позже
-          </option>
-        )}
-        {streamOptions.map((streamDate) => (
-          <option
-            key={streamDate}
-            value={streamDate}
-          >
-            {formatDisplayDate(streamDate)}
-            {!useHistoricalStreams &&
-              streamDate ===
-                suggestedStream &&
-              " · рекомендуемый"}
-          </option>
-        ))}
-      </select>
+      />
 
       {activeStream && (
         <p className="text-sm text-brand/90 mt-2">
           Клиент относится к потоку с{" "}
           {formatDisplayDate(activeStream)}
+          {!useHistoricalStreams &&
+            activeStream ===
+              suggestedStream &&
+            " · рекомендуемый"}
         </p>
       )}
+
+      {isOptionalStartDate &&
+        !activeStream && (
+          <p className="text-xs text-neutral-500 mt-1">
+            Можно оставить пустым и указать
+            позже
+          </p>
+        )}
 
       {useHistoricalStreams ? (
         <p className="text-xs text-amber-200/80 mt-1">
           {isReturnAfterRefusal
-            ? "Вернулся после отказа: выберите исходный поток из Google ТТ (колонка «Когда старт»), например 06.04 — не рекомендуемый от даты оплаты."
-            : "Для старого клиента из таблицы — поток из Google ТТ (колонка «Когда старт»), не от текущей даты оплаты."}
+            ? "Вернулся после отказа: в календаре выберите исходный поток из Google ТТ (колонка «Когда старт»), например 06.04."
+            : "Для клиента из таблицы откройте календарь и выберите поток из Google ТТ (колонка «Когда старт»), например май — не от текущей даты оплаты."}
         </p>
-      ) : isOptionalStartDate ? (
+      ) : !isOptionalStartDate && (
         <p className="text-xs text-neutral-500 mt-1">
-          Можно заполнить позже
-        </p>
-      ) : (
-        <p className="text-xs text-neutral-500 mt-1">
-          startDate = понедельник потока.
-          Дата оплаты ({formatDisplayDate(
-            paymentDate
-          )}) и поток — разные поля
+          {activeStream &&
+          suggestedStream &&
+          activeStream !== suggestedStream
+            ? "Поток подтянут из карточки клиента. "
+            : "Любая дата в календаре — сохранится понедельник этой недели. "}
+          Дата оплаты (
+          {formatDisplayDate(paymentDate)}) и
+          поток — разные поля.
         </p>
       )}
     </label>

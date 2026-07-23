@@ -50,6 +50,16 @@ describe("dialogLinkUtils", () => {
     );
   });
 
+  it("does not match different dialogIds on the same host", () => {
+    assert.equal(
+      dialogLinksMatch(
+        "https://bluesales.ru/app/Messenger/?dialogId=105631789",
+        "https://bluesales.ru/app/Messenger/?dialogId=106292200"
+      ),
+      false
+    );
+  });
+
   it("adds host alias variants for lookup", () => {
     const variants =
       getDialogLinkLookupVariants(

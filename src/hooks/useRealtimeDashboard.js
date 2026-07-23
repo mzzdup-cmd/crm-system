@@ -13,6 +13,7 @@ import {
   subscribeRecentPaymentsForUser,
   subscribeScheduleByDate,
   subscribeTrafficByDate,
+  subscribeUnsyncedPayments,
 } from "../services/realtimeService";
 
 import {
@@ -65,7 +66,7 @@ import {
   buildOperationalSummary,
 } from "../domain/kpi/operationalKpi";
 
-const OPERATIONAL_PAYMENTS_LIMIT = 3000;
+const OPERATIONAL_PAYMENTS_LIMIT = 800;
 
 export function useDashboardRealtime() {
   const { userData } = useAuth();
@@ -76,6 +77,8 @@ export function useDashboardRealtime() {
   const [payments, setPayments] = useState([]);
   const [schedule, setSchedule] = useState(null);
   const [traffic, setTraffic] = useState(null);
+  const [unsyncedTtCount, setUnsyncedTtCount] =
+    useState(0);
 
   const [initialLoading, setInitialLoading] =
     useState(true);
@@ -84,6 +87,23 @@ export function useDashboardRealtime() {
     useState(false);
 
   const today = getTodayDateString();
+
+  useEffect(() => {
+    if (!userData || !isLeadership) {
+      setUnsyncedTtCount(0);
+      return undefined;
+    }
+
+    return subscribeUnsyncedPayments(
+      500,
+      (items) => {
+        setUnsyncedTtCount(
+          items.filter(paymentNeedsTtAppend)
+            .length
+        );
+      }
+    );
+  }, [userData, isLeadership]);
 
   useEffect(() => {
     if (!userData) {
@@ -277,12 +297,6 @@ export function useDashboardRealtime() {
       ? getActiveManagers(effectiveSchedule)
       : [];
 
-    const unsyncedTtCount = isLeadership
-      ? payments.filter(
-          paymentNeedsTtAppend
-        ).length
-      : 0;
-
     return {
       ...operational,
       overdueClients,
@@ -292,7 +306,9 @@ export function useDashboardRealtime() {
       trafficLoad,
       teamLoad,
       activeManagers,
-      unsyncedTtCount,
+      unsyncedTtCount: isLeadership
+        ? unsyncedTtCount
+        : 0,
       failedSyncCount: 0,
     };
   }, [
@@ -303,6 +319,7 @@ export function useDashboardRealtime() {
     isLeadership,
     managerId,
     displayName,
+    unsyncedTtCount,
   ]);
 
   return {

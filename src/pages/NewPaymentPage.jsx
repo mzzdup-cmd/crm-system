@@ -43,6 +43,7 @@ import {
 import {
   resolvePaymentStartDate,
   getDefaultStream,
+  resolveClientStreamStartDate,
 } from "../domain/client/clientDates";
 
 import {
@@ -63,6 +64,7 @@ import {
   isOptionalStartDateDealType,
   isDeferredPaymentProfileDealType,
   isRejectDealType,
+  inheritsClientStream,
   needsBudgetFieldForExistingDeal,
   resolveDealTypeId,
   showCuratorStartDateField,
@@ -526,6 +528,10 @@ export default function NewPaymentPage() {
   const isLegacy =
     isLegacyDealType(dealTypeId);
 
+  const needsManualClientProfileFields =
+    isLegacyClientMode ||
+    isFromTtImportMode;
+
   const dealTypeKnown =
     hasDealTypeSelected(dealTypeId);
 
@@ -650,10 +656,31 @@ export default function NewPaymentPage() {
       return;
     }
 
+    if (
+      inheritsClientStream(dealTypeId) &&
+      foundClient
+    ) {
+      const inherited =
+        resolveClientStreamStartDate(
+          foundClient,
+          clientPayments
+        );
+
+      if (inherited) {
+        setSelectedStream(inherited);
+        return;
+      }
+    }
+
     setSelectedStream(
       getDefaultStream(paymentDate)
     );
-  }, [paymentDate, dealTypeId]);
+  }, [
+    paymentDate,
+    dealTypeId,
+    foundClient,
+    clientPayments,
+  ]);
 
   useEffect(() => {
     if (!isLegacy) {
@@ -1752,6 +1779,11 @@ export default function NewPaymentPage() {
       return;
     }
 
+    if (!tariff) {
+      toast.error("Выберите тариф");
+      return;
+    }
+
     if (
       !isRejectDeal &&
       needsBudgetFieldForExistingDeal(
@@ -1760,6 +1792,21 @@ export default function NewPaymentPage() {
       !parseMoneyNumber(budget)
     ) {
       toast.error("Укажите бюджет");
+      return;
+    }
+
+    if (!firstContact) {
+      toast.error(
+        "Укажите дату первого контакта"
+      );
+      return;
+    }
+
+    const trafficError =
+      validateTrafficSource();
+
+    if (trafficError) {
+      toast.error(trafficError);
       return;
     }
 
@@ -1853,6 +1900,61 @@ export default function NewPaymentPage() {
 
   function requestSaveFromTt() {
     if (!actor || !isFromTtImportMode) {
+      return;
+    }
+
+    if (!dialogLink.trim()) {
+      toast.error(
+        "Укажите ссылку на диалог"
+      );
+      return;
+    }
+
+    if (!clientName.trim()) {
+      toast.error("Укажите имя клиента");
+      return;
+    }
+
+    if (!clientNote.trim()) {
+      toast.error(
+        "Укажите ID клиента из БС"
+      );
+      return;
+    }
+
+    if (!course) {
+      toast.error("Выберите курс");
+      return;
+    }
+
+    if (!tariff) {
+      toast.error("Выберите тариф");
+      return;
+    }
+
+    if (
+      !isRejectDeal &&
+      needsBudgetFieldForExistingDeal(
+        dealTypeId
+      ) &&
+      !parseMoneyNumber(budget)
+    ) {
+      toast.error("Укажите бюджет");
+      return;
+    }
+
+    if (!firstContact) {
+      toast.error(
+        "Укажите дату первого контакта"
+      );
+      return;
+    }
+
+    const trafficError =
+      validateTrafficSource();
+
+    if (trafficError) {
+      toast.error(trafficError);
       return;
     }
 
@@ -3586,7 +3688,7 @@ export default function NewPaymentPage() {
                       />
                     </label>
 
-                    {isLegacyClientMode && (
+                    {needsManualClientProfileFields && (
                       <label className="block">
                         <span className="text-sm text-neutral-400">
                           Дата первого контакта *
@@ -3643,7 +3745,7 @@ export default function NewPaymentPage() {
                     )}
                   </FormSection>
 
-                  {isLegacyClientMode && (
+                  {needsManualClientProfileFields && (
                     <FormSection title="Источник">
                       <label className="block">
                         <span className="text-sm text-neutral-400">
