@@ -86,6 +86,7 @@ import {
 } from "../constants/dealTypes";
 import {
   extractDialogId,
+  dialogLinksMatch,
 } from "../domain/client/dialogLinkUtils";
 import {
   BB_BOOKING_STAGE,
