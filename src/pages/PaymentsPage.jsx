@@ -584,7 +584,8 @@ export default function PaymentsPage({
                       ) ? (
                         <div className="mt-2 inline-flex text-xs text-green-300 bg-green-500/10 border border-green-500/30 px-2 py-1 rounded-full">
                           {getPaymentTtSyncStatusLabel(
-                            payment
+                            payment,
+                            client
                           )}
                         </div>
                       ) : (
@@ -596,7 +597,8 @@ export default function PaymentsPage({
                           }
                         >
                           {getPaymentTtSyncStatusLabel(
-                            payment
+                            payment,
+                            client
                           )}
                         </div>
                       )}

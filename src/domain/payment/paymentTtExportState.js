@@ -91,15 +91,28 @@ const SKIP_REASON_LABELS = {
 };
 
 export function getPaymentTtSyncStatusLabel(
-  payment
+  payment,
+  client = null
 ) {
   if (paymentNeedsTtAppend(payment)) {
-    if (payment?.lastTtSyncSkipReason) {
+    const hasVk = paymentHasVkForTt(
+      payment,
+      client
+    );
+    const skipReason =
+      payment?.lastTtSyncSkipReason;
+
+    // Stale missing_vk after VK was filled on client/payment.
+    if (
+      skipReason &&
+      !(
+        skipReason === "missing_vk" &&
+        hasVk
+      )
+    ) {
       return (
-        SKIP_REASON_LABELS[
-          payment.lastTtSyncSkipReason
-        ] ||
-        `Ожидает выгрузки (${payment.lastTtSyncSkipReason})`
+        SKIP_REASON_LABELS[skipReason] ||
+        `Ожидает выгрузки (${skipReason})`
       );
     }
 
@@ -117,7 +130,7 @@ export function getPaymentTtSyncStatusLabel(
       return "Ошибка синхронизации — повторная выгрузка";
     }
 
-    if (!paymentHasVkForTt(payment)) {
+    if (!hasVk) {
       return SKIP_REASON_LABELS.missing_vk;
     }
 

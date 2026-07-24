@@ -28,7 +28,7 @@ export const MANAGER_UNLIMITED_PAYMENT_UPDATE_KEYS =
   ]);
 
 export const MANAGER_UNLIMITED_CLIENT_UPDATE_KEYS =
-  new Set(["budget", "tariff"]);
+  new Set(["budget", "tariff", "vkLink"]);
 
 /** Schedule fields on payment do not affect client.amount — skip client recalc. */
 export function shouldSkipClientRecalcForPaymentUpdates(

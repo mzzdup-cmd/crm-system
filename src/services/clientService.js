@@ -44,7 +44,10 @@ import {
 import { resolveNextPaymentDate } from "../domain/client/clientDates";
 import { getClientStatus, getRemain } from "../domain/client/clientStatus";
 import { resolveMissingVkRemindersForClient } from "./missingVkReminderService";
-import { queueTtVkResyncForClient } from "./ttVkResyncService";
+import {
+  queueTtVkResyncForClient,
+  queueTtRowResyncForClient,
+} from "./ttVkResyncService";
 
 function mapClientDoc(snapshot) {
   const data = snapshot.data();
@@ -1014,6 +1017,21 @@ export async function updateClient(id, data) {
           error
         );
       }
+    }
+  }
+
+  if (
+    "budget" in data ||
+    "tariff" in data
+  ) {
+    try {
+      await queueTtRowResyncForClient(id);
+    } catch (error) {
+      console.warn(
+        "TT row resync queue skipped:",
+        id,
+        error
+      );
     }
   }
 }

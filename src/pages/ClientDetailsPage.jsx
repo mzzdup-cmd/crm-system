@@ -48,6 +48,7 @@ import {
 
 import {
   formatMoney,
+  parseMoneyNumber,
 } from "../utils/moneyFormat";
 
 import ConfirmModal
@@ -65,6 +66,13 @@ from "../components/LoadingState";
 
 import { VkLinkInput }
 from "../components/vk/VkLinkInput";
+
+import MoneyInput
+from "../components/ui/MoneyInput";
+
+import {
+  canAccessClient,
+} from "../domain/auth/permissionHelpers";
 
 
 export default function ClientDetailsPage() {
@@ -87,7 +95,13 @@ export default function ClientDetailsPage() {
   const [vkDraft, setVkDraft] =
     useState("");
 
+  const [budgetDraft, setBudgetDraft] =
+    useState("");
+
   const [savingVk, setSavingVk] =
+    useState(false);
+
+  const [savingBudget, setSavingBudget] =
     useState(false);
 
   const [payments, setPayments] =
@@ -142,6 +156,9 @@ export default function ClientDetailsPage() {
 
       setClient(clientData);
       setVkDraft(clientData.vkLink || "");
+      setBudgetDraft(
+        String(clientData.budget ?? "")
+      );
       setDenied(false);
     } catch (error) {
       console.error(error);
@@ -343,6 +360,38 @@ export default function ClientDetailsPage() {
     }
   }
 
+  async function saveBudget() {
+    if (!client) {
+      return;
+    }
+
+    const nextBudget =
+      parseMoneyNumber(budgetDraft);
+
+    setSavingBudget(true);
+
+    try {
+      await updateClient(client.id, {
+        budget: nextBudget,
+      });
+
+      setClient({
+        ...client,
+        budget: nextBudget,
+      });
+      setBudgetDraft(String(nextBudget));
+
+      toast.success("Бюджет сохранён");
+    } catch (error) {
+      toast.error(
+        error.message ||
+          "Не удалось сохранить бюджет"
+      );
+    } finally {
+      setSavingBudget(false);
+    }
+  }
+
   if (loading) {
 
     return (
@@ -364,6 +413,10 @@ export default function ClientDetailsPage() {
 
   const remain =
     getRemain(client);
+
+  const canEditProfile =
+    Boolean(userData) &&
+    canAccessClient(userData, client);
 
   return (
 
@@ -436,40 +489,31 @@ export default function ClientDetailsPage() {
 
   }
 
-  {
-
-    client.vkLink && (
-
-      <a
-
-        href={client.vkLink}
-
-        target="_blank"
-
-        rel="noreferrer"
-
-        className="text-brand hover:underline break-all text-sm max-w-md"
-
-      >
-
-        {client.vkLink}
-
-      </a>
-
-    )
-
-  }
-
           </div>
 
-          {!client.vkLink && (
-            <div className="mt-6 bg-amber-500/10 border border-amber-500/30 p-5 rounded-2xl max-w-xl">
-              <div className="font-bold text-amber-300 mb-2">
-                Нужно дозаполнить VK
+          {canEditProfile ? (
+            <div
+              className={`mt-6 p-5 rounded-2xl max-w-xl border ${
+                client.vkLink
+                  ? "bg-surface border-neutral-800"
+                  : "bg-amber-500/10 border-amber-500/30"
+              }`}
+            >
+              <div
+                className={`font-bold mb-2 ${
+                  client.vkLink
+                    ? ""
+                    : "text-amber-300"
+                }`}
+              >
+                {client.vkLink
+                  ? "VK ссылка"
+                  : "Нужно дозаполнить VK"}
               </div>
               <p className="text-sm text-neutral-400 mb-4">
-                Добавьте ссылку — напоминание
-                закроется автоматически
+                Нужна для выгрузки в ТТ.
+                Можно добавить или изменить здесь —
+                без уведомлений.
               </p>
               <div className="flex flex-col sm:flex-row gap-3">
                 <div className="flex-1">
@@ -488,13 +532,19 @@ export default function ClientDetailsPage() {
                   onClick={saveVkLink}
                   disabled={
                     savingVk ||
-                    !vkDraft.trim()
+                    !vkDraft.trim() ||
+                    vkDraft.trim() ===
+                      (client.vkLink || "")
                   }
-                  className="
-                    bg-amber-500 hover:bg-amber-600
+                  className={`
                     px-6 py-3 rounded-xl font-bold
                     disabled:opacity-50
-                  "
+                    ${
+                      client.vkLink
+                        ? "bg-brand hover:bg-brand-muted"
+                        : "bg-amber-500 hover:bg-amber-600"
+                    }
+                  `}
                 >
                   {savingVk
                     ? "Сохранение..."
@@ -502,6 +552,17 @@ export default function ClientDetailsPage() {
                 </button>
               </div>
             </div>
+          ) : (
+            client.vkLink && (
+              <a
+                href={client.vkLink}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-4 inline-block text-brand hover:underline break-all text-sm max-w-md"
+              >
+                {client.vkLink}
+              </a>
+            )
           )}
 
         </div>
@@ -534,17 +595,41 @@ export default function ClientDetailsPage() {
 
           </div>
 
-          <div className="text-3xl font-bold mt-2">
-
-            {
-
-              client.budget || 0
-
-            }
-
-            ₽
-
-          </div>
+          {canEditProfile ? (
+            <div className="mt-3 flex flex-col gap-3">
+              <MoneyInput
+                value={budgetDraft}
+                onChange={setBudgetDraft}
+                className="w-full bg-surface-raised p-3 rounded-xl text-2xl font-bold"
+              />
+              <button
+                type="button"
+                onClick={saveBudget}
+                disabled={
+                  savingBudget ||
+                  parseMoneyNumber(
+                    budgetDraft
+                  ) ===
+                    Number(
+                      client.budget || 0
+                    )
+                }
+                className="
+                  self-start bg-brand hover:bg-brand-muted
+                  px-4 py-2 rounded-xl font-bold text-sm
+                  disabled:opacity-50
+                "
+              >
+                {savingBudget
+                  ? "Сохранение..."
+                  : "Сохранить бюджет"}
+              </button>
+            </div>
+          ) : (
+            <div className="text-3xl font-bold mt-2">
+              {client.budget || 0}₽
+            </div>
+          )}
 
         </div>
 

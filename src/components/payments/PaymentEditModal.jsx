@@ -301,6 +301,7 @@ export default function PaymentEditModal({
       clientUpdates: {
         budget: parsedBudget,
         tariff: form.tariff,
+        vkLink: (form.vkLink ?? "").trim(),
       },
     };
   }
@@ -488,7 +489,7 @@ export default function PaymentEditModal({
               <span className="block mt-1 text-amber-400">
                 Полная правка — 30 минут после
                 создания. Сумма, дата, бюджет,
-                счёт, платёжка, тариф и старт —
+                VK, счёт, платёжка, тариф и старт —
                 всегда.
               </span>
             )}
@@ -497,7 +498,7 @@ export default function PaymentEditModal({
               !editable && (
                 <span className="block mt-1 text-brand">
                   Можно изменить сумму, дату
-                  оплаты, бюджет, старт, счёт,
+                  оплаты, бюджет, VK, старт, счёт,
                   платёжку и тариф
                 </span>
               )}
@@ -655,7 +656,11 @@ export default function PaymentEditModal({
               </span>
               <VkLinkInput
                 value={form.vkLink}
-                disabled={!editable}
+                disabled={
+                  !editable &&
+                  !coreEditable &&
+                  !profileEditable
+                }
                 onChange={(value) =>
                   handleChange(
                     "vkLink",
@@ -664,6 +669,10 @@ export default function PaymentEditModal({
                 }
                 className={inputClass}
               />
+              <p className="text-xs text-neutral-500 mt-1">
+                Без VK оплата не уйдёт в ТТ.
+                Можно дозаполнить позже.
+              </p>
             </label>
 
             <label className="block">

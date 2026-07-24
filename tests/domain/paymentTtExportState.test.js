@@ -86,6 +86,30 @@ test("resync badge is hidden without row metadata", () => {
   );
 });
 
+test("stale missing_vk skip is ignored when VK is present", () => {
+  assert.equal(
+    getPaymentTtSyncStatusLabel({
+      syncedToSheets: false,
+      lastTtSyncSkipReason: "missing_vk",
+      vkLink: "https://vk.com/id1",
+    }),
+    "Ожидает выгрузки в ТТ"
+  );
+});
+
+test("missing_vk uses client VK when payment has none", () => {
+  assert.equal(
+    getPaymentTtSyncStatusLabel(
+      {
+        syncedToSheets: false,
+        lastTtSyncSkipReason: "missing_vk",
+      },
+      { vkLink: "https://vk.com/id2" }
+    ),
+    "Ожидает выгрузки в ТТ"
+  );
+});
+
 test("unsynced payment with VK waits for export label", () => {
   assert.equal(
     getPaymentTtSyncStatusLabel({
