@@ -252,22 +252,9 @@ function shouldQueueTtRowResync(
 }
 
 function shouldResetPaymentForTtAppend(payment) {
-  if (
-    isTopupDealType(payment.dealType)
-  ) {
-    return (
-      payment.syncedToSheets === true &&
-      (
-        !paymentHasExportedTtRow(payment) ||
-        !payment.ttSpreadsheetId
-      )
-    );
-  }
-
-  return (
-    payment.syncedToSheets === true &&
-    !paymentHasExportedTtRow(payment)
-  );
+  // Disabled: clearing syncedToSheets when row metadata is missing
+  // caused a second append while the old TT row stayed in the sheet.
+  return false;
 }
 
 function buildBorrowedTopupTtResetFields(
@@ -1265,6 +1252,7 @@ export async function addPaymentRecord({
   sourceId = null,
   sourceName = "",
   budget = null,
+  dialogLink = null,
   userData,
   createdByUid = null,
 }) {
@@ -1330,10 +1318,33 @@ export async function addPaymentRecord({
     client?.clientNote ||
     "";
 
+  const formDialog = String(
+    dialogLink || ""
+  ).trim();
+  const clientDialog = String(
+    client?.dialogLink || ""
+  ).trim();
+
+  if (
+    formDialog &&
+    clientDialog &&
+    !dialogLinksMatch(
+      formDialog,
+      clientDialog
+    )
+  ) {
+    throw new Error(
+      "Ссылка на диалог не совпадает с карточкой клиента. Это разные лиды — проверьте ID БС и ссылку."
+    );
+  }
+
+  const resolvedDialogLink =
+    formDialog || clientDialog || "";
+
   const paymentPayload = normalizePaymentPayload({
     clientId: client?.id ?? null,
     clientName: client?.name || "",
-    dialogLink: client?.dialogLink || "",
+    dialogLink: resolvedDialogLink,
     course: client?.course || "",
     tariff: client?.tariff || "",
     dealType,
@@ -1347,11 +1358,17 @@ export async function addPaymentRecord({
     paymentDate,
     startDate,
     curatorStartDate,
+    firstContact:
+      client?.firstContact ||
+      client?.firstContactDate ||
+      "",
     sourceId: resolvedSourceId,
     sourceName: resolvedSourceName,
-    ...(budget != null
-      ? { budget: Number(budget || 0) }
-      : {}),
+    budget: Number(
+      budget != null
+        ? budget || 0
+        : client?.budget || 0
+    ),
     syncedToSheets: false,
     ...(userData
       ? buildWriteAuditFields(
@@ -1626,6 +1643,7 @@ export async function createPayment({
   sourceId = null,
   sourceName = "",
   budget = null,
+  dialogLink = null,
   userData,
   createdByUid = null,
 }) {
@@ -1651,6 +1669,7 @@ export async function createPayment({
     sourceId,
     sourceName,
     budget: isUpsellBudget ? budgetValue : null,
+    dialogLink,
     userData,
     createdByUid,
   });

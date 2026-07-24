@@ -41,6 +41,9 @@ import {
   clientCanonicalDialogMatches,
   clientMatchesDialogLookup,
 } from "../domain/client/clientDialogLookup";
+import {
+  shouldRejectBsIdBinding,
+} from "../domain/client/dialogBsIdBinding";
 import { resolveNextPaymentDate } from "../domain/client/clientDates";
 import { getClientStatus, getRemain } from "../domain/client/clientStatus";
 import { resolveMissingVkRemindersForClient } from "./missingVkReminderService";
@@ -747,133 +750,202 @@ export async function findClientByDialogLink(
   const bsId = String(
     options.bsId || ""
   ).trim();
+  const trimmedDialog = String(
+    dialogLink || ""
+  ).trim();
 
-  if (!dialogLink && !bsId) {
+  if (!trimmedDialog && !bsId) {
     return {
       client: null,
       status: "empty",
     };
   }
 
+  async function resolveByBsId() {
+    const ownedByBsId =
+      await searchOwnedClientsByBsId(
+        bsId,
+        userData
+      );
+
+    if (ownedByBsId) {
+      return {
+        client: ownedByBsId,
+        status: "found",
+      };
+    }
+
+    const paymentByBsId =
+      await searchPaymentsByBsId({
+        bsId,
+        userData,
+        blockedOwner: null,
+      });
+
+    if (paymentByBsId.status === "found") {
+      return {
+        client: paymentByBsId.client,
+        status: "found",
+        accessDenied:
+          paymentByBsId.accessDenied,
+        blockedOwner:
+          paymentByBsId.blockedOwner,
+      };
+    }
+
+    return null;
+  }
+
   try {
-    if (bsId) {
-      const ownedByBsId =
-        await searchOwnedClientsByBsId(
-          bsId,
+    // Dialog is source of truth when pasted.
+    // Never bind a client found only by BS ID if it
+    // belongs to a different Bluesales dialog.
+    if (trimmedDialog) {
+      const dialogId =
+        resolveDialogLookupId(
+          trimmedDialog
+        );
+      const variants =
+        getDialogLinkLookupVariants(
+          trimmedDialog
+        );
+
+      const ownedClient =
+        await searchOwnedClientsForDialog(
+          trimmedDialog,
           userData
         );
 
-      if (ownedByBsId) {
+      if (ownedClient) {
+        if (
+          bsId &&
+          !clientMatchesBsId(
+            ownedClient,
+            bsId
+          )
+        ) {
+          return {
+            client: null,
+            status: "bs_id_mismatch",
+            collision: {
+              client: ownedClient,
+              paymentBsId:
+                ownedClient.clientNote ||
+                "",
+            },
+          };
+        }
+
         return {
-          client: ownedByBsId,
+          client: ownedClient,
           status: "found",
         };
       }
 
-      const paymentByBsId =
-        await searchPaymentsByBsId({
-          bsId,
+      const clientResult =
+        await searchClientsForDialog({
+          dialogId,
+          variants,
           userData,
           blockedOwner: null,
         });
 
-      if (paymentByBsId.status === "found") {
+      if (clientResult.status === "found") {
+        const client = clientResult.client;
+
+        if (
+          bsId &&
+          !clientMatchesBsId(client, bsId)
+        ) {
+          return {
+            client: null,
+            status: "bs_id_mismatch",
+            collision: {
+              client,
+              paymentBsId:
+                client.clientNote || "",
+            },
+          };
+        }
+
         return {
-          client: paymentByBsId.client,
+          client,
           status: "found",
         };
       }
-    }
 
-    if (!dialogLink) {
+      if (
+        clientResult.accessDenied &&
+        clientResult.blockedOwner
+      ) {
+        return {
+          client: null,
+          status: "access_denied",
+          blockedOwner:
+            clientResult.blockedOwner,
+        };
+      }
+
+      if (bsId) {
+        const byBsId = await resolveByBsId();
+
+        if (byBsId?.client) {
+          if (
+            shouldRejectBsIdBinding({
+              formDialogLink:
+                trimmedDialog,
+              bsClientDialogLink:
+                byBsId.client.dialogLink,
+            })
+          ) {
+            return {
+              client: null,
+              status:
+                "dialog_client_mismatch",
+              collision: {
+                client: byBsId.client,
+                paymentDialogId:
+                  extractDialogId(
+                    byBsId.client
+                      .dialogLink
+                  ) ||
+                  byBsId.client
+                    .dialogLink ||
+                  "(нет ссылки на карточке)",
+                paymentBsId:
+                  byBsId.client
+                    .clientNote || bsId,
+              },
+            };
+          }
+
+          return {
+            client: byBsId.client,
+            status: "found",
+            accessDenied:
+              byBsId.accessDenied,
+            blockedOwner:
+              byBsId.blockedOwner,
+          };
+        }
+      }
+
       return {
         client: null,
         status: "not_found",
       };
     }
 
-    const dialogId =
-      resolveDialogLookupId(dialogLink);
-    const variants =
-      getDialogLinkLookupVariants(
-        dialogLink
-      );
+    if (bsId) {
+      const byBsId = await resolveByBsId();
 
-    const ownedClient =
-      await searchOwnedClientsForDialog(
-        dialogLink,
-        userData
-      );
-
-    if (ownedClient) {
-      if (
-        bsId &&
-        !clientMatchesBsId(
-          ownedClient,
-          bsId
-        )
-      ) {
-        return {
-          client: null,
-          status: "bs_id_mismatch",
-          collision: {
-            client: ownedClient,
-            paymentBsId:
-              ownedClient.clientNote || "",
-          },
-        };
+      if (byBsId) {
+        return byBsId;
       }
 
-      return {
-        client: ownedClient,
-        status: "found",
-      };
-    }
-
-    const clientResult =
-      await searchClientsForDialog({
-        dialogId,
-        variants,
-        userData,
-        blockedOwner: null,
-      });
-
-    if (clientResult.status === "found") {
-      const client = clientResult.client;
-
-      if (
-        bsId &&
-        !clientMatchesBsId(
-          client,
-          bsId
-        )
-      ) {
-        return {
-          client: null,
-          status: "bs_id_mismatch",
-          collision: {
-            client,
-            paymentBsId:
-              client.clientNote || "",
-          },
-        };
-      }
-
-      return {
-        client,
-        status: "found",
-      };
-    }
-
-    if (
-      clientResult.accessDenied &&
-      clientResult.blockedOwner
-    ) {
       return {
         client: null,
-        status: "access_denied",
-        blockedOwner:
-          clientResult.blockedOwner,
+        status: "not_found",
       };
     }
 

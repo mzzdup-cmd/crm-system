@@ -132,27 +132,32 @@ function resolveTtBudgetAmount({
     );
   }
 
+  const paymentBudget = Number(
+    payment.budget || 0
+  );
+  const clientBudget = Number(
+    client.budget || 0
+  );
+
+  // Prefer payment budget for upsell; otherwise take whichever is set
+  // so TT does not stay empty when CRM filled only one side.
+  let resolvedBudget = 0;
+
   if (isUpsellDeal(payment.dealType)) {
-    const paymentBudget = Number(
-      payment.budget || 0
-    );
-    const clientBudget = Number(
-      client.budget || 0
-    );
-    const resolvedBudget =
+    resolvedBudget =
       paymentBudget > 0
         ? paymentBudget
         : clientBudget;
-
-    return formatTtBudgetCell(
-      payment.dealType,
-      resolvedBudget
-    );
+  } else {
+    resolvedBudget =
+      clientBudget > 0
+        ? clientBudget
+        : paymentBudget;
   }
 
   return formatTtBudgetCell(
     payment.dealType,
-    client.budget || 0
+    resolvedBudget
   );
 }
 

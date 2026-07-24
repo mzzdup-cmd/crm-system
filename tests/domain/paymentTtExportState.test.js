@@ -7,16 +7,17 @@ import {
   paymentNeedsTtAppend,
 } from "../../src/domain/payment/paymentTtExportState.js";
 
-test("orphaned synced payment shows re-export label", () => {
+test("orphaned synced payment does not re-append (avoids TT duplicates)", () => {
   const payment = {
     syncedToSheets: true,
     invoiceNumber: "46228595",
   };
 
-  assert.equal(isPaymentTtSynced(payment), false);
+  assert.equal(paymentNeedsTtAppend(payment), false);
+  assert.equal(isPaymentTtSynced(payment), true);
   assert.equal(
     getPaymentTtSyncStatusLabel(payment),
-    "Ошибка синхронизации — повторная выгрузка"
+    "В ТТ (проверьте дубль вручную)"
   );
 });
 

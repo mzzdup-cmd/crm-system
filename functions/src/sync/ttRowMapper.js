@@ -132,6 +132,16 @@ function resolveManagerId(payment, client) {
   return partialMatch?.[0] || null;
 }
 
+function resolveTtFirstContact(payment, client = {}) {
+  return (
+    payment.firstContact ||
+    payment.firstContactDate ||
+    client.firstContact ||
+    client.firstContactDate ||
+    ""
+  );
+}
+
 function mapPaymentToTtRow({
   payment,
   client = {},
@@ -174,8 +184,7 @@ function mapPaymentToTtRow({
     budget,
     formatDateRu(rawStartDate),
     formatDateRu(
-      payment.firstContact ||
-        client.firstContact
+      resolveTtFirstContact(payment, client)
     ),
     payment.invoiceNumber || "",
     payment.sourceName ||
@@ -187,7 +196,9 @@ function mapPaymentToTtRow({
       payment.course || client.course || ""
     ),
     payment.paymentSystem || "",
-    client.email || "",
+    client.email ||
+      payment.email ||
+      "",
     payment.tariff || client.tariff || "",
     payment.clientNote ||
       client.clientNote ||

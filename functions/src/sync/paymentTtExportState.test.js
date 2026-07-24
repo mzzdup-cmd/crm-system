@@ -30,13 +30,13 @@ test("row metadata counts as exported TT row", () => {
   );
 });
 
-test("orphaned synced payment still needs append", () => {
+test("orphaned synced payment does not need append (avoids TT duplicates)", () => {
   assert.equal(
     paymentNeedsTtAppend({
       syncedToSheets: true,
       invoiceNumber: "46228595",
     }),
-    true
+    false
   );
 });
 

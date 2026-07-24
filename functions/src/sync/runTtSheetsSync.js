@@ -24,8 +24,9 @@ const {
 
 const {
   canResyncStartDateInTt,
-  isUpsellDeal,
   parseTtRowNumber,
+  resolveTtBudgetAmount,
+  shouldExportTtBudget,
 } = require("./dealTypeHelpers");
 
 const {
@@ -404,6 +405,43 @@ async function fetchClientsForPayments(
   return indexClientsById(clients);
 }
 
+/**
+ * Prefer cached client; if missing but payment has clientId,
+ * fetch once. Returns null when a clientId is set but the
+ * document does not exist — callers must skip full-row rewrite
+ * to avoid wiping budget / first-contact in TT.
+ */
+async function resolveClientForPayment(
+  payment,
+  clientsById = {}
+) {
+  if (!payment?.clientId) {
+    return {};
+  }
+
+  if (clientsById[payment.clientId]) {
+    return clientsById[payment.clientId];
+  }
+
+  const snapshot = await getDb()
+    .collection("clients")
+    .doc(payment.clientId)
+    .get();
+
+  if (!snapshot.exists) {
+    return null;
+  }
+
+  const client = {
+    id: snapshot.id,
+    ...snapshot.data(),
+  };
+
+  clientsById[payment.clientId] = client;
+
+  return client;
+}
+
 async function createTtSyncLog(payload) {
   const docRef = await getDb()
     .collection("syncLog")
@@ -527,7 +565,23 @@ async function processVkResyncs({
     }
 
     const client =
-      clientsById[payment.clientId] || {};
+      await resolveClientForPayment(
+        payment,
+        clientsById
+      );
+
+    if (client === null) {
+      summary.skipped += 1;
+      summary.skipReasons.missing_client =
+        (summary.skipReasons
+          .missing_client || 0) + 1;
+      console.warn(
+        "[tt-sync] Skip VK resync — client missing:",
+        payment.id,
+        payment.clientId
+      );
+      continue;
+    }
 
     const metadata =
       await getTtRowMetadataWithVk({
@@ -636,7 +690,23 @@ async function processStartDateResyncs({
     }
 
     const client =
-      clientsById[payment.clientId] || {};
+      await resolveClientForPayment(
+        payment,
+        clientsById
+      );
+
+    if (client === null) {
+      summary.skipped += 1;
+      summary.skipReasons.missing_client =
+        (summary.skipReasons
+          .missing_client || 0) + 1;
+      console.warn(
+        "[tt-sync] Skip start-date resync — client missing:",
+        payment.id,
+        payment.clientId
+      );
+      continue;
+    }
 
     const metadata =
       await getTtRowMetadataWithVk({
@@ -765,7 +835,23 @@ async function processTtRowResyncs({
     }
 
     const client =
-      clientsById[payment.clientId] || {};
+      await resolveClientForPayment(
+        payment,
+        clientsById
+      );
+
+    if (client === null) {
+      summary.skipped += 1;
+      summary.skipReasons.missing_client =
+        (summary.skipReasons
+          .missing_client || 0) + 1;
+      console.warn(
+        "[tt-sync] Skip row resync — client missing:",
+        payment.id,
+        payment.clientId
+      );
+      continue;
+    }
 
     const metadata =
       await getTtRowMetadataWithVk({
@@ -949,19 +1035,24 @@ async function queueBudgetRepairResyncs({
       continue;
     }
 
+    if (!shouldExportTtBudget(payment.dealType)) {
+      continue;
+    }
+
     if (!parseTtRowNumber(payment)) {
       continue;
     }
 
-    if (!isUpsellDeal(payment.dealType)) {
-      continue;
-    }
-
-    const paymentBudget = Number(
-      payment.budget || 0
+    const client =
+      clientsById[payment.clientId] || {};
+    const resolvedBudget = Number(
+      resolveTtBudgetAmount({
+        payment,
+        client,
+      }) || 0
     );
 
-    if (paymentBudget <= 0) {
+    if (resolvedBudget <= 0) {
       continue;
     }
 
@@ -1164,8 +1255,8 @@ async function runTtSheetsSync({
       ]);
 
     if (
-      process.env.TT_ENABLE_BUDGET_REPAIR ===
-      "1"
+      process.env.TT_ENABLE_BUDGET_REPAIR !==
+      "0"
     ) {
       const budgetRepairIds =
         await queueBudgetRepairResyncs({
@@ -1266,7 +1357,23 @@ async function runTtSheetsSync({
       summary.processed += 1;
 
       const client =
-        clientsById[payment.clientId] || {};
+        await resolveClientForPayment(
+          payment,
+          clientsById
+        );
+
+      if (client === null) {
+        summary.skipped += 1;
+        summary.skipReasons.missing_client =
+          (summary.skipReasons
+            .missing_client || 0) + 1;
+        console.warn(
+          "[tt-sync] Skip append — client missing:",
+          payment.id,
+          payment.clientId
+        );
+        continue;
+      }
 
       let metadata;
 

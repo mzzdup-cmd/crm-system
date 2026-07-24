@@ -25,6 +25,10 @@ import {
 } from "../services/clientService";
 
 import {
+  dialogLinksMatch,
+} from "../domain/client/dialogLinkUtils";
+
+import {
   createPayment,
   createLegacyClientPayment,
   findLegacySubscriber,
@@ -1207,15 +1211,8 @@ export default function NewPaymentPage() {
     }
 
     if (lookup.client && isNewClient) {
-      if (lookup.client.name) {
-        setClientName(lookup.client.name);
-      }
-      if (lookup.client.vkLink) {
-        setVkLink(lookup.client.vkLink);
-      }
-      if (lookup.client.clientNote) {
-        setClientNote(lookup.client.clientNote);
-      }
+      // Do not copy name/VK/BS ID onto a "new client" form —
+      // that created duplicate cards with the same dialog + ID in TT.
     }
   }
 
@@ -1663,6 +1660,19 @@ export default function NewPaymentPage() {
       return;
     }
 
+    if (
+      foundClient.dialogLink &&
+      !dialogLinksMatch(
+        dialogLink,
+        foundClient.dialogLink
+      )
+    ) {
+      toast.error(
+        "Ссылка на диалог не совпадает с карточкой клиента. Это разные лиды — проверьте ID БС и ссылку."
+      );
+      return;
+    }
+
     const validationError =
       validateCommonFields();
 
@@ -1695,6 +1705,7 @@ export default function NewPaymentPage() {
         )
           ? parseMoneyNumber(budget)
           : null,
+        dialogLink: dialogLink.trim(),
         ...getSourcePayload(),
         userData: actor,
         createdByUid,
@@ -1977,6 +1988,34 @@ export default function NewPaymentPage() {
     if (!dialogLink.trim()) {
       toast.error(
         "Укажите ссылку на диалог"
+      );
+      return;
+    }
+
+    const existingLookup =
+      await findClientByDialogLink(
+        dialogLink.trim(),
+        userData,
+        clientNote.trim()
+          ? { bsId: clientNote.trim() }
+          : {}
+      );
+
+    if (existingLookup.status === "found") {
+      toast.error(
+        "Клиент с этой ссылкой уже в CRM. Оформите оплату как существующему клиенту — иначе в ТТ уедут разные лиды с одним диалогом."
+      );
+      return;
+    }
+
+    if (
+      existingLookup.status ===
+        "bs_id_mismatch" ||
+      existingLookup.status ===
+        "dialog_client_mismatch"
+    ) {
+      toast.error(
+        "Ссылка на диалог и ID БС относятся к разным клиентам. Проверьте данные."
       );
       return;
     }
@@ -3354,26 +3393,30 @@ export default function NewPaymentPage() {
                     "dialog_client_mismatch" && (
                     <div className="bg-amber-500/10 border border-amber-500/30 p-4 rounded-xl text-sm text-amber-100 space-y-2">
                       <p>
-                        В CRM есть битая запись: у
-                        оплаты указана эта ссылка (
-                        {dialogCollision?.paymentDialogId ||
-                          "?"}
-                        ), но в карточке клиента{" "}
+                        ID БС{" "}
+                        <strong>
+                          {clientNote.trim() ||
+                            dialogCollision?.paymentBsId ||
+                            "?"}
+                        </strong>{" "}
+                        в CRM принадлежит клиенту{" "}
                         <strong>
                           {dialogCollision?.client
                             ?.name ||
-                            "другой человек"}
-                        </strong>{" "}
-                        — другая (
-                        {dialogCollision?.clientDialogId ||
-                          "?"}
-                        ). Карточка клиента важнее
-                        старой оплаты.
+                            "другому человеку"}
+                        </strong>
+                        {dialogCollision?.paymentDialogId
+                          ? ` (диалог ${dialogCollision.paymentDialogId})`
+                          : ""}
+                        , а вы вставляете другую
+                        ссылку на диалог. Это разные
+                        лиды — нельзя сохранить на
+                        одну карточку.
                       </p>
                       <p>
-                        Если это ваш лид только из
-                        Google ТТ — нажмите «Продолжить
-                        как старый клиент».
+                        Проверьте пару «ссылка + ID БС».
+                        Если лид только в Google ТТ —
+                        «Продолжить как старый клиент».
                       </p>
                       <button
                         type="button"

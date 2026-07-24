@@ -15,8 +15,9 @@ function topupNeedsOwnTtAppend(payment) {
     return false;
   }
 
+  // Missing row coords must not force a second append.
   if (!paymentHasTtRowMetadata(payment)) {
-    return payment?.syncedToSheets === true;
+    return false;
   }
 
   return !payment.ttSpreadsheetId;
@@ -31,8 +32,9 @@ export function paymentNeedsTtAppend(payment) {
     return true;
   }
 
+  // Synced without row metadata: do not append again (duplicates TT).
   if (!paymentHasTtRowMetadata(payment)) {
-    return true;
+    return false;
   }
 
   if (topupNeedsOwnTtAppend(payment)) {
@@ -94,6 +96,14 @@ export function getPaymentTtSyncStatusLabel(
   payment,
   client = null
 ) {
+  if (
+    payment?.syncedToSheets === true &&
+    !paymentHasTtRowMetadata(payment) &&
+    !paymentNeedsTtAppend(payment)
+  ) {
+    return "В ТТ (проверьте дубль вручную)";
+  }
+
   if (paymentNeedsTtAppend(payment)) {
     const hasVk = paymentHasVkForTt(
       payment,
@@ -114,13 +124,6 @@ export function getPaymentTtSyncStatusLabel(
         SKIP_REASON_LABELS[skipReason] ||
         `Ожидает выгрузки (${skipReason})`
       );
-    }
-
-    if (
-      payment?.syncedToSheets === true &&
-      !paymentHasTtRowMetadata(payment)
-    ) {
-      return "Ошибка синхронизации — повторная выгрузка";
     }
 
     if (

@@ -89,6 +89,38 @@ test("new deal rows keep client budget in TT export", () => {
   assert.equal(row[5], 22000);
 });
 
+test("new deal rows use payment budget when client budget is zero", () => {
+  const row = mapPaymentToTtRow({
+    payment: {
+      ...basePayment,
+      dealType: "Новая",
+      amount: 6000,
+      budget: 22000,
+    },
+    client: {
+      ...clientWithBudget,
+      budget: 0,
+    },
+    cycle: 1,
+  });
+
+  assert.equal(row[5], 22000);
+});
+
+test("first contact accepts firstContactDate aliases", () => {
+  const row = mapPaymentToTtRow({
+    payment: {
+      ...basePayment,
+      dealType: "Новая",
+      firstContactDate: "2026-07-05",
+    },
+    client: clientWithBudget,
+    cycle: 1,
+  });
+
+  assert.equal(row[7], "05.07.2026");
+});
+
 test("upsell rows use payment budget when client budget is zero", () => {
   const row = mapPaymentToTtRow({
     payment: {

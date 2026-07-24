@@ -83,8 +83,10 @@ function topupNeedsOwnTtAppend(
     return false;
   }
 
+  // Missing row coords on an already-synced payment must NOT
+  // trigger another append — that duplicates the lead in TT.
   if (!paymentHasTtRowMetadata(payment)) {
-    return payment?.syncedToSheets === true;
+    return false;
   }
 
   if (!payment.ttSpreadsheetId) {
@@ -109,8 +111,10 @@ function paymentNeedsTtAppend(
     return true;
   }
 
+  // Already marked synced but row metadata was cleared:
+  // re-append would leave a second row in the sheet.
   if (!paymentHasTtRowMetadata(payment)) {
-    return true;
+    return false;
   }
 
   if (

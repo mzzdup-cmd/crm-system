@@ -17,6 +17,32 @@ test("isUpsellDeal matches upsell labels but not topups", () => {
   assert.equal(isUpsellDeal("Новая"), false);
 });
 
+test("resolveTtBudgetAmount uses payment budget for new deals when client budget is zero", () => {
+  assert.equal(
+    resolveTtBudgetAmount({
+      payment: {
+        dealType: "Новая",
+        budget: 22000,
+      },
+      client: { budget: 0 },
+    }),
+    22000
+  );
+});
+
+test("resolveTtBudgetAmount prefers client budget for new deals", () => {
+  assert.equal(
+    resolveTtBudgetAmount({
+      payment: {
+        dealType: "Новая",
+        budget: 1000,
+      },
+      client: { budget: 22000 },
+    }),
+    22000
+  );
+});
+
 test("resolveTtBudgetAmount prefers payment budget for upsell", () => {
   assert.equal(
     resolveTtBudgetAmount({
