@@ -475,6 +475,7 @@ function AdminOperationalCard({ summary }) {
 
 function MotivationalLeaderBlock({
   leaderInfo,
+  compareWithTeam = true,
 }) {
   const {
     current,
@@ -494,7 +495,14 @@ function MotivationalLeaderBlock({
         space-y-2
       "
     >
-      {isLeader ? (
+      {!compareWithTeam ? (
+        <div className="text-neutral-300">
+          Ваша выручка за месяц:{" "}
+          <strong className="text-green-300">
+            {formatMoney(myRevenue)}
+          </strong>
+        </div>
+      ) : isLeader ? (
         <>
           <div className="text-lg font-bold text-green-300">
             Поздравляю, вы лидер!
@@ -507,7 +515,9 @@ function MotivationalLeaderBlock({
             , средняя по команде сейчас{" "}
             <strong>
               {formatMoney(
-                teamAverageRevenue
+                Math.round(
+                  teamAverageRevenue || 0
+                )
               )}
             </strong>
           </div>
@@ -521,7 +531,9 @@ function MotivationalLeaderBlock({
           , средняя по команде{" "}
           <strong>
             {formatMoney(
-              teamAverageRevenue
+              Math.round(
+                teamAverageRevenue || 0
+              )
             )}
           </strong>
         </div>
@@ -1282,6 +1294,7 @@ function DashboardPageContent() {
             {summary.leaderInfo && (
               <MotivationalLeaderBlock
                 leaderInfo={summary.leaderInfo}
+                compareWithTeam={false}
               />
             )}
 
