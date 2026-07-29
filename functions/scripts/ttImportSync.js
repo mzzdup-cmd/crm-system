@@ -63,6 +63,8 @@ async function main() {
     "[tt-import] Finished:",
     `managers=${result.managerCount}`,
     `rows=${result.totalRows}`,
+    `pruned=${result.totalPruned || 0}`,
+    `month=${result.monthStart}`,
     `durationMs=${result.durationMs}`,
     `errors=${result.errors.length}`
   );

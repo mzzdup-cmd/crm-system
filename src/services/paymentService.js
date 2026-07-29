@@ -108,7 +108,7 @@ import { getManualBonusesForUser } from "./bonusService";
 import { getNightShiftsForUser } from "./shiftService";
 import {
   getTtSalesForUser,
-  previousMonthStartIso,
+  currentMonthStartIso,
 } from "./ttSalesService";
 import {
   buildSalaryReportBundle,
@@ -1815,7 +1815,7 @@ export async function getSalaryReportForUser(userData) {
   try {
     payments =
       await getTtSalesForUser(userData, {
-        fromDate: previousMonthStartIso(),
+        fromDate: currentMonthStartIso(),
       });
   } catch (error) {
     console.error(

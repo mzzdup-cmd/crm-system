@@ -12,9 +12,12 @@ const {
 
 const {
   cellsToTtSale,
+  getCurrentMonthRangeIsoMsk,
+  isPaymentDateInCurrentMonth,
 } = require("./ttRowParser");
 
 const WRITE_BATCH_LIMIT = 400;
+const DELETE_QUERY_LIMIT = 400;
 
 function getDb() {
   return admin.firestore();
@@ -40,9 +43,64 @@ async function commitInBatches(operations) {
   }
 }
 
+async function deleteQueryDocs(salesQuery) {
+  let deleted = 0;
+
+  while (true) {
+    const snapshot = await salesQuery.get();
+
+    if (snapshot.empty) {
+      break;
+    }
+
+    const operations = snapshot.docs.map(
+      (docSnap) => (batch) => {
+        batch.delete(docSnap.ref);
+      }
+    );
+
+    await commitInBatches(operations);
+    deleted += snapshot.size;
+
+    if (snapshot.size < DELETE_QUERY_LIMIT) {
+      break;
+    }
+  }
+
+  return deleted;
+}
+
+async function pruneOutOfMonthSales(
+  managerId,
+  { start, endExclusive }
+) {
+  const collectionRef = getDb().collection(
+    "ttSales"
+  );
+
+  const before = await deleteQueryDocs(
+    collectionRef
+      .where("managerId", "==", managerId)
+      .where("paymentDate", "<", start)
+      .orderBy("paymentDate", "desc")
+      .limit(DELETE_QUERY_LIMIT)
+  );
+
+  const after = await deleteQueryDocs(
+    collectionRef
+      .where("managerId", "==", managerId)
+      .where("paymentDate", ">=", endExclusive)
+      .orderBy("paymentDate", "desc")
+      .limit(DELETE_QUERY_LIMIT)
+  );
+
+  return before + after;
+}
+
 async function importManagerTtSheet({
   managerId,
   importedAt,
+  monthRange,
 }) {
   const ttConfig =
     getTtSheetForManager(managerId);
@@ -53,6 +111,7 @@ async function importManagerTtSheet({
       skipped: true,
       reason: "not_configured",
       rows: 0,
+      pruned: 0,
     };
   }
 
@@ -73,7 +132,13 @@ async function importManagerTtSheet({
         importedAt,
       })
     )
-    .filter(Boolean);
+    .filter(Boolean)
+    .filter((sale) =>
+      isPaymentDateInCurrentMonth(
+        sale.paymentDate,
+        new Date(importedAt)
+      )
+    );
 
   const operations = sales.map((sale) => {
     const ref = getDb()
@@ -87,10 +152,18 @@ async function importManagerTtSheet({
 
   await commitInBatches(operations);
 
+  const pruned = await pruneOutOfMonthSales(
+    managerId,
+    monthRange
+  );
+
   return {
     managerId,
     skipped: false,
     rows: sales.length,
+    pruned,
+    monthStart: monthRange.start,
+    monthEndExclusive: monthRange.endExclusive,
     spreadsheetId: sheetData.spreadsheetId,
     sheetName: sheetData.sheetName,
   };
@@ -98,10 +171,20 @@ async function importManagerTtSheet({
 
 async function runTtImport() {
   const startedAt = Date.now();
+  const monthRange =
+    getCurrentMonthRangeIsoMsk(
+      new Date(startedAt)
+    );
   const managers = listConfiguredManagers();
   const byManager = {};
   const errors = [];
   let totalRows = 0;
+  let totalPruned = 0;
+
+  console.log(
+    "[tt-import] Current month MSK:",
+    `${monthRange.start} .. < ${monthRange.endExclusive}`
+  );
 
   for (const managerId of managers) {
     try {
@@ -109,12 +192,14 @@ async function runTtImport() {
         await importManagerTtSheet({
           managerId,
           importedAt: startedAt,
+          monthRange,
         });
 
       byManager[managerId] = result;
 
       if (!result.skipped) {
         totalRows += result.rows;
+        totalPruned += result.pruned || 0;
       }
     } catch (error) {
       const message =
@@ -125,6 +210,7 @@ async function runTtImport() {
         skipped: true,
         reason: "error",
         rows: 0,
+        pruned: 0,
         error: message,
       };
 
@@ -157,6 +243,10 @@ async function runTtImport() {
         durationMs: finishedAt - startedAt,
         managerCount: managers.length,
         totalRows,
+        totalPruned,
+        monthStart: monthRange.start,
+        monthEndExclusive:
+          monthRange.endExclusive,
         byManager,
         errors,
       },
@@ -169,6 +259,9 @@ async function runTtImport() {
     durationMs: finishedAt - startedAt,
     managerCount: managers.length,
     totalRows,
+    totalPruned,
+    monthStart: monthRange.start,
+    monthEndExclusive: monthRange.endExclusive,
     byManager,
     errors,
   };
@@ -177,4 +270,5 @@ async function runTtImport() {
 module.exports = {
   runTtImport,
   importManagerTtSheet,
+  getCurrentMonthRangeIsoMsk,
 };

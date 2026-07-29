@@ -50,7 +50,9 @@ import {
 import { useToast }
 from "../context/ToastContext";
 
-export default function PendingSalesPage() {
+export default function PendingSalesPage({
+  embedded = false,
+}) {
   const { userData } = useAuth();
   const { isLeadership } = usePermissions();
   const toast = useToast();
@@ -180,18 +182,34 @@ export default function PendingSalesPage() {
   return (
     <div className="space-y-8 animate-fade-in">
 
-      <PageHeader
-        title="Быстрые продажи"
-        subtitle={
-          <>
-            {pendingCount > 0
-              ? `${pendingCount} ждут прочтения`
-              : "Нет ожидающих"}
+      {!embedded && (
+        <PageHeader
+          title="Быстрые продажи"
+          subtitle={
+            <>
+              {pendingCount > 0
+                ? `${pendingCount} ждут прочтения`
+                : "Нет ожидающих"}
+              <RealtimeIndicator connected={connected} />
+            </>
+          }
+          actions={renderQuickSaleButton()}
+        />
+      )}
+
+      {embedded && (
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-neutral-400 text-sm flex items-center gap-3">
+            <span>
+              {pendingCount > 0
+                ? `${pendingCount} ждут прочтения`
+                : "Нет ожидающих"}
+            </span>
             <RealtimeIndicator connected={connected} />
-          </>
-        }
-        actions={renderQuickSaleButton()}
-      />
+          </p>
+          {renderQuickSaleButton()}
+        </div>
+      )}
 
       <section>
 

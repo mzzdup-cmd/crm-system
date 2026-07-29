@@ -27,13 +27,6 @@ export const MOBILE_BOTTOM_NAV = [
     roles: STAFF_ROLES,
   },
   {
-    path: "/pending-sales",
-    label: "Быстрые",
-    shortLabel: "Быстр.",
-    icon: "⚡",
-    roles: STAFF_ROLES,
-  },
-  {
     path: "/calendar",
     label: "Календарь",
     shortLabel: "Кален.",
@@ -51,11 +44,6 @@ export const NAV_ITEMS = [
   {
     path: "/payments",
     label: "Продажи",
-    roles: STAFF_ROLES,
-  },
-  {
-    path: "/pending-sales",
-    label: "Быстрые продажи",
     roles: STAFF_ROLES,
   },
   {

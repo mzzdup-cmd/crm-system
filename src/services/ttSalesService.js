@@ -30,29 +30,50 @@ function mapTtSaleDoc(snapshot) {
   };
 }
 
-function monthStartIso() {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(
-    now.getMonth() + 1
-  ).padStart(2, "0");
+function mskYmdParts(date = new Date()) {
+  const parts = new Intl.DateTimeFormat(
+    "en-CA",
+    {
+      timeZone: "Europe/Moscow",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }
+  ).formatToParts(date);
 
-  return `${year}-${month}-01`;
+  const get = (type) =>
+    parts.find((part) => part.type === type)
+      ?.value;
+
+  return {
+    year: Number(get("year")),
+    month: Number(get("month")),
+    day: Number(get("day")),
+  };
 }
 
-export function previousMonthStartIso() {
-  const now = new Date();
-  const previous = new Date(
-    now.getFullYear(),
-    now.getMonth() - 1,
-    1
-  );
-  const year = previous.getFullYear();
-  const month = String(
-    previous.getMonth() + 1
-  ).padStart(2, "0");
+/** YYYY-MM-01 for the current Moscow calendar month. */
+export function currentMonthStartIso() {
+  const { year, month } = mskYmdParts();
+  return `${year}-${String(month).padStart(2, "0")}-01`;
+}
 
-  return `${year}-${month}-01`;
+/** YYYY-MM-01 for the next Moscow calendar month (exclusive upper bound). */
+export function nextMonthStartIso() {
+  const { year, month } = mskYmdParts();
+  const next = new Date(year, month, 1);
+  const nextYear = next.getFullYear();
+  const nextMonth = next.getMonth() + 1;
+  return `${nextYear}-${String(nextMonth).padStart(2, "0")}-01`;
+}
+
+/** @deprecated use currentMonthStartIso */
+export function previousMonthStartIso() {
+  const { year, month } = mskYmdParts();
+  const previous = new Date(year, month - 2, 1);
+  const prevYear = previous.getFullYear();
+  const prevMonth = previous.getMonth() + 1;
+  return `${prevYear}-${String(prevMonth).padStart(2, "0")}-01`;
 }
 
 export async function getTtImportMeta() {
@@ -96,10 +117,39 @@ export function subscribeTtImportMeta(
   );
 }
 
+function buildCurrentMonthQuery(
+  managerId,
+  {
+    fromDate = currentMonthStartIso(),
+    toDateExclusive = nextMonthStartIso(),
+    maxCount = 3000,
+  } = {}
+) {
+  if (managerId) {
+    return query(
+      collection(db, "ttSales"),
+      where("managerId", "==", managerId),
+      where("paymentDate", ">=", fromDate),
+      where("paymentDate", "<", toDateExclusive),
+      orderBy("paymentDate", "desc"),
+      limit(maxCount)
+    );
+  }
+
+  return query(
+    collection(db, "ttSales"),
+    where("paymentDate", ">=", fromDate),
+    where("paymentDate", "<", toDateExclusive),
+    orderBy("paymentDate", "desc"),
+    limit(maxCount)
+  );
+}
+
 export async function getTtSalesForUser(
   userData,
   {
-    fromDate = monthStartIso(),
+    fromDate = currentMonthStartIso(),
+    toDateExclusive = nextMonthStartIso(),
     maxCount = 3000,
   } = {}
 ) {
@@ -109,12 +159,11 @@ export async function getTtSalesForUser(
 
   if (isLeadership(userData)) {
     const snapshot = await getDocs(
-      query(
-        collection(db, "ttSales"),
-        where("paymentDate", ">=", fromDate),
-        orderBy("paymentDate", "desc"),
-        limit(maxCount)
-      )
+      buildCurrentMonthQuery(null, {
+        fromDate,
+        toDateExclusive,
+        maxCount,
+      })
     );
 
     return snapshot.docs.map(mapTtSaleDoc);
@@ -134,13 +183,11 @@ export async function getTtSalesForUser(
     10
   )) {
     const snapshot = await getDocs(
-      query(
-        collection(db, "ttSales"),
-        where("managerId", "==", managerId),
-        where("paymentDate", ">=", fromDate),
-        orderBy("paymentDate", "desc"),
-        limit(maxCount)
-      )
+      buildCurrentMonthQuery(managerId, {
+        fromDate,
+        toDateExclusive,
+        maxCount,
+      })
     );
 
     chunks.push(
@@ -158,7 +205,8 @@ export async function getTtSalesForUser(
 export function subscribeTtSalesForUser(
   userData,
   {
-    fromDate = monthStartIso(),
+    fromDate = currentMonthStartIso(),
+    toDateExclusive = nextMonthStartIso(),
     maxCount = 3000,
   } = {},
   callback
@@ -170,12 +218,11 @@ export function subscribeTtSalesForUser(
 
   if (isLeadership(userData)) {
     return onSnapshot(
-      query(
-        collection(db, "ttSales"),
-        where("paymentDate", ">=", fromDate),
-        orderBy("paymentDate", "desc"),
-        limit(maxCount)
-      ),
+      buildCurrentMonthQuery(null, {
+        fromDate,
+        toDateExclusive,
+        maxCount,
+      }),
       (snapshot) => {
         callback(
           snapshot.docs.map(mapTtSaleDoc)
@@ -202,13 +249,11 @@ export function subscribeTtSalesForUser(
   const managerId = managerIds[0];
 
   return onSnapshot(
-    query(
-      collection(db, "ttSales"),
-      where("managerId", "==", managerId),
-      where("paymentDate", ">=", fromDate),
-      orderBy("paymentDate", "desc"),
-      limit(maxCount)
-    ),
+    buildCurrentMonthQuery(managerId, {
+      fromDate,
+      toDateExclusive,
+      maxCount,
+    }),
     (snapshot) => {
       callback(
         snapshot.docs.map(mapTtSaleDoc)

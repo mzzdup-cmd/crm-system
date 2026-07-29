@@ -138,7 +138,7 @@ async function notifyOwnerPendingSale({
         type: "pending_sale",
         title: "У вас новая быстрая продажа",
         body: `${creatorName} · ${amount.toLocaleString("ru-RU")} ₽ — внесите в свою ТТ`,
-        link: "/pending-sales",
+        link: "/payments?tab=quick",
         priority: "high",
         data: {
           pendingSaleId,

@@ -69,18 +69,25 @@ export default function TtImportPanel() {
 
           <p className="text-neutral-400 text-sm mt-2 max-w-2xl">
             KPI и аналитика берутся из таблиц
-            менеджеров. CRM только читает ТТ по
-            расписанию — оплаты в CRM больше не
-            выгружаются.
+            менеджеров только за текущий месяц
+            (МСК). CRM читает ТТ по расписанию —
+            оплаты в CRM больше не выгружаются.
           </p>
         </div>
 
         <div className="text-sm text-neutral-300 bg-surface-raised px-4 py-2 rounded-xl border border-neutral-700">
-          Последний импорт:{" "}
-          {meta?.lastImportAtMsk ||
-            formatImportedAt(
-              meta?.lastImportAt
-            )}
+          <div>
+            Месяц:{" "}
+            {meta?.monthStart ||
+              "текущий (МСК)"}
+          </div>
+          <div className="mt-1">
+            Последний импорт:{" "}
+            {meta?.lastImportAtMsk ||
+              formatImportedAt(
+                meta?.lastImportAt
+              )}
+          </div>
         </div>
       </div>
 

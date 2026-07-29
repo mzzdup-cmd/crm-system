@@ -144,9 +144,66 @@ function cellsToTtSale({
   };
 }
 
+function mskYmdParts(date = new Date()) {
+  const parts = new Intl.DateTimeFormat(
+    "en-CA",
+    {
+      timeZone: "Europe/Moscow",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }
+  ).formatToParts(date);
+
+  const get = (type) =>
+    parts.find((part) => part.type === type)
+      ?.value;
+
+  return {
+    year: Number(get("year")),
+    month: Number(get("month")),
+    day: Number(get("day")),
+  };
+}
+
+function getCurrentMonthRangeIsoMsk(
+  now = new Date()
+) {
+  const { year, month } = mskYmdParts(now);
+  const start =
+    `${year}-${String(month).padStart(2, "0")}-01`;
+  const next = new Date(year, month, 1);
+  const endExclusive =
+    `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, "0")}-01`;
+
+  return {
+    start,
+    endExclusive,
+  };
+}
+
+function isPaymentDateInCurrentMonth(
+  paymentDate,
+  now = new Date()
+) {
+  if (!paymentDate) {
+    return false;
+  }
+
+  const { start, endExclusive } =
+    getCurrentMonthRangeIsoMsk(now);
+
+  return (
+    paymentDate >= start &&
+    paymentDate < endExclusive
+  );
+}
+
 module.exports = {
   parseRuDateToIso,
   parseMoneyCell,
   extractDialogId,
   cellsToTtSale,
+  getCurrentMonthRangeIsoMsk,
+  isPaymentDateInCurrentMonth,
 };

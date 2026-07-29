@@ -17,6 +17,9 @@ from "./SubscriptionsPage";
 import BookingsPage
 from "./BookingsPage";
 
+import PendingSalesPage
+from "./PendingSalesPage";
+
 const TABS = [
   {
     id: "subscriptions",
@@ -26,17 +29,34 @@ const TABS = [
     id: "bookings",
     label: "Бронь",
   },
+  {
+    id: "quick",
+    label: "Быстрые",
+  },
 ];
+
+function resolveActiveTab(tabParam) {
+  if (tabParam === "bookings") {
+    return "bookings";
+  }
+
+  if (
+    tabParam === "quick" ||
+    tabParam === "pending"
+  ) {
+    return "quick";
+  }
+
+  return "subscriptions";
+}
 
 export default function SalesHubPage() {
   const [searchParams, setSearchParams] =
     useSearchParams();
 
-  const tabParam = searchParams.get("tab");
-  const activeTab =
-    tabParam === "bookings"
-      ? "bookings"
-      : "subscriptions";
+  const activeTab = resolveActiveTab(
+    searchParams.get("tab")
+  );
 
   function handleTabChange(tabId) {
     if (tabId === "subscriptions") {
@@ -52,7 +72,7 @@ export default function SalesHubPage() {
       <div className="space-y-6 animate-fade-in">
         <PageHeader
           title="Продажи"
-          subtitle="Подписки и бронь. Выручка — из ТТ менеджеров."
+          subtitle="Подписки, бронь и быстрые продажи. Выручка KPI — из ТТ за текущий месяц."
         />
 
         <PageTabs
@@ -67,6 +87,10 @@ export default function SalesHubPage() {
 
         {activeTab === "bookings" && (
           <BookingsPage embedded />
+        )}
+
+        {activeTab === "quick" && (
+          <PendingSalesPage embedded />
         )}
       </div>
     </PageErrorBoundary>

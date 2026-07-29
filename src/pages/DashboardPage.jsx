@@ -769,7 +769,7 @@ function DashboardPageContent() {
         pendingCount > 0 && (
 
           <Link
-            to="/pending-sales"
+            to="/payments?tab=quick"
             className="
               block p-5 rounded-2xl
               bg-gradient-to-r from-brand/20 to-green-500/10
@@ -905,7 +905,7 @@ function DashboardPageContent() {
                 />
               </Link>
 
-              <Link to="/pending-sales">
+              <Link to="/payments?tab=quick">
                 <StatCard
                   label="Черновики продаж"
                   hint="ожидают проведения"

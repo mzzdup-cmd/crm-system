@@ -73,3 +73,28 @@ test("cellsToTtSale skips empty rows", () => {
     null
   );
 });
+
+test("isPaymentDateInCurrentMonth uses MSK month bounds", () => {
+  const {
+    isPaymentDateInCurrentMonth,
+    getCurrentMonthRangeIsoMsk,
+  } = require("./ttRowParser");
+
+  const now = new Date("2026-07-29T12:00:00+03:00");
+  const range = getCurrentMonthRangeIsoMsk(now);
+
+  assert.equal(range.start, "2026-07-01");
+  assert.equal(range.endExclusive, "2026-08-01");
+  assert.equal(
+    isPaymentDateInCurrentMonth("2026-07-15", now),
+    true
+  );
+  assert.equal(
+    isPaymentDateInCurrentMonth("2026-06-30", now),
+    false
+  );
+  assert.equal(
+    isPaymentDateInCurrentMonth("2026-08-01", now),
+    false
+  );
+});

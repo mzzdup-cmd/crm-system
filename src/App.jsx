@@ -75,10 +75,6 @@ const NotificationsPage = lazy(
   () => import("./pages/NotificationsPage.jsx")
 );
 
-const PendingSalesPage = lazy(
-  () => import("./pages/PendingSalesPage.jsx")
-);
-
 const TimeOffPage = lazy(
   () => import("./pages/TimeOffPage.jsx")
 );
@@ -232,7 +228,7 @@ function AppRoutes() {
             path="/new-payment"
             element={
               <Navigate
-                to="/pending-sales"
+                to="/payments?tab=quick"
                 replace
               />
             }
@@ -292,9 +288,10 @@ function AppRoutes() {
           <Route
             path="/pending-sales"
             element={
-              <LazyPage>
-                <PendingSalesPage />
-              </LazyPage>
+              <Navigate
+                to="/payments?tab=quick"
+                replace
+              />
             }
           />
 
