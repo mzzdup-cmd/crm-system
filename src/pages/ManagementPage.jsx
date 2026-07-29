@@ -36,19 +36,8 @@ import {
 } from "../services/reminderSyncService";
 
 import {
-  subscribeUnsyncedPayments,
-} from "../services/realtimeService";
-
-import {
-  countUnsyncedPayments,
-} from "../services/ttSyncService";
-
-import {
   useManagementRealtime,
 } from "../hooks/useRealtimeDashboard";
-
-import { useAuth }
-from "../context/AuthContext";
 
 import LoadingState
 from "../components/LoadingState";
@@ -56,8 +45,8 @@ from "../components/LoadingState";
 import RealtimeIndicator
 from "../components/ui/RealtimeIndicator";
 
-import TtSyncPanel
-from "../components/export/TtSyncPanel";
+import TtImportPanel
+from "../components/export/TtImportPanel";
 
 import PageHeader
 from "../components/ui/PageHeader";
@@ -87,8 +76,6 @@ const TABS = [
 ];
 
 export default function ManagementPage() {
-  const { userData } = useAuth();
-
   const [searchParams, setSearchParams] =
     useSearchParams();
 
@@ -116,9 +103,6 @@ export default function ManagementPage() {
   const [savingManual, setSavingManual] =
     useState(false);
 
-  const [pendingTtCount, setPendingTtCount] =
-    useState(0);
-
   const {
     schedule: liveSchedule,
     traffic: liveTraffic,
@@ -126,21 +110,6 @@ export default function ManagementPage() {
     initialLoading,
     connected,
   } = useManagementRealtime(date);
-
-  useEffect(() => {
-    if (!userData) {
-      return undefined;
-    }
-
-    return subscribeUnsyncedPayments(
-      500,
-      (payments) => {
-        setPendingTtCount(
-          countUnsyncedPayments(payments)
-        );
-      }
-    );
-  }, [userData]);
 
   useEffect(() => {
     if (liveSchedule) {
@@ -262,9 +231,7 @@ export default function ManagementPage() {
         }
       />
 
-      <TtSyncPanel
-        pendingCount={pendingTtCount}
-      />
+      <TtImportPanel />
 
       <PageTabs
         tabs={TABS}

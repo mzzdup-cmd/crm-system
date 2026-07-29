@@ -13,8 +13,11 @@ import {
   subscribeRecentPaymentsForUser,
   subscribeScheduleByDate,
   subscribeTrafficByDate,
-  subscribeUnsyncedPayments,
 } from "../services/realtimeService";
+
+import {
+  subscribeTtSalesForUser,
+} from "../services/ttSalesService";
 
 import {
   categorizeSubscriptions,
@@ -37,10 +40,6 @@ import {
   getActiveManagers,
   resolveEffectiveSchedule,
 } from "../domain/schedule/scheduleLogic";
-
-import {
-  paymentNeedsTtAppend,
-} from "../domain/payment/paymentTtExportState";
 
 import {
   getManagerTrafficLoad,
@@ -75,10 +74,9 @@ export function useDashboardRealtime() {
 
   const [clients, setClients] = useState([]);
   const [payments, setPayments] = useState([]);
+  const [ttSales, setTtSales] = useState([]);
   const [schedule, setSchedule] = useState(null);
   const [traffic, setTraffic] = useState(null);
-  const [unsyncedTtCount, setUnsyncedTtCount] =
-    useState(0);
 
   const [initialLoading, setInitialLoading] =
     useState(true);
@@ -89,23 +87,6 @@ export function useDashboardRealtime() {
   const today = getTodayDateString();
 
   useEffect(() => {
-    if (!userData || !isLeadership) {
-      setUnsyncedTtCount(0);
-      return undefined;
-    }
-
-    return subscribeUnsyncedPayments(
-      500,
-      (items) => {
-        setUnsyncedTtCount(
-          items.filter(paymentNeedsTtAppend)
-            .length
-        );
-      }
-    );
-  }, [userData, isLeadership]);
-
-  useEffect(() => {
     if (!userData) {
       setInitialLoading(false);
       setConnected(false);
@@ -114,7 +95,7 @@ export function useDashboardRealtime() {
 
     setInitialLoading(true);
     setConnected(true);
-    let pending = 4;
+    let pending = 5;
     let cancelled = false;
 
     const timeoutId = window.setTimeout(
@@ -154,6 +135,16 @@ export function useDashboardRealtime() {
         }
       );
 
+    const unsubTtSales =
+      subscribeTtSalesForUser(
+        userData,
+        {},
+        (items) => {
+          setTtSales(items);
+          markReady();
+        }
+      );
+
     const unsubSchedule =
       subscribeScheduleByDate(
         today,
@@ -178,6 +169,7 @@ export function useDashboardRealtime() {
       setConnected(false);
       unsubClients();
       unsubPayments();
+      unsubTtSales();
       unsubSchedule();
       unsubTraffic();
     };
@@ -236,7 +228,7 @@ export function useDashboardRealtime() {
 
     const operational =
       buildOperationalSummary({
-        payments,
+        payments: ttSales,
         clients,
         managerId,
         managerName: displayName,
@@ -306,25 +298,26 @@ export function useDashboardRealtime() {
       trafficLoad,
       teamLoad,
       activeManagers,
-      unsyncedTtCount: isLeadership
-        ? unsyncedTtCount
-        : 0,
+      unsyncedTtCount: 0,
       failedSyncCount: 0,
+      dataSource: "ttSales",
     };
   }, [
     clients,
     payments,
+    ttSales,
     schedule,
     traffic,
     isLeadership,
     managerId,
     displayName,
-    unsyncedTtCount,
+    today,
   ]);
 
   return {
     clients,
     payments,
+    ttSales,
     schedule,
     traffic,
     summary,
@@ -578,6 +571,7 @@ export function useAdminAnalyticsSummary() {
 
   const [clients, setClients] = useState([]);
   const [payments, setPayments] = useState([]);
+  const [ttSales, setTtSales] = useState([]);
   const [connected, setConnected] =
     useState(false);
 
@@ -601,17 +595,25 @@ export function useAdminAnalyticsSummary() {
         setPayments
       );
 
+    const unsubTtSales =
+      subscribeTtSalesForUser(
+        userData,
+        {},
+        setTtSales
+      );
+
     return () => {
       setConnected(false);
       unsubClients();
       unsubPayments();
+      unsubTtSales();
     };
   }, [userData]);
 
   const summary = useMemo(() => {
     const operational =
       buildOperationalSummary({
-        payments,
+        payments: ttSales,
         clients,
       });
     const paymentsByClientId =
@@ -630,10 +632,10 @@ export function useAdminAnalyticsSummary() {
       revenue: operational.totalRevenue,
       deals: operational.totalDeals,
       overdue,
-      recentPayments: payments.length,
+      recentPayments: ttSales.length,
       recentRevenue: operational.totalRevenue,
     };
-  }, [clients, payments]);
+  }, [clients, payments, ttSales]);
 
   return {
     summary,

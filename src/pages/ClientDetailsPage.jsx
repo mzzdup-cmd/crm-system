@@ -5,7 +5,6 @@ import {
 
 import {
   useParams,
-  Link,
   Navigate,
 } from "react-router-dom";
 
@@ -448,22 +447,6 @@ export default function ClientDetailsPage() {
           </div>
 
           <div className="flex gap-4 mt-6">
-
-            <Link
-
-  to={
-
-    `/new-payment?client=${client.id}`
-
-  }
-
-  className="crm-btn-primary hover:opacity-90 px-6 py-3 rounded-xl font-bold"
-
->
-
-  + Добавить оплату
-
-</Link>
 
   {
 

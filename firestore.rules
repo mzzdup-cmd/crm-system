@@ -957,5 +957,16 @@ service cloud.firestore {
 
       allow delete: if isLeadership();
     }
+
+    // Imported TT rows — CRM reads only; written by admin SDK import job.
+    match /ttSales/{saleId} {
+      allow read: if isSignedIn();
+      allow write: if false;
+    }
+
+    match /ttImportMeta/{metaId} {
+      allow read: if isSignedIn();
+      allow write: if false;
+    }
   }
 }

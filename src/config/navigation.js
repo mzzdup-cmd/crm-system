@@ -27,10 +27,10 @@ export const MOBILE_BOTTOM_NAV = [
     roles: STAFF_ROLES,
   },
   {
-    path: "/new-payment",
-    label: "Новая оплата",
-    shortLabel: "Оплата",
-    icon: "➕",
+    path: "/pending-sales",
+    label: "Быстрые",
+    shortLabel: "Быстр.",
+    icon: "⚡",
     roles: STAFF_ROLES,
   },
   {
@@ -51,11 +51,6 @@ export const NAV_ITEMS = [
   {
     path: "/payments",
     label: "Продажи",
-    roles: STAFF_ROLES,
-  },
-  {
-    path: "/new-payment",
-    label: "Новая оплата",
     roles: STAFF_ROLES,
   },
   {

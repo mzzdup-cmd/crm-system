@@ -137,7 +137,7 @@ async function notifyOwnerPendingSale({
         dedupKey: `pending_sale_${pendingSaleId}`,
         type: "pending_sale",
         title: "У вас новая быстрая продажа",
-        body: `${creatorName} · ${amount.toLocaleString("ru-RU")} ₽`,
+        body: `${creatorName} · ${amount.toLocaleString("ru-RU")} ₽ — внесите в свою ТТ`,
         link: "/pending-sales",
         priority: "high",
         data: {

@@ -865,27 +865,6 @@ function DashboardPageContent() {
 
       {
 
-        isLeadership && summary.unsyncedTtCount > 0 && (
-
-            <Link
-              to="/management"
-              className="
-                px-4 py-2 rounded-xl
-                bg-amber-500/20 text-amber-300
-                hover:bg-amber-500/30 transition-colors text-sm
-              "
-            >
-
-              {summary.unsyncedTtCount} ожидают выгрузки в ТТ
-
-            </Link>
-
-          )
-
-      }
-
-      {
-
         isManager && !isLeadership && (
 
           <section className="bg-surface p-5 md:p-6 rounded-2xl space-y-6">
@@ -1352,20 +1331,6 @@ function DashboardPageContent() {
                 value={summary.overdueClients.length}
                 color="text-red-400"
               />
-
-              <Link to="/management">
-                <StatCard
-                  label="Ожидает выгрузки в ТТ"
-                  hint="новые оплаты для ТТ-таблиц"
-                  value={summary.unsyncedTtCount}
-                  color={
-                    summary.unsyncedTtCount
-                      ? "text-amber-400"
-                      : "text-green-400"
-                  }
-                  className="h-full hover:bg-surface-raised transition-colors"
-                />
-              </Link>
 
             </div>
 

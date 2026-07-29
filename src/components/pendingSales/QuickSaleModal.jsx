@@ -9,12 +9,6 @@ import {
   getManagerNameById,
 } from "../../constants/managers";
 
-import { COURSES } from "../../constants/courses";
-
-import {
-  DEAL_TYPE_OPTIONS,
-} from "../../constants/dealTypes";
-
 import {
   getTodayDateString,
 } from "../../domain/schedule/scheduleLogic";
@@ -67,16 +61,6 @@ export default function QuickSaleModal({
 
   const [amount, setAmount] = useState("");
 
-  const [paymentDate, setPaymentDate] =
-    useState(getTodayDateString());
-
-  const [comment, setComment] = useState("");
-
-  const [course, setCourse] = useState("");
-
-  const [dealTypeId, setDealTypeId] =
-    useState("new");
-
   const [error, setError] = useState("");
 
   const [saving, setSaving] = useState(false);
@@ -114,10 +98,6 @@ export default function QuickSaleModal({
 
     setDialogLink("");
     setAmount("");
-    setPaymentDate(getTodayDateString());
-    setComment("");
-    setCourse("");
-    setDealTypeId("new");
   }, [open, singleTarget, availableTargets]);
 
   if (!open) {
@@ -136,6 +116,8 @@ export default function QuickSaleModal({
       );
       return;
     }
+
+    const paymentDate = getTodayDateString();
 
     const validationError =
       validatePendingSaleInput({
@@ -174,9 +156,6 @@ export default function QuickSaleModal({
         dialogLink,
         amount,
         paymentDate,
-        comment,
-        course: course.trim(),
-        dealTypeId,
       });
 
       const ownerName =
@@ -184,7 +163,7 @@ export default function QuickSaleModal({
         "коллегу";
 
       toast.success(
-        `Быстрая продажа сохранена для ${ownerName}: ${formatMoney(amount)}`
+        `Уведомление отправлено ${ownerName}: ${formatMoney(amount)}`
       );
 
       onClose(true);
@@ -233,9 +212,7 @@ export default function QuickSaleModal({
 
             <div className="text-neutral-400 text-sm mt-1">
 
-              {singleTarget
-                ? "Продажа будет передана коллеге на подтверждение"
-                : "Временная запись для коллеги"}
+              Только уведомление менеджеру — без оплаты в CRM и без выгрузки в ТТ
 
             </div>
 
@@ -261,7 +238,7 @@ export default function QuickSaleModal({
 
               <label className="text-neutral-400 text-sm mb-1 block">
 
-                Менеджер (владелец продажи)
+                Менеджер
 
               </label>
 
@@ -326,148 +303,19 @@ export default function QuickSaleModal({
 
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-
-            <div>
-
-              <label className="text-neutral-400 text-sm mb-1 block">
-
-                Сумма ₽
-
-              </label>
-
-              <MoneyInput
-                value={amount}
-                onChange={setAmount}
-                placeholder="15 000"
-                required
-                className="w-full bg-surface-raised p-3.5 rounded-xl"
-              />
-
-            </div>
-
-            <div>
-
-              <label className="text-neutral-400 text-sm mb-1 block">
-
-                Дата оплаты
-
-              </label>
-
-              <input
-                type="date"
-                value={paymentDate}
-                onChange={(e) =>
-                  setPaymentDate(e.target.value)
-                }
-                className="w-full bg-surface-raised p-3.5 rounded-xl"
-                required
-              />
-
-            </div>
-
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-
-            <div>
-
-              <label className="text-neutral-400 text-sm mb-1 block">
-
-                Тип сделки
-
-              </label>
-
-              <select
-                value={dealTypeId}
-                onChange={(e) =>
-                  setDealTypeId(e.target.value)
-                }
-                className="w-full bg-surface-raised p-3.5 rounded-xl"
-                required
-              >
-
-                {
-
-                  DEAL_TYPE_OPTIONS.map((item) => (
-
-                    <option
-                      key={item.id}
-                      value={item.id}
-                    >
-
-                      {item.label}
-
-                    </option>
-
-                  ))
-
-                }
-
-              </select>
-
-            </div>
-
-            <div>
-
-              <label className="text-neutral-400 text-sm mb-1 block">
-
-                Курс (необязательно)
-
-              </label>
-
-              <select
-                value={course}
-                onChange={(e) =>
-                  setCourse(e.target.value)
-                }
-                className="w-full bg-surface-raised p-3.5 rounded-xl"
-              >
-
-                <option value="">
-
-                  Не указан
-
-                </option>
-
-                {
-
-                  COURSES.map((item) => (
-
-                    <option
-                      key={item}
-                      value={item}
-                    >
-
-                      {item}
-
-                    </option>
-
-                  ))
-
-                }
-
-              </select>
-
-            </div>
-
-          </div>
-
           <div>
 
             <label className="text-neutral-400 text-sm mb-1 block">
 
-              Комментарий (необязательно)
+              Сумма ₽
 
             </label>
 
-            <input
-              type="text"
-              value={comment}
-              onChange={(e) =>
-                setComment(e.target.value)
-              }
-              placeholder="Кратко о сделке"
+            <MoneyInput
+              value={amount}
+              onChange={setAmount}
+              placeholder="15 000"
+              required
               className="w-full bg-surface-raised p-3.5 rounded-xl"
             />
 
@@ -497,7 +345,7 @@ export default function QuickSaleModal({
             "
           >
 
-            {saving ? "Сохранение..." : "Сохранить"}
+            {saving ? "Отправка..." : "Уведомить менеджера"}
 
           </button>
 

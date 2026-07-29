@@ -63,10 +63,6 @@ const ClientDetailsPage = lazy(
   () => import("./pages/ClientDetailsPage.jsx")
 );
 
-const NewPaymentPage = lazy(
-  () => import("./pages/NewPaymentPage.jsx")
-);
-
 const ManagementPage = lazy(
   () => import("./pages/ManagementPage.jsx")
 );
@@ -235,9 +231,10 @@ function AppRoutes() {
           <Route
             path="/new-payment"
             element={
-              <LazyPage>
-                <NewPaymentPage />
-              </LazyPage>
+              <Navigate
+                to="/pending-sales"
+                replace
+              />
             }
           />
 

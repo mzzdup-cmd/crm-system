@@ -107,6 +107,10 @@ import {
 import { getManualBonusesForUser } from "./bonusService";
 import { getNightShiftsForUser } from "./shiftService";
 import {
+  getTtSalesForUser,
+  previousMonthStartIso,
+} from "./ttSalesService";
+import {
   buildSalaryReportBundle,
   filterSalaryRowsForManager,
 } from "../domain/salary/salaryPeriod";
@@ -1810,10 +1814,12 @@ export async function getSalaryReportForUser(userData) {
 
   try {
     payments =
-      await getPaymentsForUser(userData);
+      await getTtSalesForUser(userData, {
+        fromDate: previousMonthStartIso(),
+      });
   } catch (error) {
     console.error(
-      "[salary] payments load failed:",
+      "[salary] ttSales load failed:",
       error
     );
     throw error;

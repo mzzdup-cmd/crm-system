@@ -11,15 +11,6 @@ from "../components/ui/PageErrorBoundary";
 import PageTabs
 from "../components/ui/PageTabs";
 
-import PaymentsPage
-from "./PaymentsPage";
-
-import ClientsPage
-from "./ClientsPage";
-
-import DealsPage
-from "./DealsPage";
-
 import SubscriptionsPage
 from "./SubscriptionsPage";
 
@@ -27,18 +18,6 @@ import BookingsPage
 from "./BookingsPage";
 
 const TABS = [
-  {
-    id: "history",
-    label: "История оплат",
-  },
-  {
-    id: "clients",
-    label: "Клиенты",
-  },
-  {
-    id: "deals",
-    label: "Сделки",
-  },
   {
     id: "subscriptions",
     label: "Подписки",
@@ -53,11 +32,14 @@ export default function SalesHubPage() {
   const [searchParams, setSearchParams] =
     useSearchParams();
 
+  const tabParam = searchParams.get("tab");
   const activeTab =
-    searchParams.get("tab") || "history";
+    tabParam === "bookings"
+      ? "bookings"
+      : "subscriptions";
 
   function handleTabChange(tabId) {
-    if (tabId === "history") {
+    if (tabId === "subscriptions") {
       setSearchParams({});
       return;
     }
@@ -70,7 +52,7 @@ export default function SalesHubPage() {
       <div className="space-y-6 animate-fade-in">
         <PageHeader
           title="Продажи"
-          subtitle="История оплат, клиенты, сделки, подписки и бронь"
+          subtitle="Подписки и бронь. Выручка — из ТТ менеджеров."
         />
 
         <PageTabs
@@ -78,18 +60,6 @@ export default function SalesHubPage() {
           activeTab={activeTab}
           onChange={handleTabChange}
         />
-
-        {activeTab === "history" && (
-          <PaymentsPage embedded />
-        )}
-
-        {activeTab === "clients" && (
-          <ClientsPage embedded />
-        )}
-
-        {activeTab === "deals" && (
-          <DealsPage embedded />
-        )}
 
         {activeTab === "subscriptions" && (
           <SubscriptionsPage embedded />

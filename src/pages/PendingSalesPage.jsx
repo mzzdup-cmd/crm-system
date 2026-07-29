@@ -11,6 +11,7 @@ from "../hooks/usePendingSales";
 import {
   rejectPendingSale,
   deletePendingSale,
+  confirmPendingSale,
 } from "../services/pendingSalesService";
 
 import PageHeader
@@ -75,11 +76,31 @@ export default function PendingSalesPage() {
   const [rejectingId, setRejectingId] =
     useState(null);
 
+  const [acknowledgingId, setAcknowledgingId] =
+    useState(null);
+
   const [deletingId, setDeletingId] =
     useState(null);
 
   const [deleteTarget, setDeleteTarget] =
     useState(null);
+
+  async function handleAcknowledge(id) {
+    setAcknowledgingId(id);
+
+    try {
+      await confirmPendingSale(id);
+      toast.success("Отмечено как прочитанное");
+    } catch (ackError) {
+      console.error(ackError);
+      toast.error(
+        ackError.message ||
+          "Не удалось подтвердить"
+      );
+    } finally {
+      setAcknowledgingId(null);
+    }
+  }
 
   async function handleReject(id) {
     setRejectingId(id);
@@ -160,11 +181,11 @@ export default function PendingSalesPage() {
     <div className="space-y-8 animate-fade-in">
 
       <PageHeader
-        title="Временные продажи"
+        title="Быстрые продажи"
         subtitle={
           <>
             {pendingCount > 0
-              ? `${pendingCount} ожидают подтверждения`
+              ? `${pendingCount} ждут прочтения`
               : "Нет ожидающих"}
             <RealtimeIndicator connected={connected} />
           </>
@@ -176,7 +197,7 @@ export default function PendingSalesPage() {
 
         <h2 className="text-xl font-bold mb-4">
 
-          Ожидают вашего подтверждения
+          Уведомления для вас
 
         </h2>
 
@@ -188,8 +209,8 @@ export default function PendingSalesPage() {
 
               <EmptyState
                 icon="✅"
-                title="Нет новых продаж"
-                description="Когда коллега зафиксирует продажу за вас, она появится здесь."
+                title="Нет новых уведомлений"
+                description="Когда коллега отправит быструю продажу вам, она появится здесь."
               />
 
             )
@@ -207,8 +228,12 @@ export default function PendingSalesPage() {
                       sale={sale}
                       showActions
                       canDelete={isLeadership}
+                      onAcknowledge={handleAcknowledge}
                       onReject={handleReject}
                       onDelete={setDeleteTarget}
+                      acknowledging={
+                        acknowledgingId === sale.id
+                      }
                       rejecting={
                         rejectingId === sale.id
                       }

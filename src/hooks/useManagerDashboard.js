@@ -13,6 +13,10 @@ import {
 } from "../services/paymentService";
 
 import {
+  getTtSalesForUser,
+} from "../services/ttSalesService";
+
+import {
   getTodayScheduleOrDefault,
 } from "../services/scheduleService";
 
@@ -74,12 +78,14 @@ export function useManagerDashboard() {
     const [
       clients,
       payments,
+      ttSales,
       schedule,
       traffic,
       salaryReport,
     ] = await Promise.all([
       getClientsForUser(userData),
       getPaymentsForUser(userData),
+      getTtSalesForUser(userData),
       getTodayScheduleOrDefault(),
       getTodayTraffic(),
       getSalaryReportForUser(userData),
@@ -115,10 +121,9 @@ export function useManagerDashboard() {
         )
     ).length;
 
-    const revenue = clients.reduce(
-      (sum, client) =>
-        sum +
-        Number(client.amount || 0),
+    const revenue = ttSales.reduce(
+      (sum, sale) =>
+        sum + Number(sale.amount || 0),
       0
     );
 
@@ -135,11 +140,11 @@ export function useManagerDashboard() {
       shiftInfo,
       trafficLoad,
       revenue,
-      deals: clients.length,
+      deals: ttSales.length,
       subscriptions,
       overdueCount,
       salaryTotal,
-      recentPayments: payments.slice(0, 5),
+      recentPayments: ttSales.slice(0, 5),
       schedule,
       traffic,
     });

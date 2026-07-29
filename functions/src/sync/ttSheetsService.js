@@ -372,6 +372,44 @@ async function writeTtSyncMeta({
   return { metaTab: resolvedMetaTab };
 }
 
+async function readTtSheetRows({
+  spreadsheetId,
+  sheetName,
+}) {
+  const sheets = await getSheetsClient();
+
+  const resolvedTab =
+    await resolveSheetTabName(
+      spreadsheetId,
+      sheetName
+    );
+
+  const result =
+    await sheets.spreadsheets.values.get({
+      spreadsheetId,
+      range: toSheetRange(
+        resolvedTab,
+        "A2:P"
+      ),
+      majorDimension: "ROWS",
+    });
+
+  const values = result.data.values || [];
+
+  return {
+    spreadsheetId,
+    sheetName: resolvedTab,
+    rows: values.map((cells, index) => ({
+      rowNumber: index + 2,
+      cells: Array.from(
+        { length: 16 },
+        (_, cellIndex) =>
+          cells?.[cellIndex] ?? ""
+      ),
+    })),
+  };
+}
+
 function formatMsk(timestamp) {
   return new Intl.DateTimeFormat(
     "ru-RU",
@@ -388,6 +426,7 @@ module.exports = {
   updateTtRow,
   clearTtRow,
   writeTtSyncMeta,
+  readTtSheetRows,
   formatMsk,
   resolveSheetTabName,
   listSpreadsheetTabs,

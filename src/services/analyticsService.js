@@ -1,6 +1,6 @@
 import {
-  getPaymentsForUser,
-} from "./paymentService";
+  getTtSalesForUser,
+} from "./ttSalesService";
 
 import {
   getClientsForUser,
@@ -103,7 +103,7 @@ async function loadAnalyticsSnapshot(
     loadSourceSafely(
       "payments",
       () =>
-        getPaymentsForUser(userData)
+        getTtSalesForUser(userData)
     ),
     loadSourceSafely(
       "clients",
